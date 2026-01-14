@@ -1,0 +1,31 @@
+.dev-navigator li {
+  width: 100%;
+  cursor: pointer;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #ccc;
+
+  transition: background-color 0.2s;
+}
+
+.dev-navigator li:hover {
+  background-color: #ffffff;
+}
+
+.toggle {
+  position: absolute;
+  bottom: 10px;
+  right: -80px;
+  cursor: pointer;
+  z-index: 1;
+  border: 1px solid #ccc;
+  padding: 5px 10px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+
+.dev-navigator li a {
+  width: 100%;
+  height: 100%;
+  display: block;
+  padding: 10px;
+}

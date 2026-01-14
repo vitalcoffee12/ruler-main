@@ -1,0 +1,47 @@
+@import url("//fonts.googleapis.com/earlyaccess/nanummyeongjo.css");
+@import url("https://hangeul.pstatic.net/hangeul_static/css/nanum-square.css");
+@import "tailwindcss";
+@font-face {
+  font-family: "SeongdongMyoungjo";
+  src: url("//cdn.jsdelivr.net/korean-webfonts/1/orgs/govs/sdgu/SungDongMyungjo/SungDongMyungjoR.woff2")
+      format("woff2"),
+    url("//cdn.jsdelivr.net/korean-webfonts/1/orgs/govs/sdgu/SungDongMyungjo/SungDongMyungjoR.woff")
+      format("woff");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SeongdongMyoungjo";
+  src: url("//cdn.jsdelivr.net/korean-webfonts/1/orgs/govs/sdgu/SungDongMyungjo/SungDongMyungjoB.woff2")
+      format("woff2"),
+    url("//cdn.jsdelivr.net/korean-webfonts/1/orgs/govs/sdgu/SungDongMyungjo/SungDongMyungjoB.woff")
+      format("woff");
+  font-weight: 700;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "NanumSquare", "Inter", ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+html,
+body {
+  font-size: 16px;
+  @apply bg-white dark:bg-gray-950;
+
+  @media (prefers-color-scheme: dark) {
+    color-scheme: dark;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera*/
+}
