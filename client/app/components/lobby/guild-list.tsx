@@ -29,26 +29,18 @@ export default function GuildList(props: { userId: string }) {
 
   return (
     <>
-      <div className="no-scrollbar">
-        <div className="p-4 pb-0">
-          <div
-            className="w-12 h-12 flex items-center justify-center border-b border-stone-300 cursor-pointer pb-2 text-2xl font-bold"
-            onClick={() => {
-              nav("/");
-            }}
-          >
-            R
-          </div>
-        </div>
-        <div className="p-4 max-h-[calc(100vh-10rem)] overflow-y-auto overflow-x-hidden no-scrollbar">
-          {guilds.map((guild) => (
-            <GuildListItem
-              key={guild.guildId}
-              guildId={guild.guildId}
-              guildName={guild.guildName}
-            />
-          ))}
-        </div>
+      <div
+        className="row-start-2 row-end-3 px-4 pt-2 max-h-[calc(100vh-var(--spacing)*70)] overflow-y-auto overflow-x-overlay no-scrollbar"
+        style={{}}
+      >
+        {guilds.map((guild) => (
+          <GuildListItem
+            key={guild.guildId}
+            guildId={guild.guildId}
+            guildName={guild.guildName}
+          />
+        ))}
+        <GuildListItem guildId="guild-create" guildName="Create Guild" />
       </div>
     </>
   );
@@ -56,7 +48,9 @@ export default function GuildList(props: { userId: string }) {
 
 function GuildListItem(props: { guildId: string; guildName: string }) {
   const nav = useNavigate();
+  const isCreateGuild = props.guildId === "guild-create";
   const [isHovered, setIsHovered] = useState(false);
+
   return (
     <div
       className="relative mb-4 cursor-pointer"
@@ -64,21 +58,32 @@ function GuildListItem(props: { guildId: string; guildName: string }) {
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
-        className={`w-12 h-12 rounded-xl ${
+        className={`w-12 h-12 rounded-xl flex items-center justify-center ${
           isHovered ? "bg-stone-100" : "bg-stone-300"
         }`}
         onClick={() => {
-          nav(`/game/${props.guildId}`);
+          if (isCreateGuild) {
+          } else {
+            nav(`/game/guild/${props.guildId}`);
+          }
         }}
-      ></div>
+      >
+        {isCreateGuild ? (
+          <span className="material-symbols-outlined text-stone-600 text-sm ">
+            add_2
+          </span>
+        ) : (
+          ""
+        )}
+      </div>
 
       <div
-        className="absolute top-1/2 bg-stone-300 h-4 w-1 rounded transform -translate-y-1/2 left-full ml-2"
+        className="absolute top-1/2 bg-stone-300 h-5 w-1 rounded transform -translate-y-1/2 -left-4"
         style={{ display: isHovered ? "block" : "none" }}
-      />
+      ></div>
       <div
         className="absolute top-1/2 rounded bg-stone-800 text-white text-sm px-2 py-1 transform -translate-y-1/2 left-full ml-4 whitespace-nowrap"
-        style={{ display: isHovered ? "block" : "none" }}
+        // style={{ display: isHovered ? "block" : "none" }}
       >
         {props.guildName}
       </div>

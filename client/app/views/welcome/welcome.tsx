@@ -74,7 +74,7 @@ export default function Welcome() {
           <SubmitButton
             label="Create Your World"
             style={{
-              backgroundColor: "var(--color-rose-400)",
+              backgroundColor: "var(--color-lime-400)",
               fontSize: "16px",
               padding: "8px 16px",
               borderRadius: "30px",
@@ -165,9 +165,9 @@ const resources = [
     icon: "emergency",
   },
   {
-    href: "pricing",
-    text: "Pricing",
-    icon: "paid",
+    href: "launcher",
+    text: "Launcher",
+    icon: "rocket_launch",
   },
   {
     href: "community",
