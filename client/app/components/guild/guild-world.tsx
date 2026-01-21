@@ -53,8 +53,28 @@ export default function GuildWorld(props: {
           </button>
         </div>
         <div>
-          <div className="border-b border-stone-300 my-4">
+          <div className="border-b border-stone-300 my-4 flex items-center justify-between ">
             <span className="text-stone-600 text-sm">Worlds</span>
+            <div>
+              <div className="inline-flex items-center cursor-pointer text-stone-600 hover:text-stone-800 mr-1">
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: "1.2rem" }}
+                >
+                  wand_stars
+                </span>
+                <span className="text-sm ml-1">Ask Gm to Create</span>
+              </div>
+              <div className="inline-flex items-center ml-1 mr-2 cursor-pointer text-stone-600 hover:text-stone-800">
+                <span
+                  className="material-symbols-outlined"
+                  style={{ fontSize: "1.2rem" }}
+                >
+                  add
+                </span>
+                <span className="text-sm ml-1">Add Element</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -72,6 +92,13 @@ const GuildWorldNodes = memo(function GuildWorldNodes(props: {
   setHoveredNodeId: (nodeId: string | null) => void;
   refs: React.Ref<{ [key: string]: HTMLDivElement | null }>;
 }) {
+  if (props.worlds.length === 0) {
+    return (
+      <div className="row-start-2 row-end-3 flex flex-col items-center justify-center text-stone-500 p-4 min0-h-full h-full">
+        No worlds found.
+      </div>
+    );
+  }
   return (
     <div className="row-start-2 row-end-3 overflow-y-auto no-scrollbar p-4 max-h-[calc(100vh-var(--spacing)*42)] mt-2">
       {props.worlds.map((world) => (
@@ -111,12 +138,16 @@ function GuildWorldNode(
           ref.current![props.nodeId] = el;
         }
       }}
+      onClick={(e) => {}}
     >
       <div className="flex items-center gap-2">
         <div
           className="text-xs text-stone-700 bg-stone-300 rounded-sm px-1 hover:bg-stone-400 transition duration-300 ease-in-out"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
+          onClick={(e) => {
+            e.stopPropagation();
+          }}
         >
           {props.nodeId}
         </div>

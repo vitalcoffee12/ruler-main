@@ -41,13 +41,17 @@
   height: 100vh;
   width: calc(100vw - var(--spacing) * 20);
   display: grid;
-  grid-template-columns: calc(var(--spacing) * 65) calc(var(--spacing) * 200) 1fr;
+  grid-template-columns:
+    calc(var(--spacing) * 65) calc(var(--spacing) * 200) calc(
+      var(--spacing) * 100
+    )
+    1fr;
   grid-template-rows: calc(var(--spacing) * 16) 1fr;
 }
 
 .guild-dashboard-header {
   border-bottom: 1px solid var(--color-stone-300);
-  grid-column: 1 / span 3;
+  grid-column: 1 / span 4;
   display: flex;
   align-items: center;
 }
@@ -63,11 +67,32 @@
 .guild-dashboard-mainside {
   overflow-y: auto;
   height: calc(100vh - var(--spacing) * 16);
+  border-right: 1px solid var(--color-stone-300);
 }
+
+.guild-dashboard-subside {
+  overflow-y: auto;
+  min-height: 100%;
+}
+
 .guild-dashboard-rightside {
   border-left: 1px solid var(--color-stone-300);
   overflow-y: auto;
   height: calc(100vh - var(--spacing) * 16);
+}
+
+.guild-dashboard-overlayside {
+  position: fixed;
+  top: calc(var(--spacing) * 16);
+  right: 0;
+  width: calc(var(--spacing) * 100);
+  height: calc(100vh - var(--spacing) * 16);
+  background-color: var(--color-stone-100);
+  border-left: 1px solid var(--color-stone-300);
+  transition: transform 0.3s ease-in-out;
+}
+.guild-dashboard-overlayside.closed {
+  transform: translateX(100%);
 }
 
 .guild-chat {
@@ -95,6 +120,8 @@
   box-sizing: border-box;
   display: grid;
   grid-template-rows: calc(var(--spacing) * 24) 1fr;
+  min-height: 100%;
+  height: 100%;
 }
 
 .chat-message h1 {

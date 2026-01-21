@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router";
 import GuildChat from "~/components/guild/guild-chat";
 import GuildHeader from "~/components/guild/guild-header";
 import GuildMemberList from "~/components/guild/guild-member-list";
+import GuildRefs from "~/components/guild/guild-refs";
 import GuildWorld from "~/components/guild/guild-world";
 
 export default function Dashboard() {
@@ -18,14 +19,13 @@ export default function Dashboard() {
         />
       </div>
       <div className="guild-dashboard-leftside no-scrollbar">
-        <div>
-          <GuildMemberList members={members} guildId={guildId} />
-        </div>
+        <GuildMemberList members={members} guildId={guildId} />
       </div>
       <div className="guild-dashboard-mainside no-scrollbar whitespace-pre-wrap">
-        <div>
-          <GuildChat guildId={guildId} messages={chats} />
-        </div>
+        <GuildChat guildId={guildId} messages={chats} />
+      </div>
+      <div className="guild-dashboard-subside no-scrollbar whitespace-pre-wrap">
+        <GuildRefs />
       </div>
       <div className="guild-dashboard-rightside no-scrollbar">
         <GuildWorld worlds={worlds} guildId={guildId} relations={relations} />

@@ -8,6 +8,9 @@ import {
 export default [
   layout("views/layout.tsx", [
     index("views/welcome/welcome.tsx"),
+    route("guides", "views/services/guides.tsx"),
+    route("blog", "views/services/blog.tsx"),
+    route("support", "views/services/support.tsx"),
 
     route("auth", "views/auth/layout.tsx", [
       route("register", "views/auth/register.tsx"),

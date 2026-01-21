@@ -1,50 +1,66 @@
 version: "3.8"
 
-name: basic-framework
+name: ruler-main
 services:
-  api:
-    container_name: basic-framework-api
-    build:
-      context: server
-      dockerfile: Dockerfile
-    ports:
-      - "16000:8080"
-    environment:
-      - ENV=development
-    restart: unless-stopped
-    networks:
-      - basic-framework-network
-    depends_on:
-      - db
+  # api:
+  #   container_name: ruler-main-api
+  #   build:
+  #     context: server
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "16000:8080"
+  #   environment:
+  #     - ENV=development
+  #   restart: unless-stopped
+  #   networks:
+  #     - ruler-main-network
+  #   depends_on:
+  #     - db
   db:
     image: mysql:8.4.7
-    container_name: basic-framework-db
+    container_name: ruler-main-db
     ports:
       - "16001:3306"
     volumes:
-      - basic-framework-db:/var/lib/mysql
+      - ruler-main-db:/var/lib/mysql
     environment:
-      MYSQL_ROOT_PASSWORD: bf-root-pass!9894@
-      MYSQL_DATABASE: basic-web
+      MYSQL_ROOT_PASSWORD: rm-root-pass!9894@
+      MYSQL_DATABASE: ruler-main
       MYSQL_USER: user
-      MYSQL_PASSWORD: bf-pass!9894@
+      MYSQL_PASSWORD: rm-pass!9894@dd
     restart: unless-stopped
     networks:
-      - basic-framework-network
+      - ruler-main-network
+
+  data:
+    image: mongodb/mongodb-atlas-local:8.0.14
+    container_name: ruler-main-data
+    ports:
+      - "16003:27017"
+    restart: unless-stopped
+    networks:
+      - ruler-main-network
+    volumes:
+      - ruler-main-data:/data/db
+    environment:
+      - MONGODB_INITDB_ROOT_USERNAME=admin
+      - MONGODB_INITDB_ROOT_PASSWORD=rm-pass!9894@mm
 
   # cache:
   #   image: redis:8.4.0-alpine
-  #   container_name: basic-framework-cache
+  #   container_name: ruler-main-cache
   #   ports:
   #     - "16002:6379"
   #   restart: unless-stopped
   #   networks:
-  #     - basic-framework-network
+  #     - ruler-main-network
 
 networks:
-  basic-framework-network:
+  ruler-main-network:
     driver: bridge
 
 volumes:
-  basic-framework-db:
+  ruler-main-db:
+    driver: local
+  ruler-main-data:
     driver: local
