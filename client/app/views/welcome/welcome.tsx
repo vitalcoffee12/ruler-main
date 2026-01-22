@@ -25,7 +25,7 @@ export default function Welcome() {
         <ActionButton
           label="Sign In"
           onClick={() => {
-            nav("auth/signin");
+            nav("/auth/signin");
           }}
           style={{
             fontSize: "16px",
@@ -68,7 +68,7 @@ export default function Welcome() {
               borderRadius: "30px",
             }}
             onClick={() => {
-              nav("guides");
+              nav("/guides");
             }}
           />
           <SubmitButton
@@ -80,7 +80,7 @@ export default function Welcome() {
               borderRadius: "30px",
             }}
             onClick={() => {
-              nav("auth/signup");
+              nav("/auth/register");
             }}
           />
         </div>

@@ -8,7 +8,7 @@ import GuildWorld from "~/components/guild/guild-world";
 export default function Dashboard() {
   const nav = useNavigate();
   const location = useLocation();
-  const guildId = location.pathname.split("/")[2];
+  const guildId = location.pathname.split("/")[3];
 
   return (
     <div className="guild-dashboard">

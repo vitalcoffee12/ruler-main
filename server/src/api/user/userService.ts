@@ -11,6 +11,7 @@ import {
   issueAccessToken,
   issueRefreshToken,
 } from "@/common/utils/auth";
+import { OAUTH_PROVIDERS } from "@/common/constants";
 
 export class UserService {
   private userRepository: UserRepository;
@@ -402,9 +403,7 @@ export class UserService {
     }
   }
 
-  async loginWithOAuth(
-    provider: "google" | "github" | "kakao" | "naver"
-  ): Promise<
+  async loginWithOAuth(provider: OAUTH_PROVIDERS): Promise<
     ServiceResponse<{
       accessToken: string;
       refreshToken: string;

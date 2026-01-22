@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-export default function GuildList(props: { userId: string }) {
+export default function GuildList(props: {
+  userId: string;
+  onClickCreateGuild?: () => void;
+}) {
   const guilds = [
     { guildId: "guild-1", guildName: "Guild One" },
     { guildId: "guild-2", guildName: "Guild Two" },
@@ -34,13 +37,21 @@ export default function GuildList(props: { userId: string }) {
             guildName={guild.guildName}
           />
         ))}
-        <GuildListItem guildId="guild-create" guildName="Create Guild" />
+        <GuildListItem
+          guildId="guild-create"
+          guildName="Create Guild"
+          onClick={props.onClickCreateGuild}
+        />
       </div>
     </>
   );
 }
 
-function GuildListItem(props: { guildId: string; guildName: string }) {
+function GuildListItem(props: {
+  guildId: string;
+  guildName: string;
+  onClick?: () => void;
+}) {
   const nav = useNavigate();
   const isCreateGuild = props.guildId === "guild-create";
   const [isHovered, setIsHovered] = useState(false);
@@ -57,6 +68,9 @@ function GuildListItem(props: { guildId: string; guildName: string }) {
         }`}
         onClick={() => {
           if (isCreateGuild) {
+            if (props.onClick) {
+              props.onClick();
+            }
           } else {
             nav(`/game/guild/${props.guildId}`);
           }

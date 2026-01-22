@@ -1,9 +1,13 @@
 import { Outlet, useNavigate } from "react-router";
 import "./lobby.css";
 import GuildList from "~/components/lobby/guild-list";
+import { useModal } from "~/hooks/use-modal.hook";
+import CreateGuildModal from "~/components/lobby/create-guild.modal";
 
 export default function Layout() {
   const nav = useNavigate();
+  const { Modal, openModal, closeModal } = useModal();
+
   return (
     <>
       <div className="lobby-layout">
@@ -18,7 +22,7 @@ export default function Layout() {
               R
             </div>
           </div>
-          <GuildList userId="user-123" />
+          <GuildList userId="user-123" onClickCreateGuild={openModal} />
           <div className="cursor-pointer hover:bg-stone-100 rounded-lg m-4 row-start-3 row-end-4">
             <div>
               <img
@@ -33,6 +37,9 @@ export default function Layout() {
           <Outlet />
         </div>
       </div>
+      <Modal>
+        <CreateGuildModal />
+      </Modal>
     </>
   );
 }

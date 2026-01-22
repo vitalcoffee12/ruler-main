@@ -13,8 +13,11 @@ export class UserEntity extends BaseEntity implements User {
   @PrimaryGeneratedColumn()
   id?: number;
 
-  @Column({ type: "varchar", length: 100 })
-  name: string;
+  @Column({ type: "varchar", length: 100, unique: true })
+  userName: string;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  displayName?: string;
 
   @Column({ unique: true, type: "varchar", length: 100 })
   email: string;
@@ -73,7 +76,8 @@ export class UserEntity extends BaseEntity implements User {
   static fromModel(user: User): UserEntity {
     return new UserEntity({
       id: user.id,
-      name: user.name,
+      userName: user.userName,
+      displayName: user.displayName,
       email: user.email,
       state: user.state,
       passwordHash: user.passwordHash,
