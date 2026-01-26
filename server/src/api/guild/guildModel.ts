@@ -15,6 +15,8 @@ export const GuildSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   state: GuildState,
+  autoFlag: z.boolean().default(false),
+  sceneId: z.number(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

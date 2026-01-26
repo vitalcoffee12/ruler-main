@@ -10,8 +10,11 @@ import {
 
 @Entity({ name: "users" })
 export class UserEntity extends BaseEntity implements User {
-  @PrimaryGeneratedColumn()
-  id?: number;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true, comment: "User ID" })
+  id: number;
+
+  @Column({ type: "varchar", length: 255, nullable: true, unique: true })
+  code: string;
 
   @Column({ type: "varchar", length: 100, unique: true })
   userName: string;

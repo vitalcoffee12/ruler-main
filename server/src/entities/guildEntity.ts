@@ -10,8 +10,8 @@ import {
 
 @Entity({ name: "guilds" })
 export class GuildEntity extends BaseEntity implements Guild {
-  @PrimaryGeneratedColumn()
-  id?: number;
+  @PrimaryGeneratedColumn({ type: "int", unsigned: true, comment: "Guild ID" })
+  id: number;
 
   @Column({ type: "varchar", length: 255, nullable: true, unique: true })
   code: string;
@@ -27,6 +27,12 @@ export class GuildEntity extends BaseEntity implements Guild {
 
   @Column({ default: "active", type: "varchar", length: 20 })
   state: "active" | "disabled";
+
+  @Column({ type: "boolean", default: false, nullable: false })
+  autoFlag: boolean;
+
+  @Column({ type: "int", nullable: false, default: 1 })
+  sceneId: number;
 
   @Column({ type: "datetime", default: () => "CURRENT_TIMESTAMP" })
   createdAt: Date;
@@ -51,6 +57,7 @@ export class GuildEntity extends BaseEntity implements Guild {
       id: guild.id,
       name: guild.name,
       state: guild.state,
+      autoFlag: guild.autoFlag,
       createdAt: guild.createdAt,
       updatedAt: guild.updatedAt,
     });

@@ -24,6 +24,11 @@ const envSchema = z.object({
   DB_PASS: z.string().min(1),
   DB_NAME: z.string().min(1),
 
+  DB_MONGO_URI: z.string().min(1),
+  DB_MONGO_NAME: z.string().min(1),
+  DB_MONGO_USER: z.string().min(1),
+  DB_MONGO_PASS: z.string().min(1),
+
   // JWT secret
   ACCESSTOKEN_SECRET: z.string().min(1),
   REFRESHTOKEN_SECRET: z.string().min(1),

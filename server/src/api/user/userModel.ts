@@ -13,6 +13,7 @@ export const UserRole = z.enum(["user", "admin"]);
 export type User = z.infer<typeof UserSchema>;
 export const UserSchema = z.object({
   id: z.number().optional(),
+  code: z.string(),
   userName: z.string(),
   displayName: z.string().optional(),
   email: z.string().email(),
