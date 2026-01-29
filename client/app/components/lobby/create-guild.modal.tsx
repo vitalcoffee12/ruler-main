@@ -1,8 +1,31 @@
 import { PlusIcon } from "@heroicons/react/20/solid";
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { UserContext } from "~/contexts/userContext";
+import { postRequest } from "~/request";
 
 export default function CreateGuildModal(props: {}) {
+  const user = useContext(UserContext);
   const [iconHovered, setIconHovered] = useState(false);
+
+  const [data, setData] = useState({
+    guildName: "",
+    guildIcon: null,
+  });
+  const handleIconClick = () => {};
+  const handleCreateGuild = async () => {
+    await postRequest(
+      "/guild/create",
+      {
+        icon: "",
+        name: data.guildName,
+      },
+      {
+        Authorization: `Bearer ${user.accessToken}`,
+        "x-refrehsh-token": user.refreshToken,
+      },
+    );
+  };
+
   return (
     <div className="flex flex-col min-w-[300px] min-h-[200px]">
       <div>
@@ -28,6 +51,10 @@ export default function CreateGuildModal(props: {}) {
         <input
           type="text"
           placeholder="Give your guild a name"
+          value={data.guildName}
+          onChange={(e) => {
+            setData({ ...data, guildName: e.target.value });
+          }}
           className="border border-stone-300 rounded px-2 py-2 mb-4 w-full text-sm"
         />
 
@@ -39,7 +66,10 @@ export default function CreateGuildModal(props: {}) {
         </div>
 
         <div className="flex justify-end w-lg">
-          <button className="bg-lime-600 text-white px-4 py-2 rounded hover:bg-lime-700 transition duration-200 active:scale-95 cursor-pointer">
+          <button
+            className="bg-lime-600 text-white px-4 py-2 rounded hover:bg-lime-700 transition duration-200 active:scale-95 cursor-pointer"
+            onClick={handleCreateGuild}
+          >
             Create Guild
           </button>
         </div>

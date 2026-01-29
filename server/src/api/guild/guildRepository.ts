@@ -32,6 +32,7 @@ export class GuildRepository {
     ownerId: number;
     name: string;
     description?: string;
+    iconPath?: string;
   }): Promise<GuildEntity> {
     const newGuild = new GuildEntity({
       code: guildData.code,
@@ -39,6 +40,7 @@ export class GuildRepository {
       name: guildData.name,
       description: guildData.description,
       state: "active",
+      iconPath: guildData.iconPath,
     });
     await this.entityManager.save(GuildEntity, newGuild);
     return newGuild;

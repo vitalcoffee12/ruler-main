@@ -1,7 +1,8 @@
-import { UserState, type User } from "@/api/user/userModel";
 import { OAUTH_PROVIDERS } from "@/common/constants";
 import AppDataSource from "@/dataSource.js";
 import { UserEntity } from "@/entities/userEntity";
+import { GenerateUserCode } from "../utils";
+import { User } from "./userModel";
 
 export class UserRepository {
   private entityManager;
@@ -25,26 +26,26 @@ export class UserRepository {
     name: string;
     email: string;
     passwordHash: string;
-  }): Promise<User> {
+  }): Promise<UserEntity> {
+    const code = GenerateUserCode();
     const newUser: User = {
-      name: userData.name,
+      code: code,
+      displayName: userData.name ?? code,
       email: userData.email,
-      state: UserState.enum.pending,
+      state: "pending",
       role: "user",
       passwordHash: userData.passwordHash,
       refreshTokenHash: "",
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    await this.entityManager.save(UserEntity, newUser);
-
-    return newUser;
+    return await this.entityManager.save(UserEntity, newUser);
   }
 
   async activate(id: number): Promise<boolean> {
     const user = await this.findById(id);
     if (user) {
-      user.state = UserState.enum.active;
+      user.state = "active";
       user.verifiedAt = new Date();
       await this.entityManager.save(UserEntity, user);
       return true;
@@ -55,7 +56,7 @@ export class UserRepository {
   async disable(id: number): Promise<boolean> {
     const user = await this.findById(id);
     if (user) {
-      user.state = UserState.enum.disabled;
+      user.state = "disabled";
       await this.entityManager.save(UserEntity, user);
       return true;
     }
@@ -92,7 +93,7 @@ export class UserRepository {
 
   async updateRefreshToken(
     id: number,
-    refreshTokenHash: string
+    refreshTokenHash: string,
   ): Promise<boolean> {
     const user = await this.findById(id);
     if (user) {
@@ -113,7 +114,7 @@ export class UserRepository {
 
   async findByOAuthId(
     provider: OAUTH_PROVIDERS,
-    oauthId: string
+    oauthId: string,
   ): Promise<UserEntity | null> {
     let user: UserEntity | null = null;
     if (provider === OAUTH_PROVIDERS.GOOGLE) {
@@ -139,7 +140,7 @@ export class UserRepository {
   async updateOAuthId(
     id: number,
     provider: OAUTH_PROVIDERS,
-    oauthId: string
+    oauthId: string,
   ): Promise<boolean> {
     const user = await this.findById(id);
     if (user) {

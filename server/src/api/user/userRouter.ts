@@ -34,7 +34,7 @@ userRouter.get(
   "/",
   validateToken(),
   validateRole(["admin"]),
-  userController.getUsers
+  userController.getUsers,
 );
 
 // get user information by id - verified users
@@ -50,7 +50,7 @@ userRouter.get(
   "/:id",
   validateRequest(GetUserSchema),
   validateToken(),
-  userController.getUser
+  userController.getUser,
 );
 
 // create new user - no authentication
@@ -67,7 +67,7 @@ userRegistry.registerPath({
 userRouter.post(
   "/create",
   validateRequest(CreateUserSchema),
-  userController.createUser
+  userController.createUser,
 );
 
 // disable user - admin only
@@ -86,7 +86,7 @@ userRegistry.registerPath({
   },
   responses: createApiResponse(
     z.object({ success: z.boolean() }),
-    "User Disabled Successfully"
+    "User Disabled Successfully",
   ),
 });
 
@@ -95,7 +95,7 @@ userRouter.post(
   validateRequest(DisableUserSchema),
   validateToken(),
   validateRole(["admin"]),
-  userController.disableUser
+  userController.disableUser,
 );
 
 // block user - admin only
@@ -114,7 +114,7 @@ userRegistry.registerPath({
   },
   responses: createApiResponse(
     z.object({ success: z.boolean() }),
-    "User Blocked Successfully"
+    "User Blocked Successfully",
   ),
 });
 
@@ -123,7 +123,7 @@ userRouter.post(
   validateRequest(BlockUserSchema),
   validateToken(),
   validateRole(["admin"]),
-  userController.blockUser
+  userController.blockUser,
 );
 
 // sigin in user - no authentication
@@ -145,14 +145,14 @@ userRegistry.registerPath({
       accessToken: z.string(),
       refreshToken: z.string(),
     }),
-    "Sign-In Successful"
+    "Sign-In Successful",
   ),
 });
 
 userRouter.post(
   "/signin",
   validateRequest(SignInSchema),
-  userController.signIn
+  userController.signIn,
 );
 
 // signout user - verified users
@@ -162,7 +162,7 @@ userRegistry.registerPath({
   tags: ["User"],
   responses: createApiResponse(
     z.object({ success: z.boolean() }),
-    "Sign-Out Successful"
+    "Sign-Out Successful",
   ),
 });
 
@@ -175,10 +175,11 @@ userRegistry.registerPath({
   tags: ["User"],
   responses: createApiResponse(
     z.object({ success: z.boolean() }),
-    "Email Verified Successfully"
+    "Email Verified Successfully",
   ),
 });
 
 userRouter.post("/verify-email/:token", userController.verifyUserEmail);
 
+userRouter.post("/validate-token", userController.validateToken);
 //

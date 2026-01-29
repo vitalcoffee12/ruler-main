@@ -16,9 +16,6 @@ export class UserEntity extends BaseEntity implements User {
   @Column({ type: "varchar", length: 255, nullable: true, unique: true })
   code: string;
 
-  @Column({ type: "varchar", length: 100, unique: true })
-  userName: string;
-
   @Column({ type: "varchar", length: 100, nullable: true })
   displayName?: string;
 
@@ -26,10 +23,10 @@ export class UserEntity extends BaseEntity implements User {
   email: string;
 
   @Column({ default: "pending", type: "varchar", length: 20 })
-  state: "pending" | "active" | "disabled";
+  state: string;
 
   @Column({ default: "user", type: "varchar", length: 20 })
-  role: "user" | "admin";
+  role: string;
 
   @Column({ type: "varchar", length: 255 })
   passwordHash: string;
@@ -79,10 +76,11 @@ export class UserEntity extends BaseEntity implements User {
   static fromModel(user: User): UserEntity {
     return new UserEntity({
       id: user.id,
-      userName: user.userName,
+      code: user.code,
       displayName: user.displayName,
       email: user.email,
       state: user.state,
+      role: user.role,
       passwordHash: user.passwordHash,
       refreshTokenHash: user.refreshTokenHash,
       blockedUntil: user.blockedUntil,

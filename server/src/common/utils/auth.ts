@@ -10,11 +10,11 @@ export async function hashPass(password: string): Promise<string> {
 
 export async function comparePass(
   password: string,
-  hashedPassword: string
+  hashedPassword: string,
 ): Promise<boolean> {
   return await bcrypt.compare(
     `${password}${env.PASS_HASH_PEPPER}`,
-    hashedPassword
+    hashedPassword,
   );
 }
 
@@ -25,7 +25,7 @@ export async function hashToken(token: string): Promise<string> {
 
 export async function compareToken(
   token: string,
-  hashedToken: string
+  hashedToken: string,
 ): Promise<boolean> {
   return await bcrypt.compare(`${token}${env.TOKEN_HASH_PEPPER}`, hashedToken);
 }

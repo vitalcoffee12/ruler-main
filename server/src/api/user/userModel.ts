@@ -8,17 +8,14 @@ import {
 
 extendZodWithOpenApi(z);
 
-export const UserState = z.enum(["pending", "active", "disabled"]);
-export const UserRole = z.enum(["user", "admin"]);
 export type User = z.infer<typeof UserSchema>;
 export const UserSchema = z.object({
   id: z.number().optional(),
   code: z.string(),
-  userName: z.string(),
   displayName: z.string().optional(),
-  email: z.string().email(),
-  state: UserState,
-  role: UserRole,
+  email: z.string(),
+  state: z.string(),
+  role: z.string(),
   passwordHash: z.string(),
   googleId: z.string().optional(),
   githubId: z.string().optional(),
@@ -80,4 +77,15 @@ export const SignInSchema = z.object({
     email: userValidations.email,
     password: userValidations.password,
   }),
+});
+
+export type ValidateTokenResponse = z.infer<typeof ValidateTokenResponseSchema>;
+export const ValidateTokenResponseSchema = z.object({
+  id: z.number(),
+  code: z.string(),
+  displayName: z.string().optional(),
+  state: z.string(),
+  role: z.string(),
+  accessToken: z.string(),
+  refreshToken: z.string(),
 });

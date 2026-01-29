@@ -1,12 +1,13 @@
 import { StatusCodes } from "http-status-codes";
-import { verify } from "jsonwebtoken";
-import type { User } from "@/api/user/userModel";
+import { sign, verify } from "jsonwebtoken";
+import type { User, ValidateTokenResponse } from "@/api/user/userModel";
 import { UserRepository } from "@/api/user/userRepository";
 import { ServiceResponse } from "@/common/models/serviceResponse";
 import { logger } from "@/server";
 import { env } from "@/common/utils/envConfig";
 import {
   comparePass,
+  compareToken,
   hashToken,
   issueAccessToken,
   issueRefreshToken,
@@ -28,7 +29,7 @@ export class UserService {
         return ServiceResponse.failure(
           "No Users found",
           null,
-          StatusCodes.NOT_FOUND
+          StatusCodes.NOT_FOUND,
         );
       }
       return ServiceResponse.success<User[]>("Users found", users);
@@ -38,7 +39,7 @@ export class UserService {
       return ServiceResponse.failure(
         "An error occurred while retrieving users.",
         null,
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -51,7 +52,7 @@ export class UserService {
         return ServiceResponse.failure(
           "User not found",
           null,
-          StatusCodes.NOT_FOUND
+          StatusCodes.NOT_FOUND,
         );
       }
       return ServiceResponse.success<User>("User found", user);
@@ -63,7 +64,7 @@ export class UserService {
       return ServiceResponse.failure(
         "An error occurred while finding user.",
         null,
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -87,7 +88,7 @@ export class UserService {
       return ServiceResponse.success<User>(
         "User created successfully",
         newUser,
-        StatusCodes.CREATED
+        StatusCodes.CREATED,
       );
     } catch (ex) {
       const errorMessage = `Error creating user: ${(ex as Error).message}`;
@@ -95,7 +96,7 @@ export class UserService {
       return ServiceResponse.failure(
         "An error occurred while creating user.",
         null,
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -105,7 +106,7 @@ export class UserService {
       return ServiceResponse.failure(
         "Invalid verification token",
         null,
-        StatusCodes.BAD_REQUEST
+        StatusCodes.BAD_REQUEST,
       );
     }
     const verified = verify(verificationToken, env.EMAILTOKEN_SECRET);
@@ -113,7 +114,7 @@ export class UserService {
       return ServiceResponse.failure(
         "Invalid or expired verification token",
         null,
-        StatusCodes.UNAUTHORIZED
+        StatusCodes.UNAUTHORIZED,
       );
     }
     const userId = (verified as any).userId;
@@ -123,7 +124,7 @@ export class UserService {
         return ServiceResponse.failure(
           "User not found",
           null,
-          StatusCodes.NOT_FOUND
+          StatusCodes.NOT_FOUND,
         );
       }
     }
@@ -139,7 +140,7 @@ export class UserService {
         return ServiceResponse.failure(
           "User not found",
           null,
-          StatusCodes.NOT_FOUND
+          StatusCodes.NOT_FOUND,
         );
       }
       return ServiceResponse.success<null>("User disabled successfully", null);
@@ -151,7 +152,7 @@ export class UserService {
       return ServiceResponse.failure(
         "An error occurred while disabling user.",
         null,
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -163,7 +164,7 @@ export class UserService {
         return ServiceResponse.failure(
           "User not found",
           null,
-          StatusCodes.NOT_FOUND
+          StatusCodes.NOT_FOUND,
         );
       }
       return ServiceResponse.success<null>("User blocked successfully", null);
@@ -175,7 +176,7 @@ export class UserService {
       return ServiceResponse.failure(
         "An error occurred while blocking user.",
         null,
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -183,7 +184,7 @@ export class UserService {
   async changePassword(
     id: number,
     oldPassword: string,
-    newPassword: string
+    newPassword: string,
   ): Promise<ServiceResponse<null>> {
     try {
       const user = await this.userRepository.findById(id);
@@ -191,7 +192,7 @@ export class UserService {
         return ServiceResponse.failure(
           "User not found",
           null,
-          StatusCodes.NOT_FOUND
+          StatusCodes.NOT_FOUND,
         );
       }
       // In real implementation, verify oldPassword with stored passwordHash
@@ -200,7 +201,7 @@ export class UserService {
         return ServiceResponse.failure(
           "Old password is incorrect",
           null,
-          StatusCodes.UNAUTHORIZED
+          StatusCodes.UNAUTHORIZED,
         );
       }
 
@@ -210,12 +211,12 @@ export class UserService {
         return ServiceResponse.failure(
           "Failed to update password",
           null,
-          StatusCodes.INTERNAL_SERVER_ERROR
+          StatusCodes.INTERNAL_SERVER_ERROR,
         );
       }
       return ServiceResponse.success<null>(
         "Password changed successfully",
-        null
+        null,
       );
     } catch (ex) {
       const errorMessage = `Error changing password for user with id ${id}: ${
@@ -225,13 +226,13 @@ export class UserService {
       return ServiceResponse.failure(
         "An error occurred while changing password.",
         null,
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   async findAccountByEmail(
-    email: string
+    email: string,
   ): Promise<ServiceResponse<User | null>> {
     try {
       const user = await this.userRepository.findByEmail(email);
@@ -239,7 +240,7 @@ export class UserService {
         return ServiceResponse.failure(
           "User not found",
           null,
-          StatusCodes.NOT_FOUND
+          StatusCodes.NOT_FOUND,
         );
       }
       return ServiceResponse.success<User>("User found", user);
@@ -251,7 +252,7 @@ export class UserService {
       return ServiceResponse.failure(
         "An error occurred while finding user by email.",
         null,
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -259,7 +260,7 @@ export class UserService {
   async resetPassword(
     id: number,
     newPassword: string,
-    resetToken: string
+    resetToken: string,
   ): Promise<ServiceResponse<null>> {
     try {
       const success = await this.userRepository.updatePassword(id, newPassword); // Hash newPassword in real implementation
@@ -268,7 +269,7 @@ export class UserService {
         return ServiceResponse.failure(
           "User not found",
           null,
-          StatusCodes.NOT_FOUND
+          StatusCodes.NOT_FOUND,
         );
       }
       return ServiceResponse.success<null>("Password reset successfully", null);
@@ -280,31 +281,31 @@ export class UserService {
       return ServiceResponse.failure(
         "An error occurred while resetting password.",
         null,
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   async refreshToken(
     id: number,
-    refreshToken: string
+    refreshToken: string,
   ): Promise<ServiceResponse<null>> {
     try {
       const success = await this.userRepository.updateRefreshToken(
         id,
-        refreshToken
+        refreshToken,
       ); // Hash refreshToken in real implementation
 
       if (!success) {
         return ServiceResponse.failure(
           "User not found",
           null,
-          StatusCodes.NOT_FOUND
+          StatusCodes.NOT_FOUND,
         );
       }
       return ServiceResponse.success<null>(
         "Refresh token updated successfully",
-        null
+        null,
       );
     } catch (ex) {
       const errorMessage = `Error updating refresh token for user with id ${id}: ${
@@ -314,14 +315,14 @@ export class UserService {
       return ServiceResponse.failure(
         "An error occurred while updating refresh token.",
         null,
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   async signIn(
     email: string,
-    password: string
+    password: string,
   ): Promise<
     ServiceResponse<{
       accessToken: string;
@@ -334,7 +335,7 @@ export class UserService {
         return ServiceResponse.failure(
           "User not found",
           null,
-          StatusCodes.NOT_FOUND
+          StatusCodes.NOT_FOUND,
         );
       }
       // In real implementation, verify password with stored passwordHash
@@ -343,7 +344,7 @@ export class UserService {
         return ServiceResponse.failure(
           "Password is incorrect",
           null,
-          StatusCodes.UNAUTHORIZED
+          StatusCodes.UNAUTHORIZED,
         );
       }
 
@@ -367,7 +368,7 @@ export class UserService {
       return ServiceResponse.failure(
         "An error occurred while signing in.",
         null,
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -378,7 +379,7 @@ export class UserService {
         return ServiceResponse.failure(
           "Invalid user ID",
           null,
-          StatusCodes.BAD_REQUEST
+          StatusCodes.BAD_REQUEST,
         );
       }
       const success = await this.userRepository.updateRefreshToken(id, "");
@@ -386,7 +387,7 @@ export class UserService {
         return ServiceResponse.failure(
           "User not found",
           null,
-          StatusCodes.NOT_FOUND
+          StatusCodes.NOT_FOUND,
         );
       }
       return ServiceResponse.success<null>("Sign-out successful", null);
@@ -398,7 +399,7 @@ export class UserService {
       return ServiceResponse.failure(
         "An error occurred while signing out.",
         null,
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -416,7 +417,7 @@ export class UserService {
         return ServiceResponse.failure(
           "User not found",
           null,
-          StatusCodes.NOT_FOUND
+          StatusCodes.NOT_FOUND,
         );
       }
       const accessToken = issueAccessToken(user.id ?? 0, user.role);
@@ -438,7 +439,119 @@ export class UserService {
       return ServiceResponse.failure(
         "An error occurred while logging in with OAuth.",
         null,
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async validateToken(
+    accessToken: string,
+    refreshToken: string,
+  ): Promise<ServiceResponse<ValidateTokenResponse | null>> {
+    try {
+      if (accessToken && accessToken.length > 0) {
+        const verified = verify(accessToken, env.ACCESSTOKEN_SECRET) as any;
+        if (!verified || !verified.userId || verified.userId <= 0) {
+          return ServiceResponse.failure(
+            "Invalid or expired access token",
+            null,
+            StatusCodes.UNAUTHORIZED,
+          );
+        }
+
+        const userId = verified.userId;
+        const user = await this.userRepository.findById(userId);
+        if (!user) {
+          return ServiceResponse.failure(
+            "User not found",
+            null,
+            StatusCodes.NOT_FOUND,
+          );
+        }
+        const refreshToken = issueRefreshToken(user.id ?? 0, user.role);
+        user.refreshTokenHash = await hashToken(refreshToken);
+        await this.userRepository.updateRefreshToken(
+          user.id ?? 0,
+          user.refreshTokenHash,
+        );
+
+        return ServiceResponse.success<ValidateTokenResponse>(
+          "Access token is valid",
+          {
+            id: user.id ?? 0,
+            code: user.code,
+            displayName: user.displayName ?? undefined,
+            state: user.state,
+            role: user.role,
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+          },
+        );
+      }
+      if (refreshToken && refreshToken.length > 0) {
+        const verified = verify(refreshToken, env.REFRESHTOKEN_SECRET) as any;
+        if (!verified || !verified.userId || verified.userId <= 0) {
+          return ServiceResponse.failure(
+            "Invalid or expired refresh token",
+            null,
+            StatusCodes.UNAUTHORIZED,
+          );
+        }
+
+        const userId = verified.userId;
+        const user = await this.userRepository.findById(userId);
+        if (!user) {
+          return ServiceResponse.failure(
+            "User not found",
+            null,
+            StatusCodes.NOT_FOUND,
+          );
+        }
+
+        const isValid = await compareToken(
+          refreshToken,
+          user.refreshTokenHash!, // In real implementation, retrieve stored hashed refresh token
+        );
+        if (!isValid) {
+          return ServiceResponse.failure(
+            "Refresh token does not match",
+            null,
+            StatusCodes.UNAUTHORIZED,
+          );
+        }
+
+        const newAccessToken = issueAccessToken(user.id ?? 0, user.role);
+        const newRefreshToken = issueRefreshToken(user.id ?? 0, user.role);
+        user.refreshTokenHash = await hashToken(newRefreshToken);
+        await this.userRepository.updateRefreshToken(
+          user.id ?? 0,
+          user.refreshTokenHash,
+        );
+        return ServiceResponse.success<ValidateTokenResponse>(
+          "Refresh token is valid",
+          {
+            id: user.id,
+            code: user.code,
+            displayName: user.displayName ?? undefined,
+            state: user.state,
+            role: user.role,
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+          },
+        );
+      }
+      return ServiceResponse.failure(
+        "Invalid Tokens",
+        null,
+        StatusCodes.UNAUTHORIZED,
+      );
+    } catch (ex) {
+      const errorMessage = `Error validating access token: ${(ex as Error).message}`;
+      logger.error(errorMessage);
+      return ServiceResponse.failure(
+        "An error occurred while validating access token.",
+        null,
+        StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
   }

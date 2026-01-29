@@ -1,5 +1,6 @@
 import { ollama } from "../llms/llama/ollama";
-import { Entity, Rule } from "./gameModel";
+import { Entity, Rule, RuleFormat, RuleFormatSchema } from "./gameModel";
+import { MODELS } from "../constants";
 
 export class AgentService {
   async chat(
@@ -18,7 +19,7 @@ export class AgentService {
 
   async embedText(text: string): Promise<number[] | null> {
     const res = await ollama.embed({
-      model: "ruler-embeddings",
+      model: MODELS.qwen_embedding,
       input: text,
     });
     return (res?.embeddings ?? [])[0] ?? null;
@@ -30,29 +31,23 @@ export class AgentService {
     return [];
   }
 
-  async extractKeywords(text: string, options?: { model?: string }) {
+  async extractKeywords(
+    text: string,
+    options?: { model?: string },
+  ): Promise<RuleFormat> {
     const res = await this.chat(
-      options?.model || "llama3.3b",
+      options?.model || MODELS.llama3,
       [
         {
           role: "system",
-          content: `You are an expert at extracting keywords from text. Given the following text, extract the most relevant keywords that capture the main topics and themes. Return the keywords as a JSON array.`,
+          content: `You are an expert at extracting keywords from text. Given the following text, extract the most relevant keywords that capture the main topics and themes. also based on origin document, give a definition for each keyword. Return the keywords as a JSON array.`,
         },
         { role: "user", content: `Text: ${text}` },
       ],
-      { type: "json" },
+      { type: RuleFormatSchema.toJSONSchema() },
     );
-    return JSON.parse(res) as string[];
+    return JSON.parse(res) as RuleFormat;
   }
-
-  async generateTermDefinition(
-    term: string,
-    options?: {
-      model?: string;
-    },
-  ) {}
-
-  async buildRuleGraph(rules: Rule[]) {}
 
   //
 

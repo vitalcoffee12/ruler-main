@@ -2,8 +2,12 @@ import { env } from "@/common/utils/envConfig";
 import { app, logger } from "@/server";
 import mongoose from "mongoose";
 import "reflect-metadata";
+import { ollama } from "./api/llms/llama/ollama";
 
-const server = app.listen(env.PORT, () => {
+const server = app.listen(env.PORT, async (err) => {
+  if (err) {
+    console.log(err);
+  }
   const {
     NODE_ENV,
     HOST,
@@ -15,11 +19,12 @@ const server = app.listen(env.PORT, () => {
   } = env;
   logger.info(`Server (${NODE_ENV}) running on port http://${HOST}:${PORT}`);
 
-  mongoose
+  await mongoose
     .connect(DB_MONGO_URI, {
       dbName: DB_MONGO_NAME,
       user: DB_MONGO_USER,
       pass: DB_MONGO_PASS,
+      directConnection: true,
     })
     .then(() => {
       logger.info("Connected to MongoDB");

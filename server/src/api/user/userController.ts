@@ -1,6 +1,7 @@
 import type { Request, RequestHandler, Response } from "express";
 
 import { userService } from "@/api/user/userService";
+import { OAUTH_PROVIDERS } from "@/common/constants";
 
 class UserController {
   public getUsers: RequestHandler = async (_req: Request, res: Response) => {
@@ -16,7 +17,7 @@ class UserController {
 
   public checkEmailExists: RequestHandler = async (
     req: Request,
-    res: Response
+    res: Response,
   ) => {
     const { email } = req.body;
     const exists = await userService.checkEmailExists(email);
@@ -31,7 +32,7 @@ class UserController {
 
   public verifyUserEmail: RequestHandler = async (
     req: Request,
-    res: Response
+    res: Response,
   ) => {
     const { verificationToken } = req.body;
     const serviceResponse = await userService.verifyEmail(verificationToken);
@@ -52,21 +53,21 @@ class UserController {
 
   public changeUserPassword: RequestHandler = async (
     req: Request,
-    res: Response
+    res: Response,
   ) => {
     const id = Number.parseInt(req.params.id as string, 10);
     const { oldPassword, newPassword } = req.body;
     const serviceResponse = await userService.changePassword(
       id,
       oldPassword,
-      newPassword
+      newPassword,
     );
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 
   public findAccountByEmail: RequestHandler = async (
     req: Request,
-    res: Response
+    res: Response,
   ) => {
     const { email } = req.body;
     const serviceResponse = await userService.findAccountByEmail(email);
@@ -75,13 +76,13 @@ class UserController {
 
   public resetPassword: RequestHandler = async (
     req: Request,
-    res: Response
+    res: Response,
   ) => {
     const { email, newPassword, resetToken } = req.body;
     const serviceResponse = await userService.resetPassword(
       email,
       newPassword,
-      resetToken
+      resetToken,
     );
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
@@ -106,14 +107,23 @@ class UserController {
 
   public loginWithOAuth: RequestHandler = async (
     req: Request,
-    res: Response
+    res: Response,
   ) => {
-    const provider = req.params.provider as
-      | "google"
-      | "github"
-      | "kakao"
-      | "naver";
+    const provider = req.params.provider as OAUTH_PROVIDERS;
     const serviceResponse = await userService.loginWithOAuth(provider);
+    res.status(serviceResponse.statusCode).send(serviceResponse);
+  };
+
+  public validateToken: RequestHandler = async (
+    req: Request,
+    res: Response,
+  ) => {
+    const accessToken = req.headers["Authorization"] as string;
+    const refreshToken = req.headers["x-refresh-token"] as string;
+    const serviceResponse = await userService.validateToken(
+      accessToken,
+      refreshToken,
+    );
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 }

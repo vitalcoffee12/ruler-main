@@ -10,6 +10,7 @@ export class GameService {
     private gameRepository: GameRepository = new GameRepository(),
   ) {}
 
+  // add entities to game world : manual
   async addEntities(
     guildCode: string,
     entities: { name: string; type: string; description: string }[],
@@ -30,6 +31,7 @@ export class GameService {
     });
   }
 
+  // add entities to game world : AI generated
   async generateEntities(guildCode: string, topic: string): Promise<Entity[]> {
     const worlds = await this.gameRepository.getWorld(guildCode);
 
@@ -37,10 +39,12 @@ export class GameService {
     return [];
   }
 
+  // find entities in game world with keywords
   async searchEntities(keywords: string[]) {
     return [];
   }
 
+  // send message (actual game play)
   async sendMessage(
     guildCode: string,
     userId: number,
@@ -56,6 +60,7 @@ export class GameService {
     });
   }
 
+  // flag up when all users have sent their messages and ready for AI agent to run
   async flagup(guildCode: string) {
     const guild = await this.guildRepository.findByCode(guildCode);
     if (!guild) {

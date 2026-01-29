@@ -22,8 +22,8 @@ export const validateRequest =
       });
       next();
     } catch (err) {
-      const errors = (err as ZodError).errors.map((e) => {
-        const fieldPath = e.path.length > 0 ? e.path.join(".") : "root";
+      const errors = (err as any)?.errors.map((e: any) => {
+        const fieldPath = e?.path.length > 0 ? e?.path.join(".") : "root";
         return `${fieldPath}: ${e.message}`;
       });
 
@@ -36,7 +36,7 @@ export const validateRequest =
       const serviceResponse = ServiceResponse.failure(
         errorMessage,
         null,
-        statusCode
+        statusCode,
       );
       res.status(serviceResponse.statusCode).send(serviceResponse);
     }
@@ -92,13 +92,13 @@ export const validateToken =
       return ServiceResponse.failure(
         "Invalid token",
         null,
-        StatusCodes.UNAUTHORIZED
+        StatusCodes.UNAUTHORIZED,
       );
     } catch (err) {
       return ServiceResponse.failure(
         "Invalid token",
         null,
-        StatusCodes.UNAUTHORIZED
+        StatusCodes.UNAUTHORIZED,
       );
     }
   };

@@ -32,9 +32,11 @@ export const RuleSchema = z.object({
   id: z.number().optional(),
   version: z.number(),
   title: z.string(),
-  content: z.string(),
-  embed: z.string().optional(),
+  content: z.array(z.string()),
   keywords: z.array(z.string()),
+  categories: z.array(z.string()),
+  children: z.array(z.number()),
+  embedding: z.array(z.number()).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -45,8 +47,8 @@ export const RuleSetSchema = z.object({
   code: z.string(),
   name: z.string(),
   description: z.string().optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
 });
 
 export type Term = z.infer<typeof TermSchema>;
@@ -55,7 +57,7 @@ export const TermSchema = z.object({
   version: z.number(),
   term: z.string(),
   definition: z.string(),
-  embed: z.string().optional(),
+  embedding: z.array(z.number()).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -69,6 +71,15 @@ export const TermSetSchema = z.object({
   updatedAt: z.date(),
 });
 
+export type RuleFormat = z.infer<typeof RuleFormatSchema>;
+export const RuleFormatSchema = z.object({
+  keywords: z.array(
+    z.object({
+      term: z.string(),
+      definition: z.string(),
+    }),
+  ),
+});
 // game turn : free talks(several game histories) -> flag up -> AI agent run -> scene history -> AI agent game histories
 
 export type GameHistory = z.infer<typeof GameHistorySchema>;

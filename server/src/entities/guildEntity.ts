@@ -25,6 +25,9 @@ export class GuildEntity extends BaseEntity implements Guild {
   @Column({ type: "text", nullable: true })
   description?: string;
 
+  @Column({ type: "varchar", length: 255, nullable: true })
+  iconPath?: string;
+
   @Column({ default: "active", type: "varchar", length: 20 })
   state: "active" | "disabled";
 

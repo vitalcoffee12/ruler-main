@@ -1,22 +1,21 @@
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 
-import {
-  ActionButton,
-  CancelButton,
-  CheckboxField,
-  InputField,
-  RadioField,
-  SelectField,
-  SubmitButton,
-  TextAreaField,
-} from "~/components/forms";
+import { CheckboxField, InputField, SubmitButton } from "~/components/forms";
 import logoLight from "../welcome/logo-light.png";
-import background from "./backs.jpg";
 import { useNavigate } from "react-router";
+import { UserContext } from "~/contexts/userContext";
 
 export default function Signin() {
   const nav = useNavigate();
+  const user = useContext(UserContext);
+
   const [select, setSelect] = useState("standard");
+  useEffect(() => {
+    if (user && user.id > 0) {
+      nav("/game");
+    }
+  }, []);
+
   return (
     <>
       <div

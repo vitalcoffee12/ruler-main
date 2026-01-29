@@ -17,6 +17,9 @@ const envSchema = z.object({
     .default(1000),
   COMMON_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(1000),
 
+  // LLM Settings
+  OLLAMA_HOST: z.string().min(1).default("localhost:11434"),
+
   // database variables
   DB_HOST: z.string().min(1),
   DB_PORT: z.coerce.number().int().positive(),

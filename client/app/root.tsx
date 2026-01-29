@@ -9,6 +9,9 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import Loading from "./components/loading";
+import { CookiesProvider } from "react-cookie";
+import { UserProvider } from "./contexts/userContext";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -50,8 +53,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+export function HydrateFallback() {
+  return <Loading />;
+}
+
 export default function App() {
-  return <Outlet />;
+  const defaultCookieOptions = {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7 * 2,
+    domain: "",
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+  };
+
+  return (
+    <CookiesProvider defaultSetOptions={defaultCookieOptions}>
+      <UserProvider>
+        <Outlet />
+      </UserProvider>
+    </CookiesProvider>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

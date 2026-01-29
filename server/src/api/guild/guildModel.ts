@@ -27,8 +27,10 @@ export const GetGuildSchema = z.object({
 });
 export const CreateGuildSchema = z.object({
   body: z.object({
+    code: z.string(),
     ownerId: commonValidations.id,
     name: z.string(),
+    iconPath: z.string().optional(),
     description: z.string().optional(),
   }),
 });
