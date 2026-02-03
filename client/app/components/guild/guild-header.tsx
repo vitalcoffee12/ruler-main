@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 
 export default function GuildHeader(props: {
-  guildId: string;
+  guildCode: string;
   guildName: string;
 }) {
   const nav = useNavigate();
@@ -13,7 +13,7 @@ export default function GuildHeader(props: {
       <div
         className="cursor-pointer"
         onClick={() => {
-          nav(`/game/guild/${props.guildId}`);
+          nav(`/game/guild/code/${props.guildCode}`);
         }}
       >
         {props.guildName}

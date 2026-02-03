@@ -1,11 +1,16 @@
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { useContext, useState } from "react";
 import { UserContext } from "~/contexts/userContext";
+import useLoading from "~/hooks/use-loading.hook";
 import { postRequest } from "~/request";
 
-export default function CreateGuildModal(props: {}) {
+export default function CreateGuildModal(props: {
+  onClose: () => void;
+  onRefresh: () => void;
+}) {
   const user = useContext(UserContext);
   const [iconHovered, setIconHovered] = useState(false);
+  const [loading, setIsLoading] = useLoading();
 
   const [data, setData] = useState({
     guildName: "",
@@ -13,21 +18,33 @@ export default function CreateGuildModal(props: {}) {
   });
   const handleIconClick = () => {};
   const handleCreateGuild = async () => {
-    await postRequest(
-      "/guild/create",
-      {
-        icon: "",
-        name: data.guildName,
-      },
-      {
-        Authorization: `Bearer ${user.accessToken}`,
-        "x-refrehsh-token": user.refreshToken,
-      },
-    );
+    try {
+      setIsLoading(true);
+      await postRequest(
+        "/guild/create",
+        {
+          iconPath: "",
+          name: data.guildName,
+          ownerId: user.id,
+        },
+        {
+          Authorization: `Bearer ${user.accessToken}`,
+          "x-refrehsh-token": user.refreshToken,
+        },
+      );
+      setIsLoading(false);
+      props.onClose();
+      props.onRefresh();
+    } catch (ex) {
+      //handle error
+    }
+    setIsLoading(false);
+    props.onClose();
   };
 
   return (
     <div className="flex flex-col min-w-[300px] min-h-[200px]">
+      {loading}
       <div>
         <h2 className="text-lg mb-4">Create a New Guild</h2>
         <div className="text-sm text-stone-600 mb-4">
@@ -68,7 +85,7 @@ export default function CreateGuildModal(props: {}) {
         <div className="flex justify-end w-lg">
           <button
             className="bg-lime-600 text-white px-4 py-2 rounded hover:bg-lime-700 transition duration-200 active:scale-95 cursor-pointer"
-            onClick={handleCreateGuild}
+            onClick={async () => await handleCreateGuild()}
           >
             Create Guild
           </button>

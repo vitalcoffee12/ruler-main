@@ -3,10 +3,12 @@ import "./lobby.css";
 import GuildList from "~/components/lobby/guild-list";
 import { useModal } from "~/hooks/use-modal.hook";
 import CreateGuildModal from "~/components/lobby/create-guild.modal";
+import { useState } from "react";
 
 export default function Layout() {
   const nav = useNavigate();
   const { Modal, openModal, closeModal } = useModal();
+  const [refreshGuildList, setRefreshGuildList] = useState(false);
 
   return (
     <>
@@ -22,7 +24,11 @@ export default function Layout() {
               R
             </div>
           </div>
-          <GuildList userId="user-123" onClickCreateGuild={openModal} />
+          <GuildList
+            userId="user-123"
+            onClickCreateGuild={openModal}
+            refreshGuildList={refreshGuildList}
+          />
           <div className="cursor-pointer hover:bg-stone-100 rounded-lg m-4 row-start-3 row-end-4">
             <div>
               <img
@@ -38,7 +44,14 @@ export default function Layout() {
         </div>
       </div>
       <Modal>
-        <CreateGuildModal />
+        <CreateGuildModal
+          onClose={() => {
+            closeModal();
+          }}
+          onRefresh={() => {
+            setRefreshGuildList(!refreshGuildList);
+          }}
+        />
       </Modal>
     </>
   );

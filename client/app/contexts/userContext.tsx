@@ -13,9 +13,9 @@ export interface User {
 }
 const defaultUser: User = {
   id: 1,
-  code: "asdf",
-  state: "undefined",
-  role: "guest",
+  code: "U-9oEjAF5a",
+  state: "active",
+  role: "user",
   accessToken: "acccessToken-clientsent",
   refreshToken: "refreshToken-clientsent",
 };

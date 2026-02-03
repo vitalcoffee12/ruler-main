@@ -15,8 +15,8 @@ export interface GuildChatMessage {
 }
 
 export default function GuildChat(props: {
+  guildCode: string;
   messages: GuildChatMessage[];
-  guildId: string;
 }) {
   return (
     <div className="guild-chat">

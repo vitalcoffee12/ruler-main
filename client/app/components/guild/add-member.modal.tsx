@@ -1,8 +1,11 @@
-export default function AddMemberModal(props: { guildId: string }) {
+export default function AddMemberModal(props: {
+  guildCode: string;
+  guildName: string;
+}) {
   return (
     <div className="">
       <div className="flex flex-col min-w-lg">
-        <h2 className="text-lg mb-4">Invite friends to {props.guildId}</h2>
+        <h2 className="text-lg mb-4">Invite friends to {props.guildName}</h2>
         <div className="relative">
           <input
             type="text"
@@ -31,7 +34,7 @@ export default function AddMemberModal(props: { guildId: string }) {
           <input
             type="text"
             readOnly
-            value={`https://ruler.gg/invite/${props.guildId}`}
+            value={`https://ruler.gg/invite/${props.guildCode}`}
             className="text-sm border border-stone-300 rounded px-2 py-2 w-full"
           />
         </div>

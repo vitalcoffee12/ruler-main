@@ -6,7 +6,7 @@ import { commonValidations } from "@/common/utils/commonValidation";
 extendZodWithOpenApi(z);
 
 export const GuildState = z.enum(["active", "disabled"]);
-export const GuildRole = z.enum(["user", "admin"]);
+export const GuildRole = z.enum(["user", "owner", "manager"]);
 export type Guild = z.infer<typeof GuildSchema>;
 export const GuildSchema = z.object({
   id: z.number().optional(),
@@ -21,13 +21,23 @@ export const GuildSchema = z.object({
   updatedAt: z.date(),
 });
 
+export type GuildMember = z.infer<typeof GuildMemberSchema>;
+export const GuildMemberSchema = z.object({
+  id: z.number().optional(),
+  guildId: z.number(),
+  guildCode: z.string(),
+  userId: z.number(),
+  userCode: z.string(),
+  role: z.string(),
+  joinedAt: z.date(),
+});
+
 // Input Validation for 'GET guilds/:id' endpoint
 export const GetGuildSchema = z.object({
   params: z.object({ code: commonValidations.code }),
 });
 export const CreateGuildSchema = z.object({
   body: z.object({
-    code: z.string(),
     ownerId: commonValidations.id,
     name: z.string(),
     iconPath: z.string().optional(),

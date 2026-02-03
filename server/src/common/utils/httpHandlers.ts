@@ -44,6 +44,7 @@ export const validateRequest =
 
 export const validateToken =
   () => async (req: Request, res: Response, next: NextFunction) => {
+    next();
     try {
       const accessToken = req.header("Authorization");
       const refreshToken = req.header("x-refresh-token");

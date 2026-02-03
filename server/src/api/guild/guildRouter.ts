@@ -33,18 +33,33 @@ guildRouter.get(
 // get guild information by id - verified guilds
 guildRegistry.registerPath({
   method: "get",
-  path: "/guild/{code}",
+  path: "/guild/code/{code}",
   tags: ["Guild"],
   request: { params: GetGuildSchema.shape.params },
   responses: createApiResponse(GuildSchema, "Success"),
 });
 
 guildRouter.get(
-  "/:code",
+  "/code/:code",
   validateRequest(GetGuildSchema),
   validateToken(),
   guildController.getGuild,
 );
+
+guildRegistry.registerPath({
+  method: "get",
+  path: "/guild/user",
+  tags: ["Guild"],
+  request: {
+    query: z.object({
+      userId: z.number().optional(),
+      userCode: z.string().optional(),
+    }),
+  },
+  responses: createApiResponse(z.array(GuildSchema), "Success"),
+});
+
+guildRouter.get("/user", validateToken(), guildController.getGuildsByUser);
 
 // create new guild - no authentication
 guildRegistry.registerPath({

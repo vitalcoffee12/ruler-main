@@ -2,7 +2,8 @@ import { useModal } from "~/hooks/use-modal.hook";
 import AddMemberModal from "./add-member.modal";
 
 export default function GuildMemberList(props: {
-  guildId: string;
+  guildCode: string;
+  guildName: string;
   members: { userId: string; name: string; icon: string }[];
 }) {
   const { Modal, openModal, closeModal } = useModal();
@@ -38,7 +39,10 @@ export default function GuildMemberList(props: {
         </div>
       </div>
       <Modal>
-        <AddMemberModal guildId={props.guildId} />
+        <AddMemberModal
+          guildCode={props.guildCode}
+          guildName={props.guildName}
+        />
       </Modal>
     </>
   );

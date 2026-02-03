@@ -1,7 +1,7 @@
 import { forwardRef, memo, useEffect, useRef, useState } from "react";
 
 export default function GuildWorld(props: {
-  guildId: string;
+  guildCode: string;
   worlds: { nodeId: string; name: string; description: string }[];
   relations: { fromNodeId: string; toNodeId: string; type: string }[];
 }) {
@@ -16,7 +16,7 @@ export default function GuildWorld(props: {
     }
     const rels = props.relations.filter(
       (rel) =>
-        rel.fromNodeId === hoveredNodeId || rel.toNodeId === hoveredNodeId
+        rel.fromNodeId === hoveredNodeId || rel.toNodeId === hoveredNodeId,
     );
 
     const connectedNodeIds = new Set<string>();
@@ -124,7 +124,7 @@ function GuildWorldNode(
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
   },
-  ref: React.Ref<{ [key: string]: HTMLDivElement | null }>
+  ref: React.Ref<{ [key: string]: HTMLDivElement | null }>,
 ) {
   const [isHovered, setIsHovered] = useState(false);
 

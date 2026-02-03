@@ -28,7 +28,7 @@ export default [
         ]),
       ]),
 
-      route("guild/:guildId", "views/game/guild-layout.tsx", [
+      route("guild/code/:guildCode", "views/game/guild-layout.tsx", [
         index("views/game/guild-dashboard.tsx"),
       ]),
     ]),

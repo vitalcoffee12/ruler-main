@@ -1,28 +1,35 @@
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { UserContext } from "~/contexts/userContext";
+import { getRequest } from "~/request";
 
 export default function GuildList(props: {
   userId: string;
+  refreshGuildList?: boolean;
   onClickCreateGuild?: () => void;
 }) {
-  const guilds = [
-    { guildId: "guild-1", guildName: "Guild One" },
-    { guildId: "guild-2", guildName: "Guild Two" },
-    { guildId: "guild-3", guildName: "Guild One" },
-    { guildId: "guild-4", guildName: "Guild Two" },
-    { guildId: "guild-5", guildName: "Guild One" },
-    { guildId: "guild-6", guildName: "Guild Two" },
-    { guildId: "guild-7", guildName: "Guild One" },
-    { guildId: "guild-8", guildName: "Guild Two" },
-    { guildId: "guild-9", guildName: "Guild One" },
-    { guildId: "guild-10", guildName: "Guild Two" },
-    { guildId: "guild-11", guildName: "Guild One" },
-    { guildId: "guild-12", guildName: "Guild Two" },
-    { guildId: "guild-13", guildName: "Guild One" },
-    { guildId: "guild-14", guildName: "Guild Two" },
-    { guildId: "guild-15", guildName: "Guild Two" },
-  ];
+  const user = useContext(UserContext);
+  const [guilds, setGuilds] = useState<{ code: string; name: string }[]>([]);
   const nav = useNavigate();
+
+  const fetchGuilds = async () => {
+    try {
+      const res = await getRequest("/guild/user", {
+        userId: user?.id,
+        userCode: user?.code,
+      });
+
+      if (res.status === 200 && res.data) {
+        setGuilds(res.data.responseObject);
+      }
+    } catch (ex) {
+      console.log(ex);
+    }
+  };
+
+  useEffect(() => {
+    fetchGuilds();
+  }, [user, props.refreshGuildList]);
 
   return (
     <>
@@ -31,15 +38,11 @@ export default function GuildList(props: {
         style={{}}
       >
         {guilds.map((guild) => (
-          <GuildListItem
-            key={guild.guildId}
-            guildId={guild.guildId}
-            guildName={guild.guildName}
-          />
+          <GuildListItem key={guild.code} code={guild.code} name={guild.name} />
         ))}
         <GuildListItem
-          guildId="guild-create"
-          guildName="Create Guild"
+          code="guild-create"
+          name="Create Guild"
           onClick={props.onClickCreateGuild}
         />
       </div>
@@ -48,12 +51,12 @@ export default function GuildList(props: {
 }
 
 function GuildListItem(props: {
-  guildId: string;
-  guildName: string;
+  code: string;
+  name: string;
   onClick?: () => void;
 }) {
   const nav = useNavigate();
-  const isCreateGuild = props.guildId === "guild-create";
+  const isCreateGuild = props.code === "guild-create";
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -72,7 +75,7 @@ function GuildListItem(props: {
               props.onClick();
             }
           } else {
-            nav(`/game/guild/${props.guildId}`);
+            nav(`/game/guild/code/${props.code}`);
           }
         }}
       >
@@ -93,7 +96,7 @@ function GuildListItem(props: {
         className="absolute top-1/2 rounded bg-stone-800 text-white text-sm px-2 py-1 transform -translate-y-1/2 left-full ml-4 whitespace-nowrap"
         // style={{ display: isHovered ? "block" : "none" }}
       >
-        {props.guildName}
+        {props.name}
       </div>
     </div>
   );

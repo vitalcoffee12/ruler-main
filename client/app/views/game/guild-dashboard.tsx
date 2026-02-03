@@ -1,34 +1,58 @@
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import GuildChat from "~/components/guild/guild-chat";
 import GuildHeader from "~/components/guild/guild-header";
 import GuildMemberList from "~/components/guild/guild-member-list";
 import GuildRefs from "~/components/guild/guild-refs";
 import GuildWorld from "~/components/guild/guild-world";
+import { getRequest } from "~/request";
 
 export default function Dashboard() {
   const nav = useNavigate();
   const location = useLocation();
-  const guildId = location.pathname.split("/")[3];
+  const guildCode = location.pathname.split("/")[4];
+  const [guild, setGuild] = useState<any>(null);
+
+  const fetchGuildData = async () => {
+    // Fetch guild data here if needed
+    const res = await getRequest(`/guild/code/${guildCode}`);
+    if (res.status === 200 && res.data) {
+      console.log(res);
+      setGuild(res.data.responseObject);
+    }
+  };
+
+  useEffect(() => {
+    fetchGuildData();
+  }, [guildCode]);
 
   return (
     <div className="guild-dashboard">
       <div className="guild-dashboard-header">
         <GuildHeader
-          guildId={guildId}
-          guildName="미나어리마넝리ㅏㅁ너이ㅏ러민;ㅏ어리;만어리ㅏ먼이"
+          guildCode={guildCode}
+          guildName={guild ? guild.name : ""}
         />
       </div>
       <div className="guild-dashboard-leftside no-scrollbar">
-        <GuildMemberList members={members} guildId={guildId} />
+        <GuildMemberList
+          members={members}
+          guildCode={guildCode}
+          guildName={guild ? guild.name : ""}
+        />
       </div>
       <div className="guild-dashboard-mainside no-scrollbar whitespace-pre-wrap">
-        <GuildChat guildId={guildId} messages={chats} />
+        <GuildChat guildCode={guildCode} messages={chats} />
       </div>
       <div className="guild-dashboard-subside no-scrollbar whitespace-pre-wrap">
         <GuildRefs />
       </div>
       <div className="guild-dashboard-rightside no-scrollbar">
-        <GuildWorld worlds={worlds} guildId={guildId} relations={relations} />
+        <GuildWorld
+          worlds={worlds}
+          guildCode={guildCode}
+          relations={relations}
+        />
       </div>
     </div>
   );

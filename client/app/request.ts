@@ -8,6 +8,9 @@ const instance = axios.create({
   },
 });
 
+export function getRequest(url: string, query = {}, headers = {}) {
+  return instance.get(url, { params: query, headers });
+}
 export function postRequest(url: string, data: any, headers = {}) {
   return instance.post(url, data, { headers });
 }

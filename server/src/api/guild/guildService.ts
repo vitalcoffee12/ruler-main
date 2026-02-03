@@ -6,7 +6,7 @@ import { GenerateGuildCode } from "../utils";
 
 export class GuildService {
   constructor(
-    private guildRepository: GuildRepository = new GuildRepository(),
+    private readonly guildRepository: GuildRepository = new GuildRepository(),
   ) {}
 
   async findAll(): Promise<ServiceResponse<Guild[] | null>> {
@@ -81,6 +81,61 @@ export class GuildService {
       const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
       return ServiceResponse.failure(
         `Error creating guild: ${errorMessage}`,
+        null,
+        StatusCodes.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async findGuildsByUser(user: {
+    userId?: number;
+    userCode?: string;
+  }): Promise<ServiceResponse<Guild[] | null>> {
+    try {
+      console.log(user);
+      const guilds = await this.guildRepository.findByMemberUser(user);
+      if (!guilds || guilds.length === 0) {
+        return ServiceResponse.failure(
+          "No guilds found for user",
+          null,
+          StatusCodes.NOT_FOUND,
+        );
+      }
+      return ServiceResponse.success<Guild[]>(
+        "Guilds retrieved successfully",
+        guilds,
+      );
+    } catch (ex) {
+      const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
+      return ServiceResponse.failure(
+        `Error retrieving guilds for user: ${errorMessage}`,
+        null,
+        StatusCodes.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async joinUserToGuild(
+    guild: { guildId?: number; guildCode?: string },
+    users: { userId?: number; userCode?: string; role: string }[],
+  ): Promise<ServiceResponse<null>> {
+    try {
+      const success = await this.guildRepository.joinUsersToGuild(guild, users);
+      if (!success) {
+        return ServiceResponse.failure(
+          "Failed to add user to guild",
+          null,
+          StatusCodes.BAD_REQUEST,
+        );
+      }
+      return ServiceResponse.success<null>(
+        "User(s) added to guild successfully",
+        null,
+      );
+    } catch (ex) {
+      const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
+      return ServiceResponse.failure(
+        `Error adding user to guild: ${errorMessage}`,
         null,
         StatusCodes.INTERNAL_SERVER_ERROR,
       );
