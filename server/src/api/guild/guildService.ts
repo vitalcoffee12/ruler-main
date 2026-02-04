@@ -3,10 +3,15 @@ import { GuildRepository } from "./guildRepository";
 import type { Guild } from "./guildModel";
 import { StatusCodes } from "http-status-codes";
 import { GenerateGuildCode } from "../utils";
+import { GuildMemberEntity } from "@/entities/guilldMemberEntity";
+import { GameRepository } from "../game/gameRepository";
+import { Entity, GameHistory, SceneHistory } from "../game/gameModel";
+import { User } from "../user/userModel";
 
 export class GuildService {
   constructor(
     private readonly guildRepository: GuildRepository = new GuildRepository(),
+    private readonly gameRepository: GameRepository = new GameRepository(),
   ) {}
 
   async findAll(): Promise<ServiceResponse<Guild[] | null>> {
@@ -33,9 +38,22 @@ export class GuildService {
     }
   }
 
-  async findByCode(code: string): Promise<ServiceResponse<Guild | null>> {
+  async findByCode(code: string): Promise<
+    ServiceResponse<{
+      guild: Guild;
+      members: any[];
+      sceneHistories: SceneHistory[];
+      gameHistories: GameHistory[];
+      world: Entity[];
+    } | null>
+  > {
     try {
       const guild = await this.guildRepository.findByCode(code);
+      const members = await this.guildRepository.findMembersByGuild({
+        guildCode: code,
+      });
+      const worlds = await this.gameRepository.getWorld(code, guild?.sceneId!);
+
       if (!guild) {
         return ServiceResponse.failure(
           "Guild not found",
@@ -43,10 +61,17 @@ export class GuildService {
           StatusCodes.NOT_FOUND,
         );
       }
-      return ServiceResponse.success<Guild>(
-        "Guild retrieved successfully",
+      return ServiceResponse.success<{
+        guild: Guild;
+        members: any[];
+        sceneHistories: SceneHistory[];
+        gameHistories: GameHistory[];
+        world: Entity[];
+      }>("Guild retrieved successfully", {
         guild,
-      );
+        members,
+        ...worlds,
+      });
     } catch (ex) {
       const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
       return ServiceResponse.failure(
@@ -93,7 +118,7 @@ export class GuildService {
   }): Promise<ServiceResponse<Guild[] | null>> {
     try {
       console.log(user);
-      const guilds = await this.guildRepository.findByMemberUser(user);
+      const guilds = await this.guildRepository.findGuildByMemberUser(user);
       if (!guilds || guilds.length === 0) {
         return ServiceResponse.failure(
           "No guilds found for user",

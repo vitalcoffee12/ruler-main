@@ -19,6 +19,9 @@ export class GuildEntity extends BaseEntity implements Guild {
   @Column({ type: "int", nullable: false })
   ownerId: number;
 
+  @Column({ type: "varchar", length: 10, nullable: true })
+  colorCode?: string;
+
   @Column({ type: "varchar", length: 100 })
   name: string;
 

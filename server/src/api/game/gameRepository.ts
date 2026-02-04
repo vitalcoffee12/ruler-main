@@ -16,19 +16,17 @@ export class GameRepository {
   constructor(private entityManager = AppDataSource.manager) {}
 
   // game world operations
-  async getWorld(guildCode: string) {
-    const guild = await this.entityManager.findOne(GuildEntity, {
-      where: { code: guildCode },
-      select: { sceneId: true },
-    });
-
-    if (!guild || guild.sceneId <= 1) {
-      throw new Error("No world found for the guild");
-    }
-
+  async getWorld(
+    guildCode: string,
+    sceneId: number,
+  ): Promise<{
+    sceneHistories: SceneHistory[];
+    gameHistories: GameHistory[];
+    world: Entity[];
+  }> {
     const sceneHistories = await this.findLatestSceneHistories(
       guildCode,
-      guild.sceneId - 1,
+      sceneId - 1,
     );
     const gameHistories = await mongoose.connection
       .collection(`${guildCode}.${COLLECTION_SUFFIX.GAME_HISTORY}`)
@@ -41,12 +39,12 @@ export class GameRepository {
     };
   }
 
-  restoreWorld(gameHistories: GameHistory[]) {
+  restoreWorld(gameHistories: GameHistory[]): Entity[] {
     const entities = new Map<string, Entity>();
 
     for (const history of gameHistories) {
       for (const entity of history.entities) {
-        const key = `${entity.type}:${entity.name}`;
+        const key = `${entity.name}`;
         if (!entities.has(key)) {
           entities.set(key, { ...entity, scoreDiff: entity.scoreDiff ?? 0 });
         } else {

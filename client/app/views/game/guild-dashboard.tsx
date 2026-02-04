@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import GuildChat from "~/components/guild/guild-chat";
+import GuildChat, {
+  type GuildChatMessage,
+} from "~/components/guild/guild-chat";
 import GuildHeader from "~/components/guild/guild-header";
 import GuildMemberList from "~/components/guild/guild-member-list";
 import GuildRefs from "~/components/guild/guild-refs";
-import GuildWorld from "~/components/guild/guild-world";
+import GuildWorld, { type Entity } from "~/components/guild/guild-world";
+import useLoading from "~/hooks/use-loading.hook";
 import { getRequest } from "~/request";
 
 export default function Dashboard() {
@@ -12,14 +15,73 @@ export default function Dashboard() {
   const location = useLocation();
   const guildCode = location.pathname.split("/")[4];
   const [guild, setGuild] = useState<any>(null);
+  const [members, setMembers] = useState<any[]>([]);
+  const [memberDic, setMemberDic] = useState<
+    Record<
+      string,
+      {
+        userId: number;
+        userCode: string;
+        displayName?: string;
+        role: string;
+        iconPath?: string;
+      }
+    >
+  >({});
+  const [world, setWorld] = useState<Entity[]>([]);
+  const [relations, setRelations] = useState<
+    { fromNodeId: string; toNodeId: string; type: string }[]
+  >([]);
+  const [chats, setChats] = useState<GuildChatMessage[]>([]);
+
+  const [flagged, setFlagged] = useState<boolean>(false);
+  const [loading, setLoading] = useLoading();
+
+  const setInitialData = (data: any) => {
+    setGuild(data.guild);
+    setMembers(data.members);
+    setMemberDic(
+      data.members.reduce((acc: any, member: any) => {
+        acc[member.userCode] = member;
+        return acc;
+      }, {}),
+    );
+
+    setWorld(data.world);
+    setChats(
+      data.gameHistories.map((gh: any) => {
+        return {
+          _id: gh._id,
+          userId: gh.userId,
+          userCode: gh.userCode,
+          iconPath:
+            memberDic[gh.userCode]?.iconPath || "https://picsum.photos/200",
+          isGm: gh.userId < 0,
+          displayName: memberDic[gh.userCode]?.displayName || "Unknown",
+          content: gh.message,
+          timestamp: new Date(gh.createdAt).toLocaleString(),
+          citations: gh.citations || [],
+          entities: gh.entities || [],
+        };
+      }),
+    );
+  };
 
   const fetchGuildData = async () => {
     // Fetch guild data here if needed
-    const res = await getRequest(`/guild/code/${guildCode}`);
-    if (res.status === 200 && res.data) {
-      console.log(res);
-      setGuild(res.data.responseObject);
+    setLoading(true);
+    try {
+      const res = await getRequest(`/guild/code/${guildCode}`);
+      if (res.status === 200 && res.data) {
+        setInitialData(res.data.responseObject);
+      }
+    } catch (error) {
+      console.error("Error fetching guild data:", error);
+      // nav("/game");
     }
+    setTimeout(() => {
+      setLoading(false);
+    }, 2000);
   };
 
   useEffect(() => {
@@ -27,34 +89,49 @@ export default function Dashboard() {
   }, [guildCode]);
 
   return (
-    <div className="guild-dashboard">
-      <div className="guild-dashboard-header">
-        <GuildHeader
-          guildCode={guildCode}
-          guildName={guild ? guild.name : ""}
-        />
+    <>
+      <div className="guild-dashboard">
+        <div className="guild-dashboard-header">
+          <GuildHeader
+            guildCode={guildCode}
+            guildName={guild ? guild.name : ""}
+          />
+        </div>
+        <div className="guild-dashboard-leftside no-scrollbar">
+          <GuildMemberList
+            members={members}
+            guildCode={guildCode}
+            guildName={guild ? guild.name : ""}
+          />
+        </div>
+        <div className="guild-dashboard-mainside no-scrollbar whitespace-pre-wrap">
+          <GuildChat
+            guildCode={guildCode}
+            guildName={guild ? guild.name : ""}
+            createdAt={guild ? new Date(guild.createdAt) : new Date()}
+            messages={chats}
+            flag={{
+              isFlagged: flagged,
+              onClickFlag: () => {
+                setFlagged(!flagged);
+                console.log(flagged);
+              },
+            }}
+          />
+        </div>
+        <div className="guild-dashboard-subside no-scrollbar whitespace-pre-wrap">
+          <GuildRefs />
+        </div>
+        <div className="guild-dashboard-rightside no-scrollbar">
+          <GuildWorld
+            world={world}
+            guildCode={guildCode}
+            relations={relations}
+          />
+        </div>
       </div>
-      <div className="guild-dashboard-leftside no-scrollbar">
-        <GuildMemberList
-          members={members}
-          guildCode={guildCode}
-          guildName={guild ? guild.name : ""}
-        />
-      </div>
-      <div className="guild-dashboard-mainside no-scrollbar whitespace-pre-wrap">
-        <GuildChat guildCode={guildCode} messages={chats} />
-      </div>
-      <div className="guild-dashboard-subside no-scrollbar whitespace-pre-wrap">
-        <GuildRefs />
-      </div>
-      <div className="guild-dashboard-rightside no-scrollbar">
-        <GuildWorld
-          worlds={worlds}
-          guildCode={guildCode}
-          relations={relations}
-        />
-      </div>
-    </div>
+      {loading}
+    </>
   );
 }
 

@@ -33,7 +33,7 @@ export class GameService {
 
   // add entities to game world : AI generated
   async generateEntities(guildCode: string, topic: string): Promise<Entity[]> {
-    const worlds = await this.gameRepository.getWorld(guildCode);
+    const worlds = await this.gameRepository.getWorld(guildCode, 0);
 
     this.agentService.generateEntities(topic);
     return [];

@@ -3,6 +3,10 @@ import { GuildEntity } from "@/entities/guildEntity";
 import { GuildMember } from "./guildModel";
 import { GuildMemberEntity } from "@/entities/guilldMemberEntity";
 import { UserEntity } from "@/entities/userEntity";
+import { COLLECTION_SUFFIX } from "../constants";
+import mongoose from "mongoose";
+import { GenerateRandomColorCode } from "../utils";
+import { User } from "../user/userModel";
 
 export class GuildRepository {
   private entityManager;
@@ -37,7 +41,40 @@ export class GuildRepository {
     return guilds;
   }
 
-  async findByMemberUser(user: {
+  async findMembersByGuild(guild: {
+    guildId?: number;
+    guildCode?: string;
+  }): Promise<
+    { userId: number; userCode: string; displayName?: string; role: string }[]
+  > {
+    let members = [];
+    if (guild.guildId) {
+      const membersById = await this.entityManager
+        .createQueryBuilder(UserEntity, "user")
+        .innerJoin(GuildMemberEntity, "member", "member.userId = user.id")
+        .where("member.guildId = :guildId", { guildId: guild.guildId })
+        .getRawMany();
+      members = membersById;
+    }
+    if (guild.guildCode) {
+      const membersByCode = await this.entityManager
+        .createQueryBuilder(UserEntity, "user")
+        .innerJoin(GuildMemberEntity, "member", "member.userId = user.id")
+        .where("member.guildCode = :guildCode", { guildCode: guild.guildCode })
+        .getRawMany();
+      members = membersByCode;
+    }
+
+    return members.map((m) => ({
+      userId: m.user_id,
+      userCode: m.user_code,
+      displayName: m.user_displayName,
+      role: m.role,
+      iconPath: "https://picsum.photos/200",
+    }));
+  }
+
+  async findGuildByMemberUser(user: {
     userId?: number;
     userCode?: string;
   }): Promise<GuildEntity[]> {
@@ -80,6 +117,7 @@ export class GuildRepository {
   }): Promise<GuildEntity> {
     const newGuild = new GuildEntity({
       code: guildData.code,
+      colorCode: GenerateRandomColorCode(),
       ownerId: guildData.ownerId,
       name: guildData.name,
       description: guildData.description,
@@ -100,6 +138,19 @@ export class GuildRepository {
         joinedAt: new Date(),
       });
     });
+
+    mongoose.connection.createCollection(
+      `${newGuild.code}.${COLLECTION_SUFFIX.GAME_HISTORY}`,
+    );
+    mongoose.connection.createCollection(
+      `${newGuild.code}.${COLLECTION_SUFFIX.SCENE_HISTORY}`,
+    );
+    mongoose.connection.createCollection(
+      `${newGuild.code}.${COLLECTION_SUFFIX.RULE_SET}`,
+    );
+    mongoose.connection.createCollection(
+      `${newGuild.code}.${COLLECTION_SUFFIX.TERM_SET}`,
+    );
 
     return newGuild;
   }

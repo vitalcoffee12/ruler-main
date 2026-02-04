@@ -3,10 +3,12 @@ import "./lobby.css";
 import GuildList from "~/components/lobby/guild-list";
 import { useModal } from "~/hooks/use-modal.hook";
 import CreateGuildModal from "~/components/lobby/create-guild.modal";
-import { useState } from "react";
+import { useContext, useRef, useState } from "react";
+import { UserContext } from "~/contexts/userContext";
 
 export default function Layout() {
   const nav = useNavigate();
+  const user = useContext(UserContext);
   const { Modal, openModal, closeModal } = useModal();
   const [refreshGuildList, setRefreshGuildList] = useState(false);
 
@@ -25,7 +27,6 @@ export default function Layout() {
             </div>
           </div>
           <GuildList
-            userId="user-123"
             onClickCreateGuild={openModal}
             refreshGuildList={refreshGuildList}
           />

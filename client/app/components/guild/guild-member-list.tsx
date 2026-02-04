@@ -4,7 +4,13 @@ import AddMemberModal from "./add-member.modal";
 export default function GuildMemberList(props: {
   guildCode: string;
   guildName: string;
-  members: { userId: string; name: string; icon: string }[];
+  members: {
+    userId: string;
+    userCode: string;
+    displayName?: string;
+    role: string;
+    iconPath: string;
+  }[];
 }) {
   const { Modal, openModal, closeModal } = useModal();
 
@@ -29,11 +35,11 @@ export default function GuildMemberList(props: {
               className="flex items-center mb-2 cursor-pointer hover:bg-stone-100 rounded-lg p-2"
             >
               <img
-                src={member.icon}
-                alt={member.name}
+                src={member.iconPath}
+                alt={member.displayName}
                 className="w-8 h-8 rounded-full mr-2"
               />
-              <span>{member.name}</span>
+              <span>{member.displayName}</span>
             </div>
           ))}
         </div>

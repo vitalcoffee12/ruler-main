@@ -1,17 +1,33 @@
 import { forwardRef, memo, useEffect, useRef, useState } from "react";
+import { useModal } from "~/hooks/use-modal.hook";
+import AddElementModal from "./add-element.modal";
+import AddElementManualModal from "./add-element-manual.modal";
+
+export interface Entity {
+  _id: string;
+  type: string;
+  name: string;
+  description: string;
+  rules: { id: number; version: number }[];
+  scoreDiff?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export default function GuildWorld(props: {
   guildCode: string;
-  worlds: { nodeId: string; name: string; description: string }[];
+  world: Entity[];
   relations: { fromNodeId: string; toNodeId: string; type: string }[];
 }) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const refs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const [modalType, setModalType] = useState<"generate" | "add" | null>(null);
+  const { Modal, openModal, closeModal } = useModal();
 
   useEffect(() => {
     if (!hoveredNodeId) {
-      for (const world of props.worlds) {
-        refs.current[world.nodeId]?.classList.remove("bg-yellow-50");
+      for (const world of props.world) {
+        refs.current[world._id]?.classList.remove("bg-yellow-50");
       }
     }
     const rels = props.relations.filter(
@@ -25,14 +41,11 @@ export default function GuildWorld(props: {
       connectedNodeIds.add(rel.toNodeId);
     });
 
-    for (const world of props.worlds) {
-      if (
-        connectedNodeIds.has(world.nodeId) &&
-        world.nodeId !== hoveredNodeId
-      ) {
-        refs.current[world.nodeId]?.classList.add("bg-yellow-50");
+    for (const world of props.world) {
+      if (connectedNodeIds.has(world._id) && world._id !== hoveredNodeId) {
+        refs.current[world._id]?.classList.add("bg-yellow-50");
       } else {
-        refs.current[world.nodeId]?.classList.remove("bg-yellow-50");
+        refs.current[world._id]?.classList.remove("bg-yellow-50");
       }
     }
   }, [hoveredNodeId]);
@@ -56,7 +69,13 @@ export default function GuildWorld(props: {
           <div className="border-b border-stone-300 my-4 flex items-center justify-between ">
             <span className="text-stone-600 text-sm">Worlds</span>
             <div>
-              <div className="inline-flex items-center cursor-pointer text-stone-600 hover:text-stone-800 mr-1">
+              <div
+                className="inline-flex items-center cursor-pointer text-stone-600 hover:text-stone-800 mr-1"
+                onClick={() => {
+                  setModalType("generate");
+                  openModal();
+                }}
+              >
                 <span
                   className="material-symbols-outlined"
                   style={{ fontSize: "1.2rem" }}
@@ -65,7 +84,13 @@ export default function GuildWorld(props: {
                 </span>
                 <span className="text-sm ml-1">Ask Gm to Create</span>
               </div>
-              <div className="inline-flex items-center ml-1 mr-2 cursor-pointer text-stone-600 hover:text-stone-800">
+              <div
+                className="inline-flex items-center ml-1 mr-2 cursor-pointer text-stone-600 hover:text-stone-800"
+                onClick={() => {
+                  setModalType("add");
+                  openModal();
+                }}
+              >
                 <span
                   className="material-symbols-outlined"
                   style={{ fontSize: "1.2rem" }}
@@ -79,35 +104,43 @@ export default function GuildWorld(props: {
         </div>
       </div>
       <GuildWorldNodes
-        worlds={props.worlds}
+        world={props.world}
         setHoveredNodeId={setHoveredNodeId}
         refs={refs}
       />
+      <Modal>
+        {modalType === "generate" && (
+          <AddElementModal guildCode={props.guildCode} />
+        )}
+        {modalType === "add" && (
+          <AddElementManualModal guildCode={props.guildCode} />
+        )}
+      </Modal>
     </div>
   );
 }
 
 const GuildWorldNodes = memo(function GuildWorldNodes(props: {
-  worlds: { nodeId: string; name: string; description: string }[];
+  world: Entity[];
   setHoveredNodeId: (nodeId: string | null) => void;
   refs: React.Ref<{ [key: string]: HTMLDivElement | null }>;
 }) {
-  if (props.worlds.length === 0) {
+  if (!props.world || props.world.length === 0) {
     return (
       <div className="row-start-2 row-end-3 flex flex-col items-center justify-center text-stone-500 p-4 min0-h-full h-full">
-        No worlds found.
+        No entities found.
       </div>
     );
   }
   return (
     <div className="row-start-2 row-end-3 overflow-y-auto no-scrollbar p-4 max-h-[calc(100vh-var(--spacing)*42)] mt-2">
-      {props.worlds.map((world) => (
+      {props.world.map((w) => (
         <ForwardedGuildWorldNode
-          key={world.nodeId}
-          nodeId={world.nodeId}
-          name={world.name}
-          description={world.description}
-          onMouseEnter={() => props.setHoveredNodeId(world.nodeId)}
+          key={w._id}
+          nodeId={w._id}
+          name={w.name}
+          description={w.description}
+          onMouseEnter={() => props.setHoveredNodeId(w._id)}
           onMouseLeave={() => props.setHoveredNodeId(null)}
           ref={props.refs}
         />
