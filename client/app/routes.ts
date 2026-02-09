@@ -6,6 +6,7 @@ import {
 } from "@react-router/dev/routes";
 
 export default [
+  // user context covered routes
   layout("views/layout.tsx", [
     index("views/welcome/welcome.tsx"),
     route("guides", "views/services/guides.tsx"),
@@ -17,6 +18,7 @@ export default [
       route("signin", "views/auth/signin.tsx"),
     ]),
 
+    // socket context covered routes
     route("game", "views/lobby/lobby-layout.tsx", [
       route("", "views/lobby/lobby-service-layout.tsx", [
         route("explore", "views/lobby-services/explore.tsx"),

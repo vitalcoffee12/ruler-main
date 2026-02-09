@@ -32,6 +32,10 @@ const envSchema = z.object({
   DB_MONGO_USER: z.string().min(1),
   DB_MONGO_PASS: z.string().min(1),
 
+  REDIS_HOST: z.string().min(1),
+  REDIS_PORT: z.coerce.number().int().positive(),
+  REDIS_PASS: z.string().min(1),
+
   // JWT secret
   ACCESSTOKEN_SECRET: z.string().min(1),
   REFRESHTOKEN_SECRET: z.string().min(1),

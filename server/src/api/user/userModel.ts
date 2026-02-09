@@ -12,6 +12,7 @@ export type User = z.infer<typeof UserSchema>;
 export const UserSchema = z.object({
   id: z.number().optional(),
   code: z.string(),
+  iconPath: z.string().optional(),
   displayName: z.string().optional(),
   email: z.string(),
   state: z.string(),

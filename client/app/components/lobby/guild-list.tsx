@@ -28,9 +28,7 @@ export default function GuildList(props: {
       if (res.status === 200 && res.data) {
         setGuilds(res.data.responseObject);
       }
-    } catch (ex) {
-      console.log(ex);
-    }
+    } catch (ex) {}
   };
 
   useEffect(() => {
@@ -40,7 +38,6 @@ export default function GuildList(props: {
   useEffect(() => {
     if (hoveredGuildCode) {
       const ref = refs.current.find((r) => r.code === hoveredGuildCode);
-      console.log(refs.current);
       if (ref) {
         const rect = ref.element.getBoundingClientRect();
         badgeRef.current?.style.setProperty(
@@ -52,7 +49,6 @@ export default function GuildList(props: {
       }
       badgeRef.current?.style.setProperty("opacity", "1");
       badgeRef.current?.style.setProperty("scale", "1");
-      console.log(hoveredGuildCode);
     } else {
       badgeRef.current?.style.setProperty("opacity", "0");
       badgeRef.current?.style.setProperty("scale", "0.95");
@@ -66,7 +62,7 @@ export default function GuildList(props: {
         className="fixed top-0 left-0 bg-white border border-stone-100 rounded shadow-md py-1 px-2 text-sm transition duration-300 pointer-events-none z-10"
       ></div>
       <div
-        className="row-start-2 row-end-3 px-4 pt-2 max-h-[calc(100vh-var(--spacing)*70)] overflow-y-auto overflow-x-overlay no-scrollbar"
+        className="row-start-2 row-end-3 px-4 pt-2 min-h-full h-full pb-4 overflow-y-auto overflow-x-overlay no-scrollbar"
         style={{}}
       >
         {guilds.map((guild) => (

@@ -18,6 +18,11 @@ export class GuildMemberEntity extends BaseEntity implements GuildMember {
   @Column({ type: "varchar", length: 255, nullable: false })
   guildCode: string;
 
+  @Column({ type: "varchar", length: 255, nullable: true })
+  iconPath?: string;
+  @Column({ type: "varchar", length: 255, nullable: true })
+  displayName?: string;
+
   @Column({ type: "int", nullable: false })
   userId: number;
   @Column({ type: "varchar", length: 255, nullable: false })

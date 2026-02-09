@@ -72,6 +72,11 @@ export default function CreateGuildModal(props: {
           onChange={(e) => {
             setData({ ...data, guildName: e.target.value });
           }}
+          onKeyDown={async (e) => {
+            if (e.key === "Enter") {
+              await handleCreateGuild();
+            }
+          }}
           className="border border-stone-300 rounded px-2 py-2 mb-4 w-full text-sm"
         />
 

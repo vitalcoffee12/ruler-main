@@ -44,7 +44,7 @@ export class AgentService {
         },
         { role: "user", content: `Text: ${text}` },
       ],
-      { type: RuleFormatSchema.toJSONSchema() },
+      { type: RuleFormatSchema.shape },
     );
     return JSON.parse(res) as RuleFormat;
   }

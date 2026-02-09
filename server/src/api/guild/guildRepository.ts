@@ -1,6 +1,6 @@
 import AppDataSource from "@/dataSource";
 import { GuildEntity } from "@/entities/guildEntity";
-import { GuildMember } from "./guildModel";
+import { GuildMember, GuildMemberWithUser } from "./guildModel";
 import { GuildMemberEntity } from "@/entities/guilldMemberEntity";
 import { UserEntity } from "@/entities/userEntity";
 import { COLLECTION_SUFFIX } from "../constants";
@@ -44,15 +44,25 @@ export class GuildRepository {
   async findMembersByGuild(guild: {
     guildId?: number;
     guildCode?: string;
-  }): Promise<
-    { userId: number; userCode: string; displayName?: string; role: string }[]
-  > {
+  }): Promise<GuildMemberWithUser[]> {
     let members = [];
+    const selects = [
+      "user.id AS user_id",
+      "user.code AS user_code",
+      "user.iconPath AS user_iconPath",
+      "user.displayName AS user_displayName",
+      "member.iconPath AS member_iconPath",
+      "member.displayName AS member_displayName",
+      "member.id AS member_id",
+      "member.role AS member_role",
+      "member.joinedAt AS member_joinedAt",
+    ];
     if (guild.guildId) {
       const membersById = await this.entityManager
         .createQueryBuilder(UserEntity, "user")
         .innerJoin(GuildMemberEntity, "member", "member.userId = user.id")
         .where("member.guildId = :guildId", { guildId: guild.guildId })
+        .select(selects)
         .getRawMany();
       members = membersById;
     }
@@ -61,16 +71,23 @@ export class GuildRepository {
         .createQueryBuilder(UserEntity, "user")
         .innerJoin(GuildMemberEntity, "member", "member.userId = user.id")
         .where("member.guildCode = :guildCode", { guildCode: guild.guildCode })
+        .select(selects)
         .getRawMany();
       members = membersByCode;
     }
 
     return members.map((m) => ({
+      id: m.member_id,
       userId: m.user_id,
       userCode: m.user_code,
-      displayName: m.user_displayName,
-      role: m.role,
-      iconPath: "https://picsum.photos/200",
+      guildId: guild.guildId ? guild.guildId : 0,
+      guildCode: guild.guildCode ? guild.guildCode : "",
+      iconPath: m.member_iconPath ? m.member_iconPath : m.user_iconPath,
+      displayName: m.member_displayName
+        ? m.member_displayName
+        : m.user_displayName,
+      role: m.member_role,
+      joinedAt: m.member_joinedAt,
     }));
   }
 

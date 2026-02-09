@@ -12,6 +12,7 @@ import "./app.css";
 import Loading from "./components/loading";
 import { CookiesProvider } from "react-cookie";
 import { UserProvider } from "./contexts/userContext";
+import { SocketProvider } from "./contexts/socketContext";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -69,7 +70,9 @@ export default function App() {
   return (
     <CookiesProvider defaultSetOptions={defaultCookieOptions}>
       <UserProvider>
-        <Outlet />
+        <SocketProvider>
+          <Outlet />
+        </SocketProvider>
       </UserProvider>
     </CookiesProvider>
   );

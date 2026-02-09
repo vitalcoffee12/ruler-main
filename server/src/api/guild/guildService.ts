@@ -1,6 +1,6 @@
 import { ServiceResponse } from "@/common/models/serviceResponse";
 import { GuildRepository } from "./guildRepository";
-import type { Guild } from "./guildModel";
+import type { Guild, GuildMemberWithUser } from "./guildModel";
 import { StatusCodes } from "http-status-codes";
 import { GenerateGuildCode } from "../utils";
 import { GuildMemberEntity } from "@/entities/guilldMemberEntity";
@@ -42,9 +42,6 @@ export class GuildService {
     ServiceResponse<{
       guild: Guild;
       members: any[];
-      sceneHistories: SceneHistory[];
-      gameHistories: GameHistory[];
-      world: Entity[];
     } | null>
   > {
     try {
@@ -52,7 +49,6 @@ export class GuildService {
       const members = await this.guildRepository.findMembersByGuild({
         guildCode: code,
       });
-      const worlds = await this.gameRepository.getWorld(code, guild?.sceneId!);
 
       if (!guild) {
         return ServiceResponse.failure(
@@ -64,18 +60,51 @@ export class GuildService {
       return ServiceResponse.success<{
         guild: Guild;
         members: any[];
-        sceneHistories: SceneHistory[];
-        gameHistories: GameHistory[];
-        world: Entity[];
       }>("Guild retrieved successfully", {
         guild,
         members,
-        ...worlds,
       });
     } catch (ex) {
       const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
       return ServiceResponse.failure(
         `Error retrieving guild: ${errorMessage}`,
+        null,
+        StatusCodes.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getHistoryByCode(
+    guildCode: string,
+    sceneId: number = 0,
+  ): Promise<
+    ServiceResponse<{
+      sceneHistories: SceneHistory[];
+      gameHistories: GameHistory[];
+      world: Entity[];
+    } | null>
+  > {
+    try {
+      const historyData = await this.gameRepository.getWorld(
+        guildCode,
+        sceneId,
+      );
+      if (!historyData) {
+        return ServiceResponse.failure(
+          "No history found for guild",
+          null,
+          StatusCodes.NOT_FOUND,
+        );
+      }
+      return ServiceResponse.success<{
+        sceneHistories: SceneHistory[];
+        gameHistories: GameHistory[];
+        world: Entity[];
+      }>("History retrieved successfully", historyData);
+    } catch (ex) {
+      const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
+      return ServiceResponse.failure(
+        `Error retrieving history for guild: ${errorMessage}`,
         null,
         StatusCodes.INTERNAL_SERVER_ERROR,
       );
@@ -134,6 +163,34 @@ export class GuildService {
       const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
       return ServiceResponse.failure(
         `Error retrieving guilds for user: ${errorMessage}`,
+        null,
+        StatusCodes.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async findMembersByGuild(guild: {
+    guildId?: number;
+    guildCode?: string;
+  }): Promise<ServiceResponse<GuildMemberWithUser[] | null>> {
+    try {
+      const members = await this.guildRepository.findMembersByGuild(guild);
+      console.log(members);
+      if (!members || members.length === 0) {
+        return ServiceResponse.failure(
+          "No members found for guild",
+          [],
+          StatusCodes.NOT_FOUND,
+        );
+      }
+      return ServiceResponse.success<GuildMemberWithUser[]>(
+        "Members retrieved successfully",
+        members,
+      );
+    } catch (ex) {
+      const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
+      return ServiceResponse.failure(
+        `Error retrieving members for guild: ${errorMessage}`,
         null,
         StatusCodes.INTERNAL_SERVER_ERROR,
       );

@@ -32,6 +32,33 @@ class GuildController {
     const serviceResponse = await this.guildService.findGuildsByUser(user);
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
+
+  public getGuildMembers: RequestHandler = async (
+    req: Request,
+    res: Response,
+  ) => {
+    const guildCode = req.params.code;
+    // const serviceResponse = await this.guildService.findByCode(guildCode);
+    // res.status(serviceResponse.statusCode).send(serviceResponse);
+  };
+
+  public joinWithCode: RequestHandler = async (req: Request, res: Response) => {
+    const guildCode = req.params.code;
+    // const serviceResponse = await this.guildService.inviteMembers(
+    //   guildCode,
+    //   members,
+    // );
+  };
+
+  public sendInvitation: RequestHandler = async (
+    req: Request,
+    res: Response,
+  ) => {};
+
+  public acceptInvitation: RequestHandler = async (
+    req: Request,
+    res: Response,
+  ) => {};
 }
 
 export const guildController = new GuildController();

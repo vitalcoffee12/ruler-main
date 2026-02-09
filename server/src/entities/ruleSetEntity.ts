@@ -1,20 +1,13 @@
-import { RuleSet } from "@/api/game/gameModel";
-import { User } from "@/api/user/userModel";
-import { COMMON_STATE } from "@/common/constants";
-import {
-  BaseEntity,
-  Column,
-  DeleteDateColumn,
-  Entity,
-  PrimaryGeneratedColumn,
-} from "typeorm";
+import { Resource } from "@/api/resources/resourceModel";
+import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { C } from "vitest/dist/chunks/reporters.d.BFLkQcL6";
 
-@Entity({ name: "rule_sets" })
-export class RuleSetEntity extends BaseEntity implements RuleSet {
+@Entity({ name: "resources" })
+export class ResourceEntity extends BaseEntity implements Resource {
   @PrimaryGeneratedColumn({
     type: "int",
     unsigned: true,
-    comment: "Rule Set ID",
+    comment: "Resource ID",
   })
   id: number;
 
@@ -27,6 +20,48 @@ export class RuleSetEntity extends BaseEntity implements RuleSet {
   @Column({ type: "text", nullable: true })
   description?: string;
 
+  @Column({ type: "enum", enum: ["ruleSet", "termSet"] })
+  type: "ruleSet" | "termSet";
+
+  @Column({ type: "text", nullable: true })
+  imagePath?: string;
+
+  @Column({ type: "text", nullable: true })
+  filePath?: string;
+
+  @Column({ type: "int", unsigned: true })
+  ownerId: number;
+
+  @Column({ type: "varchar", length: 50 })
+  ownerCode: string;
+
+  @Column({ type: "simple-array", nullable: true })
+  distributors: string[];
+
+  @Column({ type: "simple-array", nullable: true })
+  tags: string[]; // stringified array
+
+  @Column({ type: "enum", enum: ["public", "private", "unlisted"] })
+  visibility: "public" | "private" | "unlisted";
+
+  @Column({ type: "int", unsigned: true, default: 0 })
+  downloadCount: number;
+
+  @Column({ type: "int", unsigned: true, default: 0 })
+  favoriteCount: number;
+
+  @Column({ type: "float", unsigned: true, default: 0 })
+  rating: number;
+
+  @Column({ type: "int", unsigned: true, default: 0 })
+  reviews: number;
+
+  @Column({ type: "int", unsigned: true, default: 1 })
+  version: number;
+
+  @Column({ type: "datetime", nullable: true })
+  verifiedAt: Date;
+
   @Column({ type: "datetime", default: () => "CURRENT_TIMESTAMP" })
   createdAt: Date;
 
@@ -38,18 +73,18 @@ export class RuleSetEntity extends BaseEntity implements RuleSet {
   })
   updatedAt: Date;
 
-  constructor(obj: Partial<RuleSetEntity>) {
+  constructor(obj: Partial<ResourceEntity>) {
     super();
     Object.assign(this, obj);
   }
 
-  static fromModel(ruleSet: RuleSet): RuleSetEntity {
-    return new RuleSetEntity({
-      id: ruleSet.id,
-      name: ruleSet.name,
-      description: ruleSet.description,
-      createdAt: ruleSet.createdAt,
-      updatedAt: ruleSet.updatedAt,
+  static fromModel(resource: Resource): ResourceEntity {
+    return new ResourceEntity({
+      id: resource.id,
+      name: resource.name,
+      description: resource.description,
+      createdAt: resource.createdAt,
+      updatedAt: resource.updatedAt,
     });
   }
 }

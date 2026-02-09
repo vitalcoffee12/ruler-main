@@ -41,16 +41,6 @@ export const RuleSchema = z.object({
   updatedAt: z.date(),
 });
 
-export type RuleSet = z.infer<typeof RuleSetSchema>;
-export const RuleSetSchema = z.object({
-  id: z.number().optional(),
-  code: z.string(),
-  name: z.string(),
-  description: z.string().optional(),
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
-});
-
 export type Term = z.infer<typeof TermSchema>;
 export const TermSchema = z.object({
   id: z.number().optional(),
@@ -58,15 +48,6 @@ export const TermSchema = z.object({
   term: z.string(),
   definition: z.string(),
   embedding: z.array(z.number()).optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-});
-
-export type TermSet = z.infer<typeof TermSetSchema>;
-export const TermSetSchema = z.object({
-  id: z.number().optional(),
-  name: z.string(),
-  description: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -89,6 +70,7 @@ export const GameHistorySchema = z.object({
   chat: z
     .object({
       userId: z.number(),
+      userCode: z.string(),
       message: z.string(),
     })
     .optional(),

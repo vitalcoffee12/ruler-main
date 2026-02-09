@@ -1,5 +1,6 @@
 import { createContext, useEffect, useState } from "react";
 import { useCookies } from "react-cookie";
+import { useLocation } from "react-router";
 import { postRequest } from "~/request";
 
 export interface User {
@@ -8,6 +9,7 @@ export interface User {
   displayName?: string;
   state: string;
   role: string;
+  guildCode?: string | null;
   accessToken: string;
   refreshToken: string;
 }
@@ -23,7 +25,9 @@ const defaultUser: User = {
 export const UserContext = createContext<User>(defaultUser);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
+  const [guildCode, setGuildCode] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   const [cookies, setCookie, removeCookie] = useCookies(["__session"]);
@@ -65,8 +69,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     fetchUser();
   }, []);
 
+  useEffect(() => {
+    const paths = location.pathname.split("/");
+    if (paths.includes("guild")) {
+      // Do something when in game routes
+      const guildCodeFromPath = paths[4] || null;
+      setGuildCode(guildCodeFromPath);
+    } else {
+      setGuildCode(null);
+      // Do something when outside game routes
+    }
+  }, [location.pathname]);
+
   return (
-    <UserContext value={user || defaultUser}>
+    <UserContext value={{ ...(user || defaultUser), guildCode }}>
       {!loading && children}
     </UserContext>
   );

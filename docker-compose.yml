@@ -46,6 +46,19 @@ services:
       - MONGODB_INITDB_ROOT_USERNAME=admin
       - MONGODB_INITDB_ROOT_PASSWORD=rm-pass!9894@mm
 
+  cache:
+    image: redis:8.6-rc1-alpine3.23
+    container_name: ruler-main-cache
+    ports:
+      - "16002:6379"
+    restart: unless-stopped
+    networks:
+      - ruler-main-network
+    volumes:
+      - ruler-main-redis-data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+
   # cache:
   #   image: redis:8.4.0-alpine
   #   container_name: ruler-main-cache
@@ -63,4 +76,6 @@ volumes:
   ruler-main-db:
     driver: local
   ruler-main-data:
+    driver: local
+  ruler-main-redis-data:
     driver: local

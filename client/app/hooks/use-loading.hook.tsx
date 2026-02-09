@@ -1,12 +1,28 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function useLoading() {
   const [isLoading, setIsLoading] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setTimeout(() => {
+        if (ref.current) {
+          ref.current.style.display = "none";
+        }
+      }, 300);
+    } else {
+      if (ref.current) {
+        ref.current.style.display = "flex";
+      }
+    }
+  }, [isLoading]);
 
   return [
     <div
-      className="fixed h-full w-full bg-white flex-col justify-center items-center min-h-screen top-0 left-0 z-50 transition-opacity duration-300"
-      style={{ display: isLoading ? "flex" : "none" }}
+      className="fixed flex h-full w-full bg-white flex-col justify-center items-center min-h-screen top-0 left-0 z-50 transition-opacity duration-300"
+      ref={ref}
+      style={{ opacity: isLoading ? 1 : 0 }}
     >
       <div className="loader mb-2"></div>
       Loading...

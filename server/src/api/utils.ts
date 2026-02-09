@@ -96,6 +96,12 @@ export function GenerateRuleSetCode(): string {
   const randomCode = generateRandomCode(8);
   return prefix + randomCode;
 }
+export function GenerateTermSetCode(): string {
+  const prefix = "T-";
+  const randomCode = generateRandomCode(8);
+  return prefix + randomCode;
+}
+
 export function GenerateCommunityCode(): string {
   const prefix = "C-";
   const randomCode = generateRandomCode(8);

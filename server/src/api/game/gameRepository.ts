@@ -1,15 +1,7 @@
 import mongoose from "mongoose";
-import {
-  Entity,
-  GameHistory,
-  Rule,
-  RuleSet,
-  SceneHistory,
-  Term,
-} from "./gameModel";
+import { Entity, GameHistory, Rule, SceneHistory, Term } from "./gameModel";
 import AppDataSource from "@/dataSource";
 import { GuildEntity } from "@/entities/guildEntity";
-import { RuleSetEntity } from "@/entities/ruleSetEntity";
 import { COLLECTION_SUFFIX } from "../constants";
 
 export class GameRepository {
@@ -18,7 +10,7 @@ export class GameRepository {
   // game world operations
   async getWorld(
     guildCode: string,
-    sceneId: number,
+    sceneId: number = 0,
   ): Promise<{
     sceneHistories: SceneHistory[];
     gameHistories: GameHistory[];
@@ -77,7 +69,11 @@ export class GameRepository {
     const collection = mongoose.connection.collection(
       `${guildCode}.${COLLECTION_SUFFIX.GAME_HISTORY}`,
     );
-    await collection.insertOne({ ...data, sceneId: guild?.sceneId });
+    await collection.insertOne({
+      ...data,
+      sceneId: guild?.sceneId,
+      createdAt: new Date(),
+    });
   }
 
   // insert single scene history document into the guild-specific collection and update guild's sceneId, game history
@@ -99,7 +95,11 @@ export class GameRepository {
       const collection = mongoose.connection.collection(
         `${guildCode}.${COLLECTION_SUFFIX.SCENE_HISTORY}`,
       );
-      await collection.insertOne({ ...data, sceneId: guild?.sceneId });
+      await collection.insertOne({
+        ...data,
+        sceneId: guild?.sceneId,
+        createdAt: new Date(),
+      });
       const gameCollection = mongoose.connection.collection(
         `${guildCode}.${COLLECTION_SUFFIX.GAME_HISTORY}`,
       );
@@ -133,17 +133,25 @@ export class GameRepository {
 
   async findLatestSceneHistories(
     guildCode: string,
-    count: number = 5,
+    count: number = -1,
   ): Promise<SceneHistory[]> {
     const collection = mongoose.connection.collection(
       `${guildCode}.${COLLECTION_SUFFIX.SCENE_HISTORY}`,
     );
-    const doc = await collection
-      .find<SceneHistory>({})
-      .sort({ createdAt: -1 })
-      .limit(count)
-      .toArray();
-    return doc as SceneHistory[];
+    if (count === -1) {
+      const allDocs = await collection
+        .find<SceneHistory>({})
+        .sort({ createdAt: -1 })
+        .toArray();
+      return allDocs as SceneHistory[];
+    } else {
+      const doc = await collection
+        .find<SceneHistory>({})
+        .sort({ createdAt: -1 })
+        .limit(count)
+        .toArray();
+      return doc as SceneHistory[];
+    }
   }
 
   async findSceneHistoryBySceneId(
@@ -155,99 +163,6 @@ export class GameRepository {
     );
     const doc = await collection.findOne<SceneHistory>({ sceneId });
     return doc as SceneHistory | null;
-  }
-
-  // rule set operations
-  async createRuleSet(
-    ruleSetCode: string,
-    options: {
-      name?: string;
-      description?: string;
-    },
-  ): Promise<RuleSet> {
-    const ruleSet: RuleSet = {
-      code: ruleSetCode,
-      name: options.name || "Default Rule Set",
-      description: options.description || "",
-    };
-
-    await this.entityManager.getRepository(RuleSetEntity).insert(ruleSet);
-
-    await mongoose.connection.createCollection(
-      `${ruleSetCode}.${COLLECTION_SUFFIX.RULE_SET}`,
-    );
-    await this.createEmbeddingIndex(
-      `${ruleSetCode}.${COLLECTION_SUFFIX.RULE_SET}`,
-      {
-        embeddingSize: 4096,
-        fieldName: "embedding",
-      },
-    );
-    await this.createUniqueIndex(
-      `${ruleSetCode}.${COLLECTION_SUFFIX.RULE_SET}`,
-      { fieldName: "id" },
-    );
-
-    await mongoose.connection.createCollection(
-      `${ruleSetCode}.${COLLECTION_SUFFIX.TERM_SET}`,
-    );
-    await this.createEmbeddingIndex(
-      `${ruleSetCode}.${COLLECTION_SUFFIX.TERM_SET}`,
-      {
-        embeddingSize: 4096,
-        fieldName: "embedding",
-      },
-    );
-    await this.createUniqueIndex(
-      `${ruleSetCode}.${COLLECTION_SUFFIX.TERM_SET}`,
-      { fieldName: "id" },
-    );
-    return ruleSet;
-  }
-
-  async createEmbeddingIndex(
-    collectionName: string,
-    options?: {
-      embeddingSize?: number;
-      fieldName?: string;
-    },
-  ) {
-    const vectorSize = options?.embeddingSize || 4096;
-    const fieldName = options?.fieldName || "embedding";
-
-    await mongoose.connection.collection(collectionName).createSearchIndex({
-      name: `${fieldName}_vector_index`,
-      type: "vectorSearch",
-      definition: {
-        fields: [
-          {
-            type: "vector",
-            path: fieldName,
-            dimensions: vectorSize,
-            similarity: "cosine",
-          },
-        ],
-      },
-    });
-  }
-
-  async createUniqueIndex(
-    collectionName: string,
-    options?: {
-      fieldName?: string;
-    },
-  ) {
-    const fieldName = options?.fieldName || "id";
-
-    await mongoose.connection
-      .collection(collectionName)
-      .createIndex({ [fieldName]: 1 }, { unique: true });
-  }
-  async insertRuleToRuleSet(code: string, rules: Rule[]) {
-    const ruleSet = await mongoose.connection
-      .collection(`${code}.${COLLECTION_SUFFIX.RULE_SET}`)
-      .insertMany(rules);
-    return ruleSet;
   }
 
   async importRuleSetToGuildRuleSet(

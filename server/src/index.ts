@@ -3,11 +3,25 @@ import { app, logger } from "@/server";
 import mongoose from "mongoose";
 import "reflect-metadata";
 import { ollama } from "./api/llms/llama/ollama";
+import { createServer } from "http";
+import { Server, WebSocket } from "ws";
+import { ExtendedWebSocket, socketHandler } from "./api/game/socketHandler";
 
-const server = app.listen(env.PORT, async (err) => {
-  if (err) {
-    console.log(err);
-  }
+const server = createServer(app);
+const ws = new Server({ server });
+socketHandler.setWebSocketServer(ws);
+
+ws.on("connection", (socket: WebSocket) => {
+  const extendedSocket = socket as ExtendedWebSocket;
+  extendedSocket.userId = 0;
+  extendedSocket.userCode = "";
+  extendedSocket.guildId = 0;
+  extendedSocket.guildCode = "";
+
+  socketHandler.connection(extendedSocket);
+});
+
+server.listen(env.PORT, async () => {
   const {
     NODE_ENV,
     HOST,

@@ -18,6 +18,7 @@ export class GameService {
     await this.gameRepository.insertGameHistory(guildCode, {
       chat: {
         userId: 0, // system user
+        userCode: "SYSTEM",
         message: `Entities added : ${entities[0].name} other than ${entities.length - 1}`,
       },
       entities: entities.map((e) => ({
@@ -35,7 +36,7 @@ export class GameService {
   async generateEntities(guildCode: string, topic: string): Promise<Entity[]> {
     const worlds = await this.gameRepository.getWorld(guildCode, 0);
 
-    this.agentService.generateEntities(topic);
+    await this.agentService.generateEntities(topic);
     return [];
   }
 
@@ -45,15 +46,17 @@ export class GameService {
   }
 
   // send message (actual game play)
-  async sendMessage(
+  async receiveMessage(
     guildCode: string,
     userId: number,
+    userCode: string,
     message: string,
     entities: Entity[],
   ) {
     await this.gameRepository.insertGameHistory(guildCode, {
       chat: {
         userId,
+        userCode,
         message,
       },
       entities: [...entities],
@@ -104,6 +107,7 @@ export class GameService {
         sceneId: sceneId,
         chat: {
           userId: 0,
+          userCode: "system",
           message: `Scene ${sceneId} flagged up`,
         },
         entities: edits,

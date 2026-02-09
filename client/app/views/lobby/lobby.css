@@ -1,27 +1,32 @@
 .lobby-layout {
-  display: flex;
+  display: grid;
+  grid-template-columns: calc(var(--spacing) * 20) 1fr;
+
+  height: 100vh;
 }
 
 .lobby-leftside {
   width: calc(var(--spacing) * 20);
-  height: 100vh;
+  min-height: 100%;
+  height: 100%;
   overflow-y: auto;
   border-right: 1px solid var(--color-stone-300);
   display: grid;
-  grid-template-rows: calc(var(--spacing) * 20) 1fr calc(var(--spacing) * 20);
+  grid-template-rows:
+    calc(var(--spacing) * 20) 1fr calc(var(--spacing) * 14)
+    calc(var(--spacing) * 20);
 }
 
 .lobby-rightside {
-  flex: 1;
-  height: 100vh;
+  min-height: 100%;
+  height: 100%;
   overflow-y: auto;
-  width: calc(100vw - var(--spacing) * 20);
 }
 
 /* Lobby Styles */
 .lobby-index {
   box-sizing: border-box;
-  height: 100vh;
+  height: 100%;
   display: grid;
   grid-template-rows: calc(var(--spacing) * 16) repeat(4, 1fr);
   grid-template-columns: calc(var(--spacing) * 65) repeat(4, 1fr);
@@ -154,34 +159,34 @@
   position: fixed;
   top: calc(var(--spacing) * 16);
   right: 0;
-  width: calc(var(--spacing) * 100);
+  max-width: calc(var(--spacing) * 140);
+  width: 95%;
   height: calc(100vh - var(--spacing) * 16);
   background-color: var(--color-stone-100);
   border-left: 1px solid var(--color-stone-300);
   transition: transform 0.3s ease-in-out;
+  z-index: 10;
 }
 .guild-dashboard-overlayside.closed {
   transform: translateX(100%);
 }
 
 .guild-chat {
-  height: calc(100vh - var(--spacing) * 16);
-  display: grid;
-  grid-template-rows: 1fr calc(var(--spacing) * 30);
-  grid-row-gap: calc(var(--spacing) * 5);
+  min-height: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .guild-chat-messages {
   box-sizing: border-box;
   height: 100%;
-  grid-row: 1 / 2;
   overflow-y: auto;
   padding: calc(var(--spacing) * 2);
 }
 
 .guild-chat-input {
   box-sizing: border-box;
-  grid-row: 2 / 3;
   border-top: 1px solid var(--color-stone-300);
   padding: calc(var(--spacing) * 4);
 }

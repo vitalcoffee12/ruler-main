@@ -2,6 +2,7 @@ import { forwardRef, memo, useEffect, useRef, useState } from "react";
 import { useModal } from "~/hooks/use-modal.hook";
 import AddElementModal from "./add-element.modal";
 import AddElementManualModal from "./add-element-manual.modal";
+import useSocket from "~/hooks/use-socket.hook";
 
 export interface Entity {
   _id: string;
@@ -15,22 +16,25 @@ export interface Entity {
 }
 
 export default function GuildWorld(props: {
+  guildId: number;
   guildCode: string;
-  world: Entity[];
-  relations: { fromNodeId: string; toNodeId: string; type: string }[];
 }) {
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  const refs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [modalType, setModalType] = useState<"generate" | "add" | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [world, setWorld] = useState<Entity[]>([]);
+  const [relations, setRelations] = useState<
+    { fromNodeId: string; toNodeId: string; type: string }[]
+  >([]);
+  const refs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const { Modal, openModal, closeModal } = useModal();
 
   useEffect(() => {
     if (!hoveredNodeId) {
-      for (const world of props.world) {
-        refs.current[world._id]?.classList.remove("bg-yellow-50");
+      for (const w of world) {
+        refs.current[w._id]?.classList.remove("bg-yellow-50");
       }
     }
-    const rels = props.relations.filter(
+    const rels = relations.filter(
       (rel) =>
         rel.fromNodeId === hoveredNodeId || rel.toNodeId === hoveredNodeId,
     );
@@ -41,11 +45,11 @@ export default function GuildWorld(props: {
       connectedNodeIds.add(rel.toNodeId);
     });
 
-    for (const world of props.world) {
-      if (connectedNodeIds.has(world._id) && world._id !== hoveredNodeId) {
-        refs.current[world._id]?.classList.add("bg-yellow-50");
+    for (const w of world) {
+      if (connectedNodeIds.has(w._id) && w._id !== hoveredNodeId) {
+        refs.current[w._id]?.classList.add("bg-yellow-50");
       } else {
-        refs.current[world._id]?.classList.remove("bg-yellow-50");
+        refs.current[w._id]?.classList.remove("bg-yellow-50");
       }
     }
   }, [hoveredNodeId]);
@@ -104,7 +108,7 @@ export default function GuildWorld(props: {
         </div>
       </div>
       <GuildWorldNodes
-        world={props.world}
+        world={world}
         setHoveredNodeId={setHoveredNodeId}
         refs={refs}
       />

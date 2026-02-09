@@ -16,6 +16,9 @@ export class UserEntity extends BaseEntity implements User {
   @Column({ type: "varchar", length: 255, nullable: true, unique: true })
   code: string;
 
+  @Column({ type: "varchar", length: 255, nullable: true })
+  iconPath?: string;
+
   @Column({ type: "varchar", length: 100, nullable: true })
   displayName?: string;
 

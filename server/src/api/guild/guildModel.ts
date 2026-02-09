@@ -26,10 +26,17 @@ export const GuildMemberSchema = z.object({
   id: z.number().optional(),
   guildId: z.number(),
   guildCode: z.string(),
+  iconPath: z.string().optional(),
+  displayName: z.string().optional(),
   userId: z.number(),
   userCode: z.string(),
   role: z.string(),
   joinedAt: z.date(),
+});
+
+export type GuildMemberWithUser = z.infer<typeof GuildMemberWithUserSchema>;
+export const GuildMemberWithUserSchema = GuildMemberSchema.extend({
+  iconPath: z.string().optional(),
 });
 
 // Input Validation for 'GET guilds/:id' endpoint

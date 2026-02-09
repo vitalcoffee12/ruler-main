@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 
 export default function GuildHeader(props: {
+  guildId: number;
   guildCode: string;
   guildName: string;
 }) {
