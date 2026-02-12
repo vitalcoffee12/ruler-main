@@ -1,11 +1,12 @@
+import { AgentLib } from "../_lib/agent.lib";
 import { GuildRepository } from "../guild/guildRepository";
-import { AgentService } from "./agentService";
+
 import { Entity, Rule } from "./gameModel";
 import { GameRepository } from "./gameRepository";
 
 export class GameService {
   constructor(
-    private agentService = new AgentService(),
+    private agentLib = new AgentLib(),
     private guildRepository: GuildRepository = new GuildRepository(),
     private gameRepository: GameRepository = new GameRepository(),
   ) {}
@@ -36,7 +37,7 @@ export class GameService {
   async generateEntities(guildCode: string, topic: string): Promise<Entity[]> {
     const worlds = await this.gameRepository.getWorld(guildCode, 0);
 
-    await this.agentService.generateEntities(topic);
+    await this.agentLib.generateEntities(topic);
     return [];
   }
 
@@ -83,16 +84,16 @@ export class GameService {
     const rankedTerms = new Map<string, number>();
     const rankedEntities = new Map<string, number>();
 
-    const nar = await this.agentService.generateNarrative({
+    const nar = await this.agentLib.generateNarrative({
       ...gameHistories.map((gh) => ({
         role: "user",
         content: gh.chat?.message ?? "",
       })),
     });
 
-    const rules = await this.agentService.generateRuleDescription(rankedRules);
+    const rules = await this.agentLib.generateRuleDescription(rankedRules);
 
-    const edits = await this.agentService.generateEdits(nar);
+    const edits = await this.agentLib.generateEdits(nar);
 
     const result = await this.gameRepository.insertSceneHistory(
       guildCode,

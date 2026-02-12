@@ -1,5 +1,7 @@
 import type { Request, RequestHandler, Response } from "express";
 import { resourceService } from "./resourceService";
+import { ServiceResponse } from "@/common/models/serviceResponse";
+import { StatusCodes } from "http-status-codes/build/cjs/status-codes";
 
 class ResourceController {
   public getResources: RequestHandler = async (
@@ -24,10 +26,28 @@ class ResourceController {
     res: Response,
   ) => {
     const { writer, resourceData } = req.body;
-    console.log(writer, resourceData);
+    console.log(
+      "Uploading resource by writer:",
+      writer,
+      "with data:",
+      resourceData,
+    );
 
     const serviceResponse = await resourceService.upload(writer, resourceData);
-    return;
+    res.status(serviceResponse.statusCode).send(serviceResponse);
+  };
+
+  public formatResource: RequestHandler = async (
+    req: Request,
+    res: Response,
+  ) => {
+    const { id } = req.body;
+    resourceService.format(id);
+    const serviceResponse = ServiceResponse.success<boolean>(
+      "Request to format resource successfully received",
+      true,
+      StatusCodes.OK,
+    );
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 }

@@ -33,9 +33,10 @@ export const RuleSchema = z.object({
   version: z.number(),
   title: z.string(),
   content: z.array(z.string()),
-  keywords: z.array(z.string()),
+  keywords: z.array(z.object({ term: z.string(), description: z.string() })),
   categories: z.array(z.string()),
   children: z.array(z.number()),
+  summary: z.string().optional(),
   embedding: z.array(z.number()).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -46,7 +47,7 @@ export const TermSchema = z.object({
   id: z.number().optional(),
   version: z.number(),
   term: z.string(),
-  definition: z.string(),
+  description: z.string(),
   embedding: z.array(z.number()).optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -57,7 +58,7 @@ export const RuleFormatSchema = z.object({
   keywords: z.array(
     z.object({
       term: z.string(),
-      definition: z.string(),
+      description: z.string(),
     }),
   ),
 });

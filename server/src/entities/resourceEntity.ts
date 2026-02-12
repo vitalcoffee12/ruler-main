@@ -23,6 +23,9 @@ export class ResourceEntity extends BaseEntity implements Resource {
   @Column({ type: "enum", enum: ["ruleSet", "termSet"] })
   type: "ruleSet" | "termSet";
 
+  @Column({ type: "int", nullable: false, default: 0 })
+  generativeLevel: number;
+
   @Column({ type: "text", nullable: true })
   imagePath?: string;
 

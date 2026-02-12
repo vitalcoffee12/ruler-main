@@ -113,6 +113,10 @@ export function GenerateUserCode(): string {
   return prefix + randomCode;
 }
 
+export function getCodeWithoutPrefix(code: string): string {
+  return code.split("-")[1] || code;
+}
+
 export function removeMarkdownFormatting(origin: string): string {
   let text = origin;
   text = text.replace(/#{1,6}/g, ""); // headings

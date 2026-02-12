@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
-import { COLLECTION_SUFFIX } from "../constants";
-import { Rule } from "../game/gameModel";
 
 export class MongoLib {
+  // 벡터 인덱스 생성, 옵션으로 임베딩 사이즈, 필드 설정 가능
+  // 각 규칙, 용어집 콜렉션에서 문맥 검색을 위함
   async createEmbeddingIndex(
     collectionName: string,
     options?: {
@@ -29,6 +29,9 @@ export class MongoLib {
     });
   }
 
+  // 고유 인덱스 생성, 옵션으로 필드 설정 가능
+  // 규칙 및 용어집에서 id로 중복된 항목이 들어오는 것을 방지... object id는 사람이 읽기 어려우니
+  // 별도의 인티저 id 필드를 추가하였음.
   async createUniqueIndex(
     collectionName: string,
     options?: {
@@ -40,6 +43,40 @@ export class MongoLib {
     await mongoose.connection
       .collection(collectionName)
       .createIndex({ [fieldName]: 1 }, { unique: true });
+  }
+
+  async findAllDocuments<T>(collectionName: string): Promise<T[]> {
+    const documents = await mongoose.connection
+      .collection(collectionName)
+      .find({})
+      .toArray();
+    return documents as T[];
+  }
+
+  async findDocumentByField<T>(
+    collectionName: string,
+    fieldName: string,
+    value: any,
+  ): Promise<T | null> {
+    const document = await mongoose.connection
+      .collection(collectionName)
+      .findOne({ [fieldName]: value });
+    return document as T | null;
+  }
+
+  async bulkWriteDocuments(
+    collectionName: string,
+    operations: mongoose.mongo.AnyBulkWriteOperation<any>[],
+  ) {
+    await mongoose.connection.collection(collectionName).bulkWrite(operations);
+  }
+
+  async insertDocumentsToEmptyCollection(
+    collectionName: string,
+    documents: any,
+  ): Promise<void> {
+    await mongoose.connection.collection(collectionName).deleteMany({});
+    await mongoose.connection.collection(collectionName).insertMany(documents);
   }
 }
 

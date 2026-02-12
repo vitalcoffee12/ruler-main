@@ -2,10 +2,16 @@ import fs from "fs";
 import { StatusCodes } from "http-status-codes";
 import { ServiceResponse } from "@/common/models/serviceResponse";
 import { logger } from "@/server";
-import { ResourceRepository } from "./resourceRepository";
+import { resourceRepository } from "./resourceRepository";
 import { Resource } from "./resourceModel";
-import { Rule } from "../game/gameModel";
+import { Rule, Term, TermSchema } from "../game/gameModel";
 import path from "path";
+import { AgentLib } from "../_lib/agent.lib";
+import { mongoLib } from "../_lib/mongo.lib";
+import { COLLECTION_SUFFIX } from "../constants";
+import { ResourceEntity } from "@/entities/resourceEntity";
+import mongoose from "mongoose";
+import { generateRandomCode, getCodeWithoutPrefix } from "../utils";
 
 interface NestedRule {
   title: string;
@@ -15,16 +21,12 @@ interface NestedRule {
 }
 
 export class ResourceService {
-  private resourceRepository: ResourceRepository;
-
-  constructor(repository: ResourceRepository = new ResourceRepository()) {
-    this.resourceRepository = repository;
-  }
+  constructor(private agentLib: AgentLib = new AgentLib()) {}
 
   // Retrieves all resources from the database
   async findAll(): Promise<ServiceResponse<Resource[] | null>> {
     try {
-      const resources = await this.resourceRepository.findAll();
+      const resources = await resourceRepository.find();
       if (!resources || resources.length === 0) {
         return ServiceResponse.failure(
           "No Resources found",
@@ -47,7 +49,9 @@ export class ResourceService {
   // Retrieves a single resource by their ID
   async findById(id: number): Promise<ServiceResponse<Resource | null>> {
     try {
-      const resource = await this.resourceRepository.findById(id);
+      const resource = await resourceRepository.findOne({
+        where: { id },
+      });
       if (!resource) {
         return ServiceResponse.failure(
           "Resource not found",
@@ -69,6 +73,86 @@ export class ResourceService {
     }
   }
 
+  public async createResourceCollection(
+    code: string,
+    writer: {
+      userId: number;
+      userCode: string;
+    },
+    options?: {
+      ruleSetData?: {
+        name: string;
+        description?: string;
+        fileName?: string;
+      };
+      termSetData?: {
+        name: string;
+        description?: string;
+        fileName?: string;
+      };
+    },
+  ): Promise<void> {
+    if (options?.ruleSetData) {
+      const ruleSet: Partial<ResourceEntity> = {
+        code: `R-${code}`,
+        ownerId: writer.userId,
+        ownerCode: writer.userCode,
+        name: options.ruleSetData.name,
+        description: options.ruleSetData.description || "",
+        type: "ruleSet",
+        imagePath: `https://picsum.photos/${Math.random() * 1000 + 300}`,
+        filePath: options.ruleSetData.fileName || undefined,
+        ...resourceDefaultData,
+      };
+
+      await mongoose.connection.createCollection(
+        `${ruleSet.code}.${COLLECTION_SUFFIX.RULE_SET}`,
+      );
+      await mongoLib.createEmbeddingIndex(
+        `${ruleSet.code}.${COLLECTION_SUFFIX.RULE_SET}`,
+        {
+          embeddingSize: 4096,
+          fieldName: "embedding",
+        },
+      );
+      await mongoLib.createUniqueIndex(
+        `${ruleSet.code}.${COLLECTION_SUFFIX.RULE_SET}`,
+        { fieldName: "id" },
+      );
+
+      await resourceRepository.save(ruleSet);
+    }
+    if (options?.termSetData) {
+      const termSet: Partial<ResourceEntity> = {
+        code: `T-${code}`,
+        ownerId: writer.userId,
+        ownerCode: writer.userCode,
+        name: options.termSetData.name,
+        description: options.termSetData.description || "",
+        type: "termSet",
+        imagePath: `https://picsum.photos/${Math.random() * 1000 + 300}`,
+        filePath: options.termSetData.fileName || undefined,
+        ...resourceDefaultData,
+      };
+
+      await mongoose.connection.createCollection(
+        `${termSet.code}.${COLLECTION_SUFFIX.TERM_SET}`,
+      );
+      await mongoLib.createEmbeddingIndex(
+        `${termSet.code}.${COLLECTION_SUFFIX.TERM_SET}`,
+        {
+          embeddingSize: 4096,
+          fieldName: "embedding",
+        },
+      );
+      await mongoLib.createUniqueIndex(
+        `${termSet.code}.${COLLECTION_SUFFIX.TERM_SET}`,
+        { fieldName: "id" },
+      );
+      await resourceRepository.save(termSet);
+    }
+  }
+
   async upload(
     writer: { userId: number; userCode: string },
     resourceData: {
@@ -80,14 +164,43 @@ export class ResourceService {
     try {
       const rules = await buildRuleFromMarkdown(resourceData.filePath);
 
-      const resourceCode = await this.resourceRepository.uploadFile(
+      let code = generateRandomCode();
+      while (true) {
+        const existing = await resourceRepository.findOne({
+          where: [
+            {
+              code: `R-${code}`,
+            },
+            {
+              code: `T-${code}`,
+            },
+          ],
+        });
+        if (!existing) {
+          break;
+        }
+        code = generateRandomCode();
+      }
+
+      await this.createResourceCollection(
+        code,
         { userId: writer.userId, userCode: writer.userCode },
-        resourceData,
-        rules,
+        {
+          ruleSetData: {
+            name: resourceData.name,
+            description: resourceData.description,
+            fileName: resourceData.filePath,
+          },
+        },
       );
+
+      await mongoose.connection
+        .collection(`R-${code}.${COLLECTION_SUFFIX.RULE_SET}`)
+        .insertMany(rules);
+
       return ServiceResponse.success<string>(
         "Resource created successfully",
-        resourceCode,
+        code,
         StatusCodes.CREATED,
       );
     } catch (ex) {
@@ -98,6 +211,149 @@ export class ResourceService {
         null,
         StatusCodes.INTERNAL_SERVER_ERROR,
       );
+    }
+  }
+  async format(id: number): Promise<boolean> {
+    try {
+      // 사용자에게 선 응답으로 처리 요청이 들어간 것만 전달.
+      // 처리 프로세스는 서버에서 진행하고, 캐시 등에 진행상황만 저장.
+      // 사용자는 별도 API로 진행상황을 조회. 조회 중인 클라이언트에 실시간 프로세싱 상태를 소켓으로 전달 여부는 추후 고민...
+
+      const resource = await resourceRepository.findOne({
+        where: { id },
+      });
+
+      if (!resource) {
+        return false;
+      }
+      const type = resource.type || "ruleSet";
+
+      // rule set processing
+      if (type === "ruleSet") {
+        const documents = await mongoLib.findAllDocuments<Rule>(
+          `${resource.code}.${COLLECTION_SUFFIX.RULE_SET}`,
+        );
+        const result = await this.agentLib.formatRuleSet(documents);
+        if (!result) {
+          return false;
+        }
+
+        // rule set summary embedding
+        for (let i = 0; i < result.length; i++) {
+          if (!result[i].summary) continue;
+          const embedded = await this.agentLib.embedText(
+            result[i].summary || "",
+          );
+          result[i].embedding = embedded ? embedded : undefined;
+        }
+
+        // update
+        await mongoLib.bulkWriteDocuments(
+          `${resource.code}.${COLLECTION_SUFFIX.RULE_SET}`,
+          result.map((item) => ({
+            updateOne: {
+              filter: { id: item.id },
+              update: {
+                $set: {
+                  keywords: item.keywords,
+                  summary: item.summary,
+                  embedding: item.embedding,
+                  updatedAt: item.updatedAt,
+                },
+              },
+            },
+          })),
+        );
+
+        // check term set existence & term processing
+        let termResource = await resourceRepository.findOne({
+          where: { code: `T-${getCodeWithoutPrefix(resource?.code || "")}` },
+        });
+        if (!termResource) {
+          termResource = new ResourceEntity({
+            code: `T-${getCodeWithoutPrefix(resource?.code || "")}`,
+            ownerId: resource?.ownerId || 0,
+            ownerCode: resource?.ownerCode || "",
+            name: `${resource?.name || ""} - Term Set`,
+            description: `Auto generated term set for ${resource?.name || ""}`,
+            type: "termSet",
+            imagePath: `https://picsum.photos/${Math.random() * 1000 + 300}`,
+            ...resourceDefaultData,
+          });
+        }
+        await resourceRepository.save(termResource);
+
+        // term set 생성
+        const keywords = result.flatMap((rule) => rule.keywords || []) as {
+          term: string;
+          description: string;
+          embedding?: number[] | null;
+          updatedAt?: Date;
+          createdAt?: Date;
+        }[];
+
+        for (let i = 0; i < keywords.length; i++) {
+          const embedded = await this.agentLib.embedText(
+            keywords[i].description,
+          );
+          keywords[i].embedding = embedded;
+          keywords[i].updatedAt = new Date();
+          keywords[i].createdAt = keywords[i].createdAt || new Date();
+        }
+
+        await mongoLib.insertDocumentsToEmptyCollection(
+          `T-${getCodeWithoutPrefix(resource.code)}.${COLLECTION_SUFFIX.TERM_SET}`,
+          keywords.map((keyword, index) => ({
+            id: index + 1,
+            version: 1,
+            term: keyword.term,
+            description: keyword.description,
+            embedding: keyword.embedding,
+            updatedAt: keyword.updatedAt,
+            createdAt: keyword.createdAt || new Date(),
+          })),
+        );
+
+        await resourceRepository.save(resource);
+      }
+
+      // term processing
+      if (type === "termSet") {
+        const documents = await mongoLib.findAllDocuments<Term>(
+          `${resource.code}.${COLLECTION_SUFFIX.TERM_SET}`,
+        );
+
+        for (let i = 0; i < documents.length; i++) {
+          const embedded = await this.agentLib.embedText(
+            documents[i].description,
+          );
+          documents[i].embedding = embedded ? embedded : undefined;
+          documents[i].updatedAt = new Date();
+        }
+
+        await mongoLib.bulkWriteDocuments(
+          `${resource.code}.${COLLECTION_SUFFIX.TERM_SET}`,
+          documents.map((item) => ({
+            updateOne: {
+              filter: { id: item.id },
+              update: {
+                $set: {
+                  embedding: item.embedding,
+                  updatedAt: item.updatedAt,
+                },
+              },
+            },
+          })),
+        );
+      }
+
+      return true;
+    } catch (ex) {
+      const errorMessage = `Error formatting resource with id ${id}:, ${
+        (ex as Error).message
+      }`;
+      logger.error(errorMessage);
+      return false;
     }
   }
 
@@ -122,6 +378,7 @@ export class ResourceService {
   //   return ruleSetCode;
   //}
 }
+export const resourceService = new ResourceService();
 
 // rule operations
 
@@ -224,4 +481,13 @@ async function buildRuleFromMarkdown(
   return rules;
 }
 
-export const resourceService = new ResourceService();
+const resourceDefaultData = {
+  distributors: [],
+  tags: [],
+  visibility: "private" as "public" | "private" | "unlisted",
+  downloadCount: 0,
+  favoriteCount: 0,
+  rating: 0,
+  reviews: 0,
+  version: 1,
+};

@@ -24,6 +24,10 @@ export default [
         route("explore", "views/lobby-services/explore.tsx"),
         route("friends", "views/lobby-services/friends.tsx"),
         route("resources", "views/lobby-services/resources.tsx"),
+        route(
+          "resources/detail/:id",
+          "views/lobby-services/resources-detail.tsx",
+        ),
         route("shop", "views/lobby-services/shop.tsx"),
         route("community", "views/community/community-layout.tsx", [
           route(":communityId", "views/community/community-dashboard.tsx"),

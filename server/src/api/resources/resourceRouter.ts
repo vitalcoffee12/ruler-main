@@ -12,7 +12,6 @@ export const resourceRouter: Router = express.Router();
 
 resourceRegistry.register("Resource", ResourceSchema);
 
-// get all users - admin only
 resourceRegistry.registerPath({
   method: "get",
   path: "/resource",
@@ -23,7 +22,7 @@ resourceRegistry.registerPath({
 resourceRouter.get(
   "/",
   validateToken(),
-  validateRole(["admin"]),
+  //validateRole(["admin"]),
   resourceController.getResources,
 );
 
@@ -35,7 +34,11 @@ resourceRegistry.registerPath({
   responses: createApiResponse(ResourceSchema, "Success"),
 });
 
-resourceRouter.get("/:id", validateToken(), resourceController.getResourceById);
+resourceRouter.get(
+  "/detail/:id",
+  validateToken(),
+  resourceController.getResourceById,
+);
 
 resourceRegistry.registerPath({
   method: "post",
@@ -64,4 +67,28 @@ resourceRouter.post(
   "/upload",
   validateToken(),
   resourceController.uploadResource,
+);
+
+resourceRegistry.registerPath({
+  method: "post",
+  path: "/resource/format",
+  tags: ["Resource"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            id: z.number(),
+          }),
+        },
+      },
+    },
+  },
+  responses: createApiResponse(ResourceSchema, "Resource Formatted"),
+});
+
+resourceRouter.post(
+  "/format",
+  validateToken(),
+  resourceController.formatResource,
 );
