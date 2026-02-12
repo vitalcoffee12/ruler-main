@@ -3,19 +3,9 @@ import AddMemberModal from "./add-member.modal";
 import useSocket from "~/hooks/use-socket.hook";
 import { useEffect, useState } from "react";
 import SettingsModal from "./settings.modal";
+import type { Guild, GuildMember } from "../common.interface";
 
-export interface GuildMember {
-  userId: number;
-  userCode: string;
-  iconPath: string;
-  displayName: string;
-  role: string;
-}
-export default function GuildMemberList(props: {
-  guildId: number;
-  guildCode: string;
-  guildName: string;
-}) {
+export default function GuildMemberList(props: { guild: Guild }) {
   const [modalType, setModalType] = useState<"invite" | "settings" | null>(
     null,
   );
@@ -28,12 +18,12 @@ export default function GuildMemberList(props: {
     for (const payload of payloads) {
       if (
         payload.type === "GUILD_MEMBER_LIST_UPDATE" &&
-        payload.guildCode === props.guildCode
+        payload.guildCode === props.guild.code
       ) {
         setMembers(payload.content);
       }
     }
-  }, [isConnected, payloads, props.guildCode]);
+  }, [isConnected, payloads, props.guild.code]);
 
   return (
     <>
@@ -77,12 +67,15 @@ export default function GuildMemberList(props: {
       <Modal>
         {modalType === "invite" && (
           <AddMemberModal
-            guildCode={props.guildCode}
-            guildName={props.guildName}
+            guildCode={props.guild.code}
+            guildName={props.guild.name}
           />
         )}
         {modalType === "settings" && (
-          <SettingsModal guildId={props.guildId} guildCode={props.guildCode} />
+          <SettingsModal
+            guildId={props.guild.id}
+            guildCode={props.guild.code}
+          />
         )}
       </Modal>
     </>

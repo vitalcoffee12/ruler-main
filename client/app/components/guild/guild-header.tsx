@@ -1,11 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import type { Guild } from "../common.interface";
+import GuildKnowledgeBase from "./guild-knowbase";
 
-export default function GuildHeader(props: {
-  guildId: number;
-  guildCode: string;
-  guildName: string;
-}) {
+export default function GuildHeader(props: { guild: Guild }) {
   const nav = useNavigate();
   const [overlaysideOpen, setOverlaysideOpen] = useState(false);
 
@@ -14,10 +12,10 @@ export default function GuildHeader(props: {
       <div
         className="cursor-pointer"
         onClick={() => {
-          nav(`/game/guild/code/${props.guildCode}`);
+          nav(`/game/guild/code/${props.guild.code}`);
         }}
       >
-        {props.guildName}
+        {props.guild.name}
       </div>
       <div
         className={`material-symbols-outlined cursor-pointer hover:bg-stone-100 rounded-lg p-2 text-stone-600 no-select ${
@@ -34,7 +32,7 @@ export default function GuildHeader(props: {
           overlaysideOpen ? "" : "closed"
         }`}
       >
-        asldkjalkdjf
+        <GuildKnowledgeBase guild={props.guild} />
       </div>
     </div>
   );

@@ -2,16 +2,21 @@ import fs from "fs";
 import { StatusCodes } from "http-status-codes";
 import { ServiceResponse } from "@/common/models/serviceResponse";
 import { logger } from "@/server";
-import { resourceRepository } from "./resourceRepository";
 import { Resource } from "./resourceModel";
 import { Rule, Term, TermSchema } from "../game/gameModel";
 import path from "path";
 import { AgentLib } from "../_lib/agent.lib";
 import { mongoLib } from "../_lib/mongo.lib";
 import { COLLECTION_SUFFIX } from "../constants";
-import { ResourceEntity } from "@/entities/resourceEntity";
+import { ResourceEntity, resourceRepository } from "@/entities/resourceEntity";
 import mongoose from "mongoose";
 import { generateRandomCode, getCodeWithoutPrefix } from "../utils";
+import {
+  GuildResourceEntity,
+  guildResourceRepository,
+} from "@/entities/guildResourceEntity";
+import { guildRepository } from "@/entities/guildEntity";
+import { In } from "typeorm";
 
 interface NestedRule {
   title: string;
@@ -71,6 +76,107 @@ export class ResourceService {
         StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  async findByGuildCode(
+    type: "ruleSet" | "termSet",
+    code: string,
+    page: number,
+  ): Promise<ServiceResponse<{ data: Resource[]; maxPage: number } | null>> {
+    try {
+      const collection = await mongoose.connection.collection(
+        `${code}.${
+          type === "ruleSet"
+            ? COLLECTION_SUFFIX.RULE_SET
+            : COLLECTION_SUFFIX.TERM_SET
+        }`,
+      );
+      const resources = await collection
+        .find<any>({})
+        .skip((page - 1) * 10)
+        .limit(10)
+        .toArray();
+      const counts = await collection.countDocuments();
+      const maxPage = Math.ceil(counts / 10);
+
+      if (!resources || resources.length === 0) {
+        return ServiceResponse.failure(
+          "No Resources found for the guild",
+          null,
+          StatusCodes.NOT_FOUND,
+        );
+      }
+      return ServiceResponse.success<{ data: Resource[]; maxPage: number }>(
+        "Resources found",
+        { data: resources, maxPage },
+      );
+    } catch (ex) {
+      const errorMessage = `Error finding resources for guild code ${code}:, ${
+        (ex as Error).message
+      }`;
+      logger.error(errorMessage);
+      return ServiceResponse.failure(
+        "An error occurred while retrieving resources for the guild.",
+        null,
+        StatusCodes.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  public async importResourcesToGuild(
+    guildCode: string,
+    resourceIds: number[],
+  ): Promise<ServiceResponse<boolean>> {
+    try {
+      const guild = await guildRepository.findOne({
+        where: { code: guildCode },
+      });
+      if (!guild) {
+        return ServiceResponse.failure(
+          "Guild not found",
+          false,
+          StatusCodes.NOT_FOUND,
+        );
+      }
+
+      const guildResources = await guildResourceRepository.find({
+        where: { guildCode },
+      });
+      const existingIds = guildResources.map((e) => e.resourceId);
+      const newIds = resourceIds.filter((id) => !existingIds.includes(id));
+
+      const resources = await resourceRepository.find({
+        where: { id: In(newIds) },
+      });
+
+      const newGuildResources = resources.map((resource) => {
+        const guildResource = new GuildResourceEntity({
+          guildId: guild.id,
+          guildCode: guildCode,
+          resourceId: resource.id,
+          resourceCode: resource.code,
+          type: resource.type,
+        });
+        return guildResource;
+      });
+
+      await guildResourceRepository.save(newGuildResources);
+    } catch (ex) {
+      const errorMessage = `Error importing resources to guild ${guildCode}:, ${
+        (ex as Error).message
+      }`;
+      logger.error(errorMessage);
+      return ServiceResponse.failure(
+        "An error occurred while importing resources to the guild.",
+        false,
+        StatusCodes.INTERNAL_SERVER_ERROR,
+      );
+    }
+    return ServiceResponse.success<boolean>(
+      "Resources imported to guild successfully",
+      true,
+      StatusCodes.OK,
+    );
   }
 
   public async createResourceCollection(

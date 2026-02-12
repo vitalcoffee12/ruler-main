@@ -3,6 +3,7 @@ import { useModal } from "~/hooks/use-modal.hook";
 import AddElementModal from "./add-element.modal";
 import AddElementManualModal from "./add-element-manual.modal";
 import useSocket from "~/hooks/use-socket.hook";
+import type { Guild } from "../common.interface";
 
 export interface Entity {
   _id: string;
@@ -15,10 +16,7 @@ export interface Entity {
   updatedAt: Date;
 }
 
-export default function GuildWorld(props: {
-  guildId: number;
-  guildCode: string;
-}) {
+export default function GuildWorld(props: { guild: Guild }) {
   const [modalType, setModalType] = useState<"generate" | "add" | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [world, setWorld] = useState<Entity[]>([]);
@@ -114,10 +112,10 @@ export default function GuildWorld(props: {
       />
       <Modal>
         {modalType === "generate" && (
-          <AddElementModal guildCode={props.guildCode} />
+          <AddElementModal guildCode={props.guild.code} />
         )}
         {modalType === "add" && (
-          <AddElementManualModal guildCode={props.guildCode} />
+          <AddElementManualModal guildCode={props.guild.code} />
         )}
       </Modal>
     </div>

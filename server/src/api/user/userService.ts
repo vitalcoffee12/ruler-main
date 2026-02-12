@@ -1,7 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { sign, verify } from "jsonwebtoken";
 import type { User, ValidateTokenResponse } from "@/api/user/userModel";
-import { UserRepository } from "@/api/user/userRepository";
 import { ServiceResponse } from "@/common/models/serviceResponse";
 import { logger } from "@/server";
 import { env } from "@/common/utils/envConfig";
@@ -13,18 +12,16 @@ import {
   issueRefreshToken,
 } from "@/common/utils/auth";
 import { OAUTH_PROVIDERS } from "@/common/constants";
+import { userRepositroy } from "@/entities/userEntity";
+import { GenerateUserCode } from "../utils";
 
 export class UserService {
-  private userRepository: UserRepository;
-
-  constructor(repository: UserRepository = new UserRepository()) {
-    this.userRepository = repository;
-  }
+  constructor() {}
 
   // Retrieves all users from the database
   async findAll(): Promise<ServiceResponse<User[] | null>> {
     try {
-      const users = await this.userRepository.findAll();
+      const users = await userRepositroy.find();
       if (!users || users.length === 0) {
         return ServiceResponse.failure(
           "No Users found",
@@ -47,7 +44,7 @@ export class UserService {
   // Retrieves a single user by their ID
   async findById(id: number): Promise<ServiceResponse<User | null>> {
     try {
-      const user = await this.userRepository.findById(id);
+      const user = await userRepositroy.findOne({ where: { id } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -70,7 +67,7 @@ export class UserService {
   }
 
   async checkEmailExists(email: string): Promise<boolean> {
-    const user = await this.userRepository.findByEmail(email);
+    const user = await userRepositroy.findOne({ where: { email } });
     return !!user;
   }
 
@@ -78,16 +75,18 @@ export class UserService {
     name: string;
     email: string;
     password: string;
-  }): Promise<ServiceResponse<User | null>> {
+  }): Promise<ServiceResponse<boolean>> {
     try {
-      const newUser = await this.userRepository.create({
-        name: userData.name,
+      const newUser = await userRepositroy.insert({
+        code: GenerateUserCode(),
+        displayName: userData.name,
         email: userData.email,
         passwordHash: userData.password, // In real implementation, hash the password
       });
-      return ServiceResponse.success<User>(
+
+      return ServiceResponse.success<boolean>(
         "User created successfully",
-        newUser,
+        true,
         StatusCodes.CREATED,
       );
     } catch (ex) {
@@ -95,7 +94,7 @@ export class UserService {
       logger.error(errorMessage);
       return ServiceResponse.failure(
         "An error occurred while creating user.",
-        null,
+        false,
         StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }
@@ -119,7 +118,16 @@ export class UserService {
     }
     const userId = (verified as any).userId;
     if (verified && userId && userId > 0) {
-      const success = await this.userRepository.activate(userId);
+      const user = await userRepositroy.findOne({ where: { id: userId } });
+      if (!user) {
+        return ServiceResponse.failure(
+          "User not found",
+          null,
+          StatusCodes.NOT_FOUND,
+        );
+      }
+      user.verifiedAt = new Date();
+      const success = await userRepositroy.save(user);
       if (!success) {
         return ServiceResponse.failure(
           "User not found",
@@ -135,7 +143,16 @@ export class UserService {
 
   async disable(id: number): Promise<ServiceResponse<null>> {
     try {
-      const success = await this.userRepository.disable(id);
+      const user = await userRepositroy.findOne({ where: { id } });
+      if (!user) {
+        return ServiceResponse.failure(
+          "User not found",
+          null,
+          StatusCodes.NOT_FOUND,
+        );
+      }
+      user.state = "disabled";
+      const success = await userRepositroy.save(user);
       if (!success) {
         return ServiceResponse.failure(
           "User not found",
@@ -159,7 +176,17 @@ export class UserService {
 
   async block(id: number, blockedUntil: Date): Promise<ServiceResponse<null>> {
     try {
-      const success = await this.userRepository.block(id, blockedUntil);
+      const user = await userRepositroy.findOne({ where: { id } });
+      if (!user) {
+        return ServiceResponse.failure(
+          "User not found",
+          null,
+          StatusCodes.NOT_FOUND,
+        );
+      }
+      user.state = "blocked";
+      user.blockedUntil = blockedUntil;
+      const success = await userRepositroy.save(user);
       if (!success) {
         return ServiceResponse.failure(
           "User not found",
@@ -187,7 +214,7 @@ export class UserService {
     newPassword: string,
   ): Promise<ServiceResponse<null>> {
     try {
-      const user = await this.userRepository.findById(id);
+      const user = await userRepositroy.findOne({ where: { id } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -195,6 +222,7 @@ export class UserService {
           StatusCodes.NOT_FOUND,
         );
       }
+
       // In real implementation, verify oldPassword with stored passwordHash
       const checkOldPassword = oldPassword === user.passwordHash;
       if (!checkOldPassword) {
@@ -204,16 +232,8 @@ export class UserService {
           StatusCodes.UNAUTHORIZED,
         );
       }
-
-      const success = await this.userRepository.updatePassword(id, newPassword); // Hash newPassword in real implementation
-
-      if (!success) {
-        return ServiceResponse.failure(
-          "Failed to update password",
-          null,
-          StatusCodes.INTERNAL_SERVER_ERROR,
-        );
-      }
+      user.passwordHash = newPassword; // In real implementation, hash the new password
+      await userRepositroy.save(user); // Hash newPassword in real implementation
       return ServiceResponse.success<null>(
         "Password changed successfully",
         null,
@@ -235,7 +255,7 @@ export class UserService {
     email: string,
   ): Promise<ServiceResponse<User | null>> {
     try {
-      const user = await this.userRepository.findByEmail(email);
+      const user = await userRepositroy.findOne({ where: { email } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -263,15 +283,16 @@ export class UserService {
     resetToken: string,
   ): Promise<ServiceResponse<null>> {
     try {
-      const success = await this.userRepository.updatePassword(id, newPassword); // Hash newPassword in real implementation
-
-      if (!success) {
+      const user = await userRepositroy.findOne({ where: { id } });
+      if (!user) {
         return ServiceResponse.failure(
           "User not found",
           null,
           StatusCodes.NOT_FOUND,
         );
       }
+      user.passwordHash = newPassword; // In real implementation, hash the new password and verify resetToken
+      await userRepositroy.save(user); // Hash newPassword in real implementation
       return ServiceResponse.success<null>("Password reset successfully", null);
     } catch (ex) {
       const errorMessage = `Error resetting password for user with id ${id}: ${
@@ -291,18 +312,16 @@ export class UserService {
     refreshToken: string,
   ): Promise<ServiceResponse<null>> {
     try {
-      const success = await this.userRepository.updateRefreshToken(
-        id,
-        refreshToken,
-      ); // Hash refreshToken in real implementation
-
-      if (!success) {
+      const user = await userRepositroy.findOne({ where: { id } });
+      if (!user) {
         return ServiceResponse.failure(
           "User not found",
           null,
           StatusCodes.NOT_FOUND,
         );
       }
+      user.refreshTokenHash = refreshToken; // In real implementation, hash refreshToken
+      await userRepositroy.save(user); // Hash refreshToken in real implementation
       return ServiceResponse.success<null>(
         "Refresh token updated successfully",
         null,
@@ -330,7 +349,7 @@ export class UserService {
     } | null>
   > {
     try {
-      const user = await this.userRepository.findByEmail(email);
+      const user = await userRepositroy.findOne({ where: { email } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -351,7 +370,10 @@ export class UserService {
       const accessToken = issueAccessToken(user.id ?? 0, user.role);
       const refreshToken = issueRefreshToken(user.id ?? 0, user.role);
       const hashedRefreshToken = await hashToken(refreshToken);
-      await this.userRepository.signIn(user.id ?? 0, hashedRefreshToken);
+      await userRepositroy.save({
+        ...user,
+        refreshTokenHash: hashedRefreshToken,
+      });
 
       return ServiceResponse.success<{
         accessToken: string;
@@ -382,14 +404,16 @@ export class UserService {
           StatusCodes.BAD_REQUEST,
         );
       }
-      const success = await this.userRepository.updateRefreshToken(id, "");
-      if (!success) {
+      const user = await userRepositroy.findOne({ where: { id } });
+      if (!user) {
         return ServiceResponse.failure(
           "User not found",
           null,
           StatusCodes.NOT_FOUND,
         );
       }
+      user.refreshTokenHash = "";
+      await userRepositroy.save(user);
       return ServiceResponse.success<null>("Sign-out successful", null);
     } catch (ex) {
       const errorMessage = `Error signing out user with id ${id}: ${
@@ -412,7 +436,9 @@ export class UserService {
   > {
     try {
       const oauthId = "mock-oauth-id"; // In real implementation, retrieve OAuth ID using the oauthToken
-      const user = await this.userRepository.findByOAuthId(provider, oauthId);
+      const user = await userRepositroy.findOne({
+        where: { googleId: oauthId },
+      });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -423,7 +449,10 @@ export class UserService {
       const accessToken = issueAccessToken(user.id ?? 0, user.role);
       const refreshToken = issueRefreshToken(user.id ?? 0, user.role);
       const hashedRefreshToken = await hashToken(refreshToken);
-      await this.userRepository.signIn(user.id ?? 0, hashedRefreshToken);
+      await userRepositroy.save({
+        ...user,
+        refreshTokenHash: hashedRefreshToken,
+      });
       return ServiceResponse.success<{
         accessToken: string;
         refreshToken: string;
@@ -460,7 +489,7 @@ export class UserService {
         }
 
         const userId = verified.userId;
-        const user = await this.userRepository.findById(userId);
+        const user = await userRepositroy.findOne({ where: { id: userId } });
         if (!user) {
           return ServiceResponse.failure(
             "User not found",
@@ -470,10 +499,7 @@ export class UserService {
         }
         const refreshToken = issueRefreshToken(user.id ?? 0, user.role);
         user.refreshTokenHash = await hashToken(refreshToken);
-        await this.userRepository.updateRefreshToken(
-          user.id ?? 0,
-          user.refreshTokenHash,
-        );
+        await userRepositroy.save(user);
 
         return ServiceResponse.success<ValidateTokenResponse>(
           "Access token is valid",
@@ -499,7 +525,7 @@ export class UserService {
         }
 
         const userId = verified.userId;
-        const user = await this.userRepository.findById(userId);
+        const user = await userRepositroy.findOne({ where: { id: userId } });
         if (!user) {
           return ServiceResponse.failure(
             "User not found",
@@ -523,10 +549,7 @@ export class UserService {
         const newAccessToken = issueAccessToken(user.id ?? 0, user.role);
         const newRefreshToken = issueRefreshToken(user.id ?? 0, user.role);
         user.refreshTokenHash = await hashToken(newRefreshToken);
-        await this.userRepository.updateRefreshToken(
-          user.id ?? 0,
-          user.refreshTokenHash,
-        );
+        await userRepositroy.save(user);
         return ServiceResponse.success<ValidateTokenResponse>(
           "Refresh token is valid",
           {

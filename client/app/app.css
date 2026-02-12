@@ -86,3 +86,9 @@ body {
     opacity: 0;
   }
 }
+
+.playwrite-font {
+  font-family: "Playwrite CU Guides", cursive;
+  font-weight: 400;
+  font-style: normal;
+}

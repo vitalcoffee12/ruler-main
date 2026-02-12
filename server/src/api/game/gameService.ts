@@ -2,7 +2,7 @@ import { AgentLib } from "../_lib/agent.lib";
 import { GuildRepository } from "../guild/guildRepository";
 
 import { Entity, Rule } from "./gameModel";
-import { GameRepository } from "./gameRepository";
+import { GameRepository } from "../_lib/game.lib";
 
 export class GameService {
   constructor(

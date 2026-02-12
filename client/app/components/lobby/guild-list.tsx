@@ -13,9 +13,7 @@ export default function GuildList(props: {
     { code: string; name: string; element: HTMLDivElement }[]
   >([]);
   const [hoveredGuildCode, setHoveredGuildCode] = useState<string | null>(null);
-  const [guilds, setGuilds] = useState<
-    { code: string; name: string; colorCode?: string }[]
-  >([]);
+  const [guilds, setGuilds] = useState<GuildListItemProps[]>([]);
   const nav = useNavigate();
 
   const fetchGuilds = async () => {
@@ -68,9 +66,7 @@ export default function GuildList(props: {
         {guilds.map((guild) => (
           <GuildListItem
             key={guild.code}
-            code={guild.code}
-            name={guild.name}
-            colorCode={guild.colorCode ?? "#CCCCCC"}
+            guild={guild}
             ref={(el) => {
               if (el) {
                 const existingIndex = refs.current.findIndex(
@@ -97,8 +93,7 @@ export default function GuildList(props: {
         ))}
         <GuildListItem
           ref={null}
-          code="guild-create"
-          name="Create Guild"
+          guild={{ code: "guild-create", name: "Create Guild" }}
           onClick={props.onClickCreateGuild}
         />
       </div>
@@ -108,15 +103,13 @@ export default function GuildList(props: {
 
 function GuildListItem(props: {
   ref: React.Ref<HTMLDivElement>;
-  code: string;
-  name: string;
-  colorCode?: string;
+  guild: GuildListItemProps;
   onClick?: () => void;
   onHover?: () => void;
   onLeave?: () => void;
 }) {
   const nav = useNavigate();
-  const isCreateGuild = props.code === "guild-create";
+  const isCreateGuild = props.guild.code === "guild-create";
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -136,14 +129,21 @@ function GuildListItem(props: {
         className={`w-12 h-12 rounded-xl flex items-center justify-center bg-stone-100 transition duration-200 ${
           isHovered ? "brightness-80" : "brightness-100"
         }`}
-        style={{ backgroundColor: props.colorCode }}
+        style={{
+          backgroundColor: props.guild.colorCode,
+          backgroundImage: props.guild.iconPath
+            ? `url(${props.guild.iconPath})`
+            : undefined,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
         onClick={() => {
           if (isCreateGuild) {
             if (props.onClick) {
               props.onClick();
             }
           } else {
-            nav(`/game/guild/code/${props.code}`);
+            nav(`/game/guild/code/${props.guild.code}`);
           }
         }}
       >
@@ -164,8 +164,15 @@ function GuildListItem(props: {
         className="absolute top-1/2 rounded bg-stone-800 text-white text-sm px-2 py-1 transform -translate-y-1/2 left-full ml-4 whitespace-nowrap"
         // style={{ display: isHovered ? "block" : "none" }}
       >
-        {props.name}
+        {props.guild.name}
       </div>
     </div>
   );
+}
+
+interface GuildListItemProps {
+  code: string;
+  name: string;
+  iconPath?: string;
+  colorCode?: string;
 }

@@ -1,17 +1,16 @@
-import { PaperAirplaneIcon } from "@heroicons/react/20/solid";
-import { InputField } from "../forms";
 import Markdown from "react-markdown";
 import { memo, useContext, useEffect, useState } from "react";
 import useSocket from "~/hooks/use-socket.hook";
 import { UserContext } from "~/contexts/userContext";
+import type { Guild } from "../common.interface";
 
 export interface GameHistory {
   _id: string;
   sceneId: number;
   chat: { userId: number; userCode: string; message: string };
-  createdAt: string;
   entities: any[];
   citations: any[];
+  createdAt: Date;
 }
 
 export interface GuildChatMessage {
@@ -22,15 +21,13 @@ export interface GuildChatMessage {
   iconPath: string;
   displayName: string;
   content: string;
-  timestamp: string;
+  timestamp: Date;
   citations: { content: string; ruleId: number; description?: string }[];
   entities: any[];
 }
 
 export default function GuildChat(props: {
-  guildId: number;
-  guildCode: string;
-  guildName: string;
+  guild: Guild;
   memberDic?: Record<
     string,
     {
@@ -41,7 +38,6 @@ export default function GuildChat(props: {
       iconPath?: string;
     }
   >;
-  createdAt: Date;
 }) {
   const user = useContext(UserContext);
   const { payloads, isConnected, sendMessage } = useSocket();
@@ -65,20 +61,25 @@ export default function GuildChat(props: {
     for (const payload of payloads) {
       if (
         payload.type === "GUILD_CHAT_UPDATE" &&
-        payload.guildCode === props.guildCode
+        payload.guildCode === props.guild.code
       ) {
         setHistories(payload.content.gameHistories);
       }
     }
-  }, [isConnected, payloads, props.guildCode]);
+  }, [isConnected, payloads, props.guild.code]);
 
   return (
     <div className="guild-chat">
-      <MessageList
-        guildName={props.guildName}
-        createdAt={props.createdAt}
-        messages={mapHistoriesToMessages(histories, props.memberDic)}
-      />
+      <div className="guild-chat-messages no-scrollbar box-sizing-border">
+        <div>{introMessage(props.guild)}</div>
+        <div className="w-full border-b border-stone-200 mb-2 mt-2" />
+        <MessageList
+          guildName={props.guild.name}
+          createdAt={props.guild.createdAt}
+          messages={mapHistoriesToMessages(histories, props.memberDic)}
+          iconPath={props.guild.iconPath}
+        />
+      </div>
       <div className="guild-chat-input">
         <div className="mb-2 flex items-center justify-between">
           <ul className="flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -178,11 +179,10 @@ const MessageList = memo(function MessageList(props: {
   guildName: string;
   createdAt: Date;
   messages: GuildChatMessage[];
+  iconPath?: string;
 }) {
   return (
-    <div className="guild-chat-messages no-scrollbar box-sizing-border">
-      <div>{introMessage(props.guildName, props.createdAt)}</div>
-      <div className="w-full border-b border-stone-200 mb-2 mt-2" />
+    <>
       {props.messages.map((msg, index) => (
         <MessageItem
           key={msg._id}
@@ -198,7 +198,7 @@ const MessageList = memo(function MessageList(props: {
           entities={msg.entities}
         />
       ))}
-    </div>
+    </>
   );
 });
 
@@ -270,17 +270,17 @@ function MessageItem(props: GuildChatMessage) {
 }
 
 const taggedNodes = ["node-1", "node-3", "node-5"];
-const introMessage = (guildName: string, createdAt: Date) => (
+const introMessage = (guild: Guild) => (
   <MessageItem
     _id="intro"
-    content={`## Congratulations, \`${guildName}\` has been created!
+    content={`## Congratulations, \`${guild.name}\` has been created!
 This is the beginning of your guild chat. Guild members can communicate here, adventure the world, and \`Ruler\` will take a job in guiding your journey!`}
     citations={[]}
     entities={[]}
-    displayName={guildName}
-    iconPath="https://picsum.photos/400"
+    displayName={guild.name}
+    iconPath={guild.iconPath || "https://picsum.photos/400"}
     isGm={true}
-    timestamp={createdAt.toISOString()}
+    timestamp={guild.createdAt}
     userCode=""
     userId={0}
   />

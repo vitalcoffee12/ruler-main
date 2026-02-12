@@ -34,6 +34,19 @@ export const GuildMemberSchema = z.object({
   joinedAt: z.date(),
 });
 
+export type GuildResource = z.infer<typeof GuildResourceSchema>;
+export const GuildResourceSchema = z.object({
+  id: z.number().optional(),
+  guildId: z.number(),
+  guildCode: z.string(),
+  resourceId: z.number(),
+  resourceCode: z.string(),
+  type: z.enum(["ruleSet", "termSet"]),
+  version: z.number().default(1),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
 export type GuildMemberWithUser = z.infer<typeof GuildMemberWithUserSchema>;
 export const GuildMemberWithUserSchema = GuildMemberSchema.extend({
   iconPath: z.string().optional(),

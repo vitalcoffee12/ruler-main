@@ -21,6 +21,31 @@ class ResourceController {
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 
+  public getResourcesByGuildCode: RequestHandler = async (
+    req: Request,
+    res: Response,
+  ) => {
+    const { type, code, page } = req.params;
+    const serviceResponse = await resourceService.findByGuildCode(
+      type as "ruleSet" | "termSet",
+      code as string,
+      Number(page),
+    );
+    res.status(serviceResponse.statusCode).send(serviceResponse);
+  };
+
+  public importResourcesToGuild: RequestHandler = async (
+    req: Request,
+    res: Response,
+  ) => {
+    const { guildCode, resourceIds } = req.body;
+    const serviceResponse = await resourceService.importResourcesToGuild(
+      guildCode as string,
+      resourceIds as number[],
+    );
+    res.status(serviceResponse.statusCode).send(serviceResponse);
+  };
+
   public uploadResource: RequestHandler = async (
     req: Request,
     res: Response,

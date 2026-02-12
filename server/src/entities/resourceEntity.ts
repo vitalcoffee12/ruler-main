@@ -1,4 +1,5 @@
 import { Resource } from "@/api/resources/resourceModel";
+import AppDataSource from "@/dataSource";
 import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 import { C } from "vitest/dist/chunks/reporters.d.BFLkQcL6";
 
@@ -91,3 +92,5 @@ export class ResourceEntity extends BaseEntity implements Resource {
     });
   }
 }
+
+export const resourceRepository = AppDataSource.getRepository(ResourceEntity);

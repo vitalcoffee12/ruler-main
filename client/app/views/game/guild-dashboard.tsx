@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
+import type { Guild } from "~/components/common.interface";
 import GuildChat, {
   type GuildChatMessage,
 } from "~/components/guild/guild-chat";
@@ -15,7 +16,7 @@ export default function Dashboard() {
   const location = useLocation();
   const guildCode = location.pathname.split("/")[4];
 
-  const [guild, setGuild] = useState<any>(null);
+  const [guild, setGuild] = useState<Guild | null>(null);
   const [memberDic, setMemberDic] = useState<
     Record<
       string,
@@ -73,36 +74,34 @@ export default function Dashboard() {
     <>
       <div className="guild-dashboard">
         <div className="guild-dashboard-header">
-          <GuildHeader
-            guildId={guild ? guild.id : 0}
-            guildCode={guildCode}
-            guildName={guild ? guild.name : ""}
-          />
+          <GuildHeader guild={guild ?? defaultGuild} />
         </div>
         <div className="guild-dashboard-leftside no-scrollbar">
-          <GuildMemberList
-            guildId={guild ? guild.id : 0}
-            guildCode={guildCode}
-            guildName={guild ? guild.name : ""}
-          />
+          <GuildMemberList guild={guild ?? defaultGuild} />
         </div>
         <div className="guild-dashboard-mainside no-scrollbar whitespace-pre-wrap">
-          <GuildChat
-            guildId={guild ? guild.id : 0}
-            guildCode={guildCode}
-            guildName={guild ? guild.name : ""}
-            memberDic={memberDic}
-            createdAt={guild ? new Date(guild.createdAt) : new Date()}
-          />
+          <GuildChat guild={guild ?? defaultGuild} memberDic={memberDic} />
         </div>
         <div className="guild-dashboard-subside no-scrollbar whitespace-pre-wrap">
           <GuildRefs />
         </div>
         <div className="guild-dashboard-rightside no-scrollbar">
-          <GuildWorld guildId={guild ? guild.id : 0} guildCode={guildCode} />
+          <GuildWorld guild={guild ?? defaultGuild} />
         </div>
       </div>
       {loading}
     </>
   );
 }
+
+const defaultGuild: Guild = {
+  id: 0,
+  code: "",
+  name: "",
+  iconPath: undefined,
+  ownerId: 0,
+  ownerCode: "",
+  colorCode: undefined,
+  updatedAt: new Date(),
+  createdAt: new Date(),
+};

@@ -1,4 +1,5 @@
 import { GuildMember } from "@/api/guild/guildModel";
+import AppDataSource from "@/dataSource";
 
 import {
   BaseEntity,
@@ -67,3 +68,6 @@ export class GuildMemberEntity extends BaseEntity implements GuildMember {
     });
   }
 }
+
+export const guildMemberRepository =
+  AppDataSource.getRepository(GuildMemberEntity);

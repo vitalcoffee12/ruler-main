@@ -1,11 +1,16 @@
 import mongoose from "mongoose";
-import { Entity, GameHistory, Rule, SceneHistory, Term } from "./gameModel";
-import AppDataSource from "@/dataSource";
-import { GuildEntity } from "@/entities/guildEntity";
+import {
+  Entity,
+  GameHistory,
+  Rule,
+  SceneHistory,
+  Term,
+} from "../game/gameModel";
+import { guildRepository } from "@/entities/guildEntity";
 import { COLLECTION_SUFFIX } from "../constants";
 
-export class GameRepository {
-  constructor(private entityManager = AppDataSource.manager) {}
+export class GameLib {
+  constructor() {}
 
   // game world operations
   async getWorld(
@@ -57,7 +62,7 @@ export class GameRepository {
     guildCode: string,
     data: Pick<GameHistory, "chat" | "entities">,
   ) {
-    const guild = await this.entityManager.findOne(GuildEntity, {
+    const guild = await guildRepository.findOne({
       where: { code: guildCode },
       select: { sceneId: true },
     });
@@ -82,9 +87,8 @@ export class GameRepository {
     data: SceneHistory,
     gameHistory: GameHistory,
   ) {
-    const guild = await this.entityManager.findOne(GuildEntity, {
+    const guild = await guildRepository.findOne({
       where: { code: guildCode },
-      select: { sceneId: true },
     });
 
     if (!guild) {
@@ -113,7 +117,7 @@ export class GameRepository {
     }
 
     guild.sceneId += 1;
-    await this.entityManager.save(guild);
+    await guildRepository.save(guild);
   }
 
   // history operations
@@ -263,3 +267,5 @@ export class GameRepository {
     }
   }
 }
+
+export const gameLib = new GameLib();

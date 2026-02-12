@@ -28,7 +28,7 @@ resourceRouter.get(
 
 resourceRegistry.registerPath({
   method: "get",
-  path: "/resource/:id",
+  path: "/resource/detail/:id",
   tags: ["Resource"],
   request: { params: z.object({ id: z.number() }) },
   responses: createApiResponse(ResourceSchema, "Success"),
@@ -38,6 +38,32 @@ resourceRouter.get(
   "/detail/:id",
   validateToken(),
   resourceController.getResourceById,
+);
+
+resourceRegistry.registerPath({
+  method: "get",
+  path: "/resource/guild",
+  tags: ["Resource"],
+  request: {
+    query: z.object({
+      type: z.enum(["ruleSet", "termSet"]),
+      code: z.string(),
+      page: z.number().optional(),
+    }),
+  },
+  responses: createApiResponse(
+    z.object({
+      data: z.array(ResourceSchema),
+      maxPage: z.number(),
+    }),
+    "Success",
+  ),
+});
+
+resourceRouter.get(
+  "/guild",
+  validateToken(),
+  resourceController.getResourcesByGuildCode,
 );
 
 resourceRegistry.registerPath({

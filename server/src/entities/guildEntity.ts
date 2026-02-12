@@ -1,4 +1,5 @@
 import { Guild } from "@/api/guild/guildModel";
+import AppDataSource from "@/dataSource";
 
 import {
   BaseEntity,
@@ -77,3 +78,5 @@ export class GuildEntity extends BaseEntity implements Guild {
     this.state = "disabled";
   }
 }
+
+export const guildRepository = AppDataSource.getRepository(GuildEntity);

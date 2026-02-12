@@ -1,5 +1,6 @@
 import { User } from "@/api/user/userModel";
 import { COMMON_STATE } from "@/common/constants";
+import AppDataSource from "@/dataSource";
 import {
   BaseEntity,
   Column,
@@ -13,16 +14,16 @@ export class UserEntity extends BaseEntity implements User {
   @PrimaryGeneratedColumn({ type: "int", unsigned: true, comment: "User ID" })
   id: number;
 
-  @Column({ type: "varchar", length: 255, nullable: true, unique: true })
+  @Column({ type: "varchar", length: 255, nullable: false, unique: true })
   code: string;
 
   @Column({ type: "varchar", length: 255, nullable: true })
   iconPath?: string;
 
-  @Column({ type: "varchar", length: 100, nullable: true })
-  displayName?: string;
+  @Column({ type: "varchar", length: 100, nullable: false })
+  displayName: string;
 
-  @Column({ unique: true, type: "varchar", length: 100 })
+  @Column({ unique: true, type: "varchar", length: 100, nullable: false })
   email: string;
 
   @Column({ default: "pending", type: "varchar", length: 20 })
@@ -104,3 +105,5 @@ export class UserEntity extends BaseEntity implements User {
     this.state = "disabled";
   }
 }
+
+export const userRepository = AppDataSource.getRepository(UserEntity);
