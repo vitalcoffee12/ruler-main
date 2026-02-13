@@ -78,5 +78,3 @@ export class GuildEntity extends BaseEntity implements Guild {
     this.state = "disabled";
   }
 }
-
-export const guildRepository = AppDataSource.getRepository(GuildEntity);

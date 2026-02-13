@@ -92,5 +92,3 @@ export class ResourceEntity extends BaseEntity implements Resource {
     });
   }
 }
-
-export const resourceRepository = AppDataSource.getRepository(ResourceEntity);

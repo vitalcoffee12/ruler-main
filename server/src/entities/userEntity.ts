@@ -105,5 +105,3 @@ export class UserEntity extends BaseEntity implements User {
     this.state = "disabled";
   }
 }
-
-export const userRepository = AppDataSource.getRepository(UserEntity);

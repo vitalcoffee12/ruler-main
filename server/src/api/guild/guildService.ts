@@ -1,22 +1,33 @@
 import { ServiceResponse } from "@/common/models/serviceResponse";
-import type { Guild, GuildMemberWithUser } from "./guildModel";
+import type { Guild, GuildMember, GuildMemberWithUser } from "./guildModel";
 import { StatusCodes } from "http-status-codes";
 import { GenerateGuildCode, GenerateRandomColorCode } from "../utils";
-import {
-  GuildMemberEntity,
-  guildMemberRepository,
-} from "@/entities/guilldMemberEntity";
+import { GuildMemberEntity } from "@/entities/guilldMemberEntity";
+import { GuildEntity } from "@/entities/guildEntity";
+import { UserEntity } from "@/entities/userEntity";
 import { Entity, GameHistory, SceneHistory } from "../game/gameModel";
-import { GuildEntity, guildRepository } from "@/entities/guildEntity";
 import { gameLib } from "../_lib/game.lib";
-import { userRepository } from "@/entities/userEntity";
 import { COLLECTION_SUFFIX } from "../constants";
 import mongoose from "mongoose";
+import { OAUTH_PROVIDERS } from "@/common/constants";
+import AppDataSource from "@/dataSource";
+import { Repository } from "typeorm/repository/Repository";
 
 export class GuildService {
+  constructor(
+    private guildRepository: Repository<GuildEntity> = AppDataSource.getRepository(
+      GuildEntity,
+    ),
+    private guildMemberRepository: Repository<GuildMemberEntity> = AppDataSource.getRepository(
+      GuildMemberEntity,
+    ),
+    private userRepository: Repository<UserEntity> = AppDataSource.getRepository(
+      UserEntity,
+    ),
+  ) {}
   async findAll(): Promise<ServiceResponse<Guild[] | null>> {
     try {
-      const guilds = await guildRepository.find();
+      const guilds = await this.guildRepository.find();
       if (!guilds || guilds.length === 0) {
         return ServiceResponse.failure(
           "No guilds found",
@@ -45,10 +56,8 @@ export class GuildService {
     } | null>
   > {
     try {
-      const guild = await guildRepository.findOne({ where: { code } });
-      const members = await guildMemberRepository.find({
-        where: { guildCode: code },
-      });
+      const guild = await this.guildRepository.findOne({ where: { code } });
+      const members = await this.findMembersByGuild({ guildCode: code });
 
       if (!guild) {
         return ServiceResponse.failure(
@@ -124,15 +133,15 @@ export class GuildService {
       state: "active",
       iconPath: guildData.iconPath,
     });
-    const user = await userRepository.findOne({
+    const user = await this.userRepository.findOne({
       where: { id: guildData.ownerId },
     });
     if (!user) {
       throw new Error(`User with ID ${guildData.ownerId} not found`);
     }
 
-    await guildRepository.save(newGuild);
-    await guildMemberRepository.save(
+    await this.guildRepository.save(newGuild);
+    await this.guildMemberRepository.save(
       new GuildMemberEntity({
         guildId: newGuild.id,
         guildCode: newGuild.code,
@@ -167,7 +176,7 @@ export class GuildService {
   }) {
     try {
       const guildCode = GenerateGuildCode();
-      const guild = await guildRepository.create({
+      const guild = await this.guildRepository.create({
         code: guildCode,
         ownerId: createGuildData.ownerId,
         name: createGuildData.name,
@@ -194,10 +203,10 @@ export class GuildService {
     userCode?: string;
   }): Promise<ServiceResponse<Guild[] | null>> {
     try {
-      const guildMember = await guildMemberRepository.find({
+      const guildMember = await this.guildMemberRepository.find({
         where: { userId: user.userId, userCode: user.userCode },
       });
-      const guilds = await guildRepository.find({
+      const guilds = await this.guildRepository.find({
         where: guildMember.map((gm) => ({ id: gm.guildId })),
       });
       if (!guilds || guilds.length === 0) {
@@ -221,85 +230,112 @@ export class GuildService {
     }
   }
 
-  async findMembersByGuild(guild: {
-    guildId?: number;
-    guildCode?: string;
-  }): Promise<ServiceResponse<GuildMemberWithUser[] | null>> {
-    try {
-      const members = await guildMemberRepository.find({
-        where: { guildId: guild.guildId, guildCode: guild.guildCode },
-      });
-      console.log(members);
-      if (!members || members.length === 0) {
-        return ServiceResponse.failure(
-          "No members found for guild",
-          [],
-          StatusCodes.NOT_FOUND,
-        );
-      }
-      return ServiceResponse.success<GuildMemberWithUser[]>(
-        "Members retrieved successfully",
-        members,
-      );
-    } catch (ex) {
-      const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
-      return ServiceResponse.failure(
-        `Error retrieving members for guild: ${errorMessage}`,
-        null,
-        StatusCodes.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  async joinUserToGuild(
-    guild: { guildId?: number; guildCode?: string },
-    users: { userId?: number; userCode?: string; role: string }[],
-  ): Promise<ServiceResponse<null>> {
-    try {
-      const success = await guildMemberRepository.joinUsersToGuild(
-        guild,
-        users,
-      );
-      if (!success) {
-        return ServiceResponse.failure(
-          "Failed to add user to guild",
-          null,
-          StatusCodes.BAD_REQUEST,
-        );
-      }
-      return ServiceResponse.success<null>(
-        "User(s) added to guild successfully",
-        null,
-      );
-    } catch (ex) {
-      const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
-      return ServiceResponse.failure(
-        `Error adding user to guild: ${errorMessage}`,
-        null,
-        StatusCodes.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
   async updateRefreshToken(
     id: number,
     refreshTokenHash: string,
-  ): Promise<boolean> {
-    const user = await this.findById(id);
+  ): Promise<ServiceResponse<boolean>> {
+    const user = await this.userRepository.findOne({ where: { id } });
     if (user) {
       user.refreshTokenHash = refreshTokenHash;
-      await this.entityManager.save(UserEntity, user);
-      return true;
+      await this.userRepository.save(user);
+      return ServiceResponse.success<boolean>(
+        "Refresh token updated successfully",
+        true,
+        StatusCodes.OK,
+      );
     }
-    return false;
+    return ServiceResponse.failure<boolean>(
+      "User not found",
+      false,
+      StatusCodes.NOT_FOUND,
+    );
   }
 
-  async signIn(id: number, refreshTokenHash: string): Promise<void> {
-    const user = await this.findById(id);
+  async signIn(
+    id: number,
+    refreshTokenHash: string,
+  ): Promise<ServiceResponse<boolean>> {
+    const user = await this.userRepository.findOne({ where: { id } });
     if (user) {
       user.lastSigninAt = new Date();
-      await this.entityManager.save(UserEntity, user);
+      await this.userRepository.save(user);
+    } else {
+      return ServiceResponse.failure<boolean>(
+        "User not found",
+        false,
+        StatusCodes.NOT_FOUND,
+      );
     }
+    return ServiceResponse.success<boolean>(
+      "User signed in successfully",
+      true,
+      StatusCodes.OK,
+    );
+  }
+
+  async joinUsersToGuild(
+    guild: { guildId?: number; guildCode?: string },
+    users: { userId?: number; userCode?: string; role: string }[],
+  ): Promise<ServiceResponse<boolean>> {
+    let guildEntity = null;
+    let userEntities = [];
+    if (guild.guildId) {
+      guildEntity = await this.guildRepository.findOne({
+        where: { id: guild.guildId },
+      });
+    } else if (guild.guildCode) {
+      guildEntity = await this.guildRepository.findOne({
+        where: { code: guild.guildCode },
+      });
+    }
+    if (!guildEntity) {
+      return ServiceResponse.failure<boolean>(
+        "Guild not found",
+        false,
+        StatusCodes.NOT_FOUND,
+      );
+    }
+
+    userEntities = await this.userRepository
+      .createQueryBuilder("user")
+      .where("user.id IN (:userIds) OR user.code IN (:userCodes)", {
+        userIds: users
+          .filter((u) => u.userId !== undefined)
+          .map((u) => u.userId) as number[],
+        userCodes: users
+          .filter((u) => u.userCode !== undefined)
+          .map((u) => u.userCode) as string[],
+      })
+      .getMany();
+
+    const members: GuildMember[] = [];
+    for (const userEntity of userEntities) {
+      members.push({
+        guildId: guildEntity.id,
+        guildCode: guildEntity.code,
+        userId: userEntity.id,
+        userCode: userEntity.code,
+        role: users.find(
+          (u) =>
+            (u.userId && u.userId === userEntity.id) ||
+            (u.userCode && u.userCode === userEntity.code),
+        )?.role as string,
+        joinedAt: new Date(),
+      });
+    }
+
+    await this.guildMemberRepository
+      .createQueryBuilder("guild_members")
+      .insert()
+      .into("guild_members")
+      .values(members)
+      .execute();
+
+    return ServiceResponse.success<boolean>(
+      "User(s) added to guild successfully",
+      true,
+      StatusCodes.OK,
+    );
   }
 
   async findByOAuthId(
@@ -308,19 +344,19 @@ export class GuildService {
   ): Promise<UserEntity | null> {
     let user: UserEntity | null = null;
     if (provider === OAUTH_PROVIDERS.GOOGLE) {
-      user = await this.entityManager.findOne(UserEntity, {
+      user = await this.userRepository.findOne({
         where: { googleId: oauthId },
       });
     } else if (provider === OAUTH_PROVIDERS.GITHUB) {
-      user = await this.entityManager.findOne(UserEntity, {
+      user = await this.userRepository.findOne({
         where: { githubId: oauthId },
       });
     } else if (provider === OAUTH_PROVIDERS.KAKAO) {
-      user = await this.entityManager.findOne(UserEntity, {
+      user = await this.userRepository.findOne({
         where: { kakaoId: oauthId },
       });
     } else if (provider === OAUTH_PROVIDERS.NAVER) {
-      user = await this.entityManager.findOne(UserEntity, {
+      user = await this.userRepository.findOne({
         where: { naverId: oauthId },
       });
     }
@@ -332,16 +368,16 @@ export class GuildService {
     provider: OAUTH_PROVIDERS,
     oauthId: string,
   ): Promise<boolean> {
-    const user = await this.findById(id);
+    const user = await this.userRepository.findOne({ where: { id } });
     if (user) {
-      if (provider === "google") {
+      if (provider === OAUTH_PROVIDERS.GOOGLE) {
         user.googleId = oauthId;
-      } else if (provider === "kakao") {
+      } else if (provider === OAUTH_PROVIDERS.KAKAO) {
         user.kakaoId = oauthId;
-      } else if (provider === "naver") {
+      } else if (provider === OAUTH_PROVIDERS.NAVER) {
         user.naverId = oauthId;
       }
-      await this.entityManager.save(UserEntity, user);
+      await this.userRepository.save(user);
       return true;
     }
     return false;
@@ -364,7 +400,8 @@ export class GuildService {
       "member.joinedAt AS member_joinedAt",
     ];
     if (guild.guildId) {
-      const membersById = await this.createQueryBuilder(UserEntity, "user")
+      const membersById = await this.userRepository
+        .createQueryBuilder("user")
         .innerJoin(GuildMemberEntity, "member", "member.userId = user.id")
         .where("member.guildId = :guildId", { guildId: guild.guildId })
         .select(selects)
@@ -372,7 +409,8 @@ export class GuildService {
       members = membersById;
     }
     if (guild.guildCode) {
-      const membersByCode = await this.createQueryBuilder(UserEntity, "user")
+      const membersByCode = await this.userRepository
+        .createQueryBuilder("user")
         .innerJoin(GuildMemberEntity, "member", "member.userId = user.id")
         .where("member.guildCode = :guildCode", { guildCode: guild.guildCode })
         .select(selects)
@@ -404,19 +442,22 @@ export class GuildService {
     }
 
     if (user.userCode && !user.userId) {
-      const guildsByUserCode = await this.createQueryBuilder("guild")
+      const guildsByUserCode = await this.guildRepository
+        .createQueryBuilder("guild")
         .innerJoin("guild_members", "member", "member.guildId = guild.id")
         .where("member.userCode = :userCode", { userCode: user.userCode })
         .getMany();
       return guildsByUserCode;
     } else if (!user.userCode && user.userId) {
-      const guildsByUserId = await this.createQueryBuilder("guild")
+      const guildsByUserId = await this.guildRepository
+        .createQueryBuilder("guild")
         .innerJoin("guild_members", "member", "member.guildId = guild.id")
         .where("member.userId = :userId", { userId: user.userId })
         .getMany();
       return guildsByUserId;
     }
-    const guilds = await this.createQueryBuilder("guild")
+    const guilds = await this.guildRepository
+      .createQueryBuilder("guild")
       .innerJoin("guild_members", "member", "member.guildId = guild.id")
       .where("member.userId = :userId OR member.userCode = :userCode", {
         userId: user.userId,
@@ -424,58 +465,5 @@ export class GuildService {
       })
       .getMany();
     return guilds;
-  }
-
-  async joinUsersToGuild(
-    guild: { guildId?: number; guildCode?: string },
-    users: { userId?: number; userCode?: string; role: string }[],
-  ): Promise<boolean> {
-    let guildEntity = null;
-    let userEntities = [];
-    if (guild.guildId) {
-      guildEntity = await this.findById(guild.guildId);
-    } else if (guild.guildCode) {
-      guildEntity = await this.findByCode(guild.guildCode);
-    }
-    if (!guildEntity) {
-      return false;
-    }
-
-    userEntities = await this.entityManager
-      .createQueryBuilder("user", "user")
-      .where("user.id IN (:...userIds) OR user.code IN (:...userCodes)", {
-        userIds: users
-          .filter((u) => u.userId !== undefined)
-          .map((u) => u.userId) as number[],
-        userCodes: users
-          .filter((u) => u.userCode !== undefined)
-          .map((u) => u.userCode) as string[],
-      })
-      .getMany();
-
-    const members: GuildMember[] = [];
-    for (const userEntity of userEntities) {
-      members.push({
-        guildId: guildEntity.id,
-        guildCode: guildEntity.code,
-        userId: userEntity.id,
-        userCode: userEntity.code,
-        role: users.find(
-          (u) =>
-            (u.userId && u.userId === userEntity.id) ||
-            (u.userCode && u.userCode === userEntity.code),
-        )?.role as string,
-        joinedAt: new Date(),
-      });
-    }
-
-    await this.entityManager
-      .createQueryBuilder()
-      .insert()
-      .into("guild_members")
-      .values(members)
-      .execute();
-
-    return true;
   }
 }

@@ -12,16 +12,22 @@ import {
   issueRefreshToken,
 } from "@/common/utils/auth";
 import { OAUTH_PROVIDERS } from "@/common/constants";
-import { userRepositroy } from "@/entities/userEntity";
 import { GenerateUserCode } from "../utils";
+import { Repository } from "typeorm";
+import { UserEntity } from "@/entities/userEntity";
+import AppDataSource from "@/dataSource";
 
 export class UserService {
-  constructor() {}
+  constructor(
+    private userRepository: Repository<UserEntity> = AppDataSource.getRepository(
+      UserEntity,
+    ),
+  ) {}
 
   // Retrieves all users from the database
   async findAll(): Promise<ServiceResponse<User[] | null>> {
     try {
-      const users = await userRepositroy.find();
+      const users = await this.userRepository.find();
       if (!users || users.length === 0) {
         return ServiceResponse.failure(
           "No Users found",
@@ -44,7 +50,7 @@ export class UserService {
   // Retrieves a single user by their ID
   async findById(id: number): Promise<ServiceResponse<User | null>> {
     try {
-      const user = await userRepositroy.findOne({ where: { id } });
+      const user = await this.userRepository.findOne({ where: { id } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -67,7 +73,7 @@ export class UserService {
   }
 
   async checkEmailExists(email: string): Promise<boolean> {
-    const user = await userRepositroy.findOne({ where: { email } });
+    const user = await this.userRepository.findOne({ where: { email } });
     return !!user;
   }
 
@@ -77,7 +83,7 @@ export class UserService {
     password: string;
   }): Promise<ServiceResponse<boolean>> {
     try {
-      const newUser = await userRepositroy.insert({
+      const newUser = await this.userRepository.insert({
         code: GenerateUserCode(),
         displayName: userData.name,
         email: userData.email,
@@ -118,7 +124,7 @@ export class UserService {
     }
     const userId = (verified as any).userId;
     if (verified && userId && userId > 0) {
-      const user = await userRepositroy.findOne({ where: { id: userId } });
+      const user = await this.userRepository.findOne({ where: { id: userId } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -127,7 +133,7 @@ export class UserService {
         );
       }
       user.verifiedAt = new Date();
-      const success = await userRepositroy.save(user);
+      const success = await this.userRepository.save(user);
       if (!success) {
         return ServiceResponse.failure(
           "User not found",
@@ -143,7 +149,7 @@ export class UserService {
 
   async disable(id: number): Promise<ServiceResponse<null>> {
     try {
-      const user = await userRepositroy.findOne({ where: { id } });
+      const user = await this.userRepository.findOne({ where: { id } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -152,7 +158,7 @@ export class UserService {
         );
       }
       user.state = "disabled";
-      const success = await userRepositroy.save(user);
+      const success = await this.userRepository.save(user);
       if (!success) {
         return ServiceResponse.failure(
           "User not found",
@@ -176,7 +182,7 @@ export class UserService {
 
   async block(id: number, blockedUntil: Date): Promise<ServiceResponse<null>> {
     try {
-      const user = await userRepositroy.findOne({ where: { id } });
+      const user = await this.userRepository.findOne({ where: { id } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -186,7 +192,7 @@ export class UserService {
       }
       user.state = "blocked";
       user.blockedUntil = blockedUntil;
-      const success = await userRepositroy.save(user);
+      const success = await this.userRepository.save(user);
       if (!success) {
         return ServiceResponse.failure(
           "User not found",
@@ -214,7 +220,7 @@ export class UserService {
     newPassword: string,
   ): Promise<ServiceResponse<null>> {
     try {
-      const user = await userRepositroy.findOne({ where: { id } });
+      const user = await this.userRepository.findOne({ where: { id } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -233,7 +239,7 @@ export class UserService {
         );
       }
       user.passwordHash = newPassword; // In real implementation, hash the new password
-      await userRepositroy.save(user); // Hash newPassword in real implementation
+      await this.userRepository.save(user); // Hash newPassword in real implementation
       return ServiceResponse.success<null>(
         "Password changed successfully",
         null,
@@ -255,7 +261,7 @@ export class UserService {
     email: string,
   ): Promise<ServiceResponse<User | null>> {
     try {
-      const user = await userRepositroy.findOne({ where: { email } });
+      const user = await this.userRepository.findOne({ where: { email } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -283,7 +289,7 @@ export class UserService {
     resetToken: string,
   ): Promise<ServiceResponse<null>> {
     try {
-      const user = await userRepositroy.findOne({ where: { id } });
+      const user = await this.userRepository.findOne({ where: { id } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -292,7 +298,7 @@ export class UserService {
         );
       }
       user.passwordHash = newPassword; // In real implementation, hash the new password and verify resetToken
-      await userRepositroy.save(user); // Hash newPassword in real implementation
+      await this.userRepository.save(user); // Hash newPassword in real implementation
       return ServiceResponse.success<null>("Password reset successfully", null);
     } catch (ex) {
       const errorMessage = `Error resetting password for user with id ${id}: ${
@@ -312,7 +318,7 @@ export class UserService {
     refreshToken: string,
   ): Promise<ServiceResponse<null>> {
     try {
-      const user = await userRepositroy.findOne({ where: { id } });
+      const user = await this.userRepository.findOne({ where: { id } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -321,7 +327,7 @@ export class UserService {
         );
       }
       user.refreshTokenHash = refreshToken; // In real implementation, hash refreshToken
-      await userRepositroy.save(user); // Hash refreshToken in real implementation
+      await this.userRepository.save(user); // Hash refreshToken in real implementation
       return ServiceResponse.success<null>(
         "Refresh token updated successfully",
         null,
@@ -349,7 +355,7 @@ export class UserService {
     } | null>
   > {
     try {
-      const user = await userRepositroy.findOne({ where: { email } });
+      const user = await this.userRepository.findOne({ where: { email } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -370,7 +376,7 @@ export class UserService {
       const accessToken = issueAccessToken(user.id ?? 0, user.role);
       const refreshToken = issueRefreshToken(user.id ?? 0, user.role);
       const hashedRefreshToken = await hashToken(refreshToken);
-      await userRepositroy.save({
+      await this.userRepository.save({
         ...user,
         refreshTokenHash: hashedRefreshToken,
       });
@@ -404,7 +410,7 @@ export class UserService {
           StatusCodes.BAD_REQUEST,
         );
       }
-      const user = await userRepositroy.findOne({ where: { id } });
+      const user = await this.userRepository.findOne({ where: { id } });
       if (!user) {
         return ServiceResponse.failure(
           "User not found",
@@ -413,7 +419,7 @@ export class UserService {
         );
       }
       user.refreshTokenHash = "";
-      await userRepositroy.save(user);
+      await this.userRepository.save(user);
       return ServiceResponse.success<null>("Sign-out successful", null);
     } catch (ex) {
       const errorMessage = `Error signing out user with id ${id}: ${
@@ -436,7 +442,7 @@ export class UserService {
   > {
     try {
       const oauthId = "mock-oauth-id"; // In real implementation, retrieve OAuth ID using the oauthToken
-      const user = await userRepositroy.findOne({
+      const user = await this.userRepository.findOne({
         where: { googleId: oauthId },
       });
       if (!user) {
@@ -449,7 +455,7 @@ export class UserService {
       const accessToken = issueAccessToken(user.id ?? 0, user.role);
       const refreshToken = issueRefreshToken(user.id ?? 0, user.role);
       const hashedRefreshToken = await hashToken(refreshToken);
-      await userRepositroy.save({
+      await this.userRepository.save({
         ...user,
         refreshTokenHash: hashedRefreshToken,
       });
@@ -489,7 +495,9 @@ export class UserService {
         }
 
         const userId = verified.userId;
-        const user = await userRepositroy.findOne({ where: { id: userId } });
+        const user = await this.userRepository.findOne({
+          where: { id: userId },
+        });
         if (!user) {
           return ServiceResponse.failure(
             "User not found",
@@ -499,7 +507,7 @@ export class UserService {
         }
         const refreshToken = issueRefreshToken(user.id ?? 0, user.role);
         user.refreshTokenHash = await hashToken(refreshToken);
-        await userRepositroy.save(user);
+        await this.userRepository.save(user);
 
         return ServiceResponse.success<ValidateTokenResponse>(
           "Access token is valid",
@@ -525,7 +533,9 @@ export class UserService {
         }
 
         const userId = verified.userId;
-        const user = await userRepositroy.findOne({ where: { id: userId } });
+        const user = await this.userRepository.findOne({
+          where: { id: userId },
+        });
         if (!user) {
           return ServiceResponse.failure(
             "User not found",
@@ -549,7 +559,7 @@ export class UserService {
         const newAccessToken = issueAccessToken(user.id ?? 0, user.role);
         const newRefreshToken = issueRefreshToken(user.id ?? 0, user.role);
         user.refreshTokenHash = await hashToken(newRefreshToken);
-        await userRepositroy.save(user);
+        await this.userRepository.save(user);
         return ServiceResponse.success<ValidateTokenResponse>(
           "Refresh token is valid",
           {

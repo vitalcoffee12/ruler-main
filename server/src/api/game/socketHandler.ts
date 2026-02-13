@@ -1,6 +1,7 @@
 import { Data, Server, WebSocket } from "ws";
-import { GameService } from "./gameService";
+
 import { GuildService } from "../guild/guildService";
+import { gameLib } from "../_lib/game.lib";
 
 const defaultUser = {
   userId: 1,
@@ -26,7 +27,6 @@ export type ExtendedWebSocket = WebSocket & {
 export class SocketHandler {
   constructor(
     private ws: Server | null,
-    private gameService: GameService = new GameService(),
     private guildService: GuildService = new GuildService(),
   ) {}
 
@@ -109,7 +109,7 @@ export class SocketHandler {
     });
 
     this.sendMessageToGuild("GUILD_MEMBER_LIST_UPDATE", guildCode, {
-      content: members.responseObject,
+      content: members,
     });
   }
 
@@ -128,13 +128,14 @@ export class SocketHandler {
 
   async receiveGuildChatMessage(payload: Payload) {
     try {
-      await this.gameService.receiveMessage(
-        payload.guildCode,
-        payload.userId,
-        payload.userCode,
-        payload.content.message,
-        payload.content.entities,
-      );
+      await gameLib.insertGameHistory(payload.guildCode, {
+        chat: {
+          userId: payload.userId,
+          userCode: payload.userCode,
+          message: payload.content.message,
+        },
+        entities: payload.content.entities,
+      });
     } catch (ex) {
       const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
       console.error(`Error handling guild chat message: ${errorMessage}`);

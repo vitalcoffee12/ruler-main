@@ -2,7 +2,6 @@ import { href, Link, useNavigate } from "react-router";
 import logoDark from "./logo-dark.svg";
 import logoLight from "./logo-light.png";
 import welcomImage from "./welcome-image.png";
-import { ActionButton, SubmitButton } from "~/components/forms";
 
 export default function Welcome() {
   const nav = useNavigate();
@@ -22,17 +21,14 @@ export default function Welcome() {
         />
       </Link>
       <div className="w-44 h-24 fixed flex items-center justify-end px-6 right-0">
-        <ActionButton
-          label="Sign In"
+        <div
+          className="cursor-pointer mr-4 border border-stone-100  px-4 py-2 rounded-2xl transition duration-200 shadow-md hover:shadow-lg hover:scale-105"
           onClick={() => {
             nav("/auth/signin");
           }}
-          style={{
-            fontSize: "16px",
-            padding: "8px 16px",
-            borderRadius: "30px",
-          }}
-        />
+        >
+          Sign In
+        </div>
       </div>
       {/** GNB */}
       <nav className="flex justify-center border-b border-stone-200 dark:border-stone-700 h-24">
@@ -59,30 +55,23 @@ export default function Welcome() {
             className="w-full mx-auto mt-8"
           />
         </div>
-        <div className="flex justify-center gap-5 mt-12">
-          <SubmitButton
-            label="How It Works"
-            style={{
-              fontSize: "16px",
-              padding: "8px 16px",
-              borderRadius: "30px",
-            }}
+        <div className="flex justify-center mt-12">
+          <div
+            className="cursor-pointer mr-4 px-4 py-2 rounded-2xl border border-stone-100 transition duration-200 shadow-md hover:shadow-lg hover:scale-105"
             onClick={() => {
               nav("/guides");
             }}
-          />
-          <SubmitButton
-            label="Create Your World"
-            style={{
-              backgroundColor: "var(--color-lime-400)",
-              fontSize: "16px",
-              padding: "8px 16px",
-              borderRadius: "30px",
-            }}
+          >
+            How It Works
+          </div>
+          <div
+            className="cursor-pointer mr-4 px-4 py-2 rounded-2xl transition duration-200 bg-lime-500 text-white shadow-md hover:shadow-lg hover:scale-105"
             onClick={() => {
               nav("/auth/register");
             }}
-          />
+          >
+            Create Your World
+          </div>
         </div>
         {/** Features */}
         <div className="flex flex-col gap-4 mt-20 px-3">

@@ -1,6 +1,5 @@
 import { useContext, useEffect, useState } from "react";
 
-import { CheckboxField, InputField, SubmitButton } from "~/components/forms";
 import logoLight from "../welcome/logo-light.png";
 import { useNavigate } from "react-router";
 import { UserContext } from "~/contexts/userContext";
@@ -11,9 +10,9 @@ export default function Signin() {
 
   const [select, setSelect] = useState("standard");
   useEffect(() => {
-    if (user && user.id > 0) {
-      nav("/game");
-    }
+    // if (user && user.id > 0) {
+    //   nav("/game");
+    // }
   }, []);
 
   return (
@@ -36,51 +35,58 @@ export default function Signin() {
             }}
           />
           <div className="mt-14 mb-2">
-            <InputField
+            <label
+              htmlFor="email"
+              className="block mt-4 text-sm text-stone-700"
+            >
+              Email
+            </label>
+            <input
               id="email"
-              label="Email"
               name="email"
               type="email"
               placeholder="Enter your email"
+              className="block px-3 py-2 border border-stone-300 focus:outline-2 rounded-md mt-2 w-full "
             />
-            <InputField
+            <label
+              htmlFor="password"
+              className="block mt-4 text-sm text-stone-700"
+            >
+              Password
+            </label>
+            <input
               id="password"
-              label="Password"
               name="password"
               type="password"
               placeholder="Enter your password"
-              style={{ marginTop: "24px" }}
+              className="block px-3 py-2 border border-stone-300 focus:outline-2 rounded-md mt-2 w-full "
             />
-            <div className="text-sm text-stone-400 mt-3 flex justify-between ">
-              <div>
-                <CheckboxField
+            <div className="text-sm text-stone-400 mt-3 flex justify-between items-center">
+              <div className="flex gap-2 items-center ml-1">
+                <input
+                  type="checkbox"
                   id="remember"
-                  label="Remember me"
+                  aria-label="Remember me"
                   name="remember"
-                  style={{
-                    marginTop: "0",
-                    color: "var(--color-stone-500)",
-                  }}
+                  className="accent-lime-600 w-4 h-4 rounded-sm transition duration-150"
                 />
+                <label htmlFor="remember" className="cursor-pointer">
+                  Remember me
+                </label>
               </div>
               <div className="hover:underline cursor-pointer">
                 Forgot your password?
               </div>
             </div>
             <div className="flex justify-end">
-              <SubmitButton
-                label="Sign In"
-                style={{
-                  fontSize: "16px",
-                  padding: "12px 16px",
-                  marginTop: "32px",
-                  borderRadius: "30px",
-                  width: "100%",
-                }}
+              <button
+                className="mt-10 rounded-3xl w-full border border-lime-600 bg-lime-600 px-6 py-3 text-white font-medium hover:bg-lime-700 transition duration-150 cursor-pointer"
                 onClick={() => {
                   nav("/game");
                 }}
-              />
+              >
+                Sign In
+              </button>
             </div>
             <div className="flex justify-center mb-6">
               <div className="text-sm text-stone-500 mt-6">

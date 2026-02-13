@@ -6,11 +6,18 @@ import {
   SceneHistory,
   Term,
 } from "../game/gameModel";
-import { guildRepository } from "@/entities/guildEntity";
+
 import { COLLECTION_SUFFIX } from "../constants";
+import { Repository } from "typeorm";
+import { GuildEntity } from "@/entities/guildEntity";
+import AppDataSource from "@/dataSource";
 
 export class GameLib {
-  constructor() {}
+  constructor(
+    private guildRepository: Repository<GuildEntity> = AppDataSource.getRepository(
+      GuildEntity,
+    ),
+  ) {}
 
   // game world operations
   async getWorld(
@@ -62,7 +69,7 @@ export class GameLib {
     guildCode: string,
     data: Pick<GameHistory, "chat" | "entities">,
   ) {
-    const guild = await guildRepository.findOne({
+    const guild = await this.guildRepository.findOne({
       where: { code: guildCode },
       select: { sceneId: true },
     });
@@ -87,7 +94,7 @@ export class GameLib {
     data: SceneHistory,
     gameHistory: GameHistory,
   ) {
-    const guild = await guildRepository.findOne({
+    const guild = await this.guildRepository.findOne({
       where: { code: guildCode },
     });
 
@@ -117,7 +124,7 @@ export class GameLib {
     }
 
     guild.sceneId += 1;
-    await guildRepository.save(guild);
+    await this.guildRepository.save(guild);
   }
 
   // history operations

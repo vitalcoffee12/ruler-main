@@ -8,15 +8,14 @@ import path from "path";
 import { AgentLib } from "../_lib/agent.lib";
 import { mongoLib } from "../_lib/mongo.lib";
 import { COLLECTION_SUFFIX } from "../constants";
-import { ResourceEntity, resourceRepository } from "@/entities/resourceEntity";
+import { ResourceEntity } from "@/entities/resourceEntity";
 import mongoose from "mongoose";
 import { generateRandomCode, getCodeWithoutPrefix } from "../utils";
-import {
-  GuildResourceEntity,
-  guildResourceRepository,
-} from "@/entities/guildResourceEntity";
-import { guildRepository } from "@/entities/guildEntity";
-import { In } from "typeorm";
+import { GuildResourceEntity } from "@/entities/guildResourceEntity";
+
+import { In, Repository } from "typeorm";
+import { GuildEntity } from "@/entities/guildEntity";
+import AppDataSource from "@/dataSource";
 
 interface NestedRule {
   title: string;
@@ -26,12 +25,23 @@ interface NestedRule {
 }
 
 export class ResourceService {
-  constructor(private agentLib: AgentLib = new AgentLib()) {}
+  constructor(
+    private agentLib: AgentLib = new AgentLib(),
+    private guildRepository: Repository<GuildEntity> = AppDataSource.getRepository(
+      GuildEntity,
+    ),
+    private guildResourceRepository: Repository<GuildResourceEntity> = AppDataSource.getRepository(
+      GuildResourceEntity,
+    ),
+    private resourceRepository: Repository<ResourceEntity> = AppDataSource.getRepository(
+      ResourceEntity,
+    ),
+  ) {}
 
   // Retrieves all resources from the database
   async findAll(): Promise<ServiceResponse<Resource[] | null>> {
     try {
-      const resources = await resourceRepository.find();
+      const resources = await this.resourceRepository.find();
       if (!resources || resources.length === 0) {
         return ServiceResponse.failure(
           "No Resources found",
@@ -54,7 +64,7 @@ export class ResourceService {
   // Retrieves a single resource by their ID
   async findById(id: number): Promise<ServiceResponse<Resource | null>> {
     try {
-      const resource = await resourceRepository.findOne({
+      const resource = await this.resourceRepository.findOne({
         where: { id },
       });
       if (!resource) {
@@ -128,7 +138,7 @@ export class ResourceService {
     resourceIds: number[],
   ): Promise<ServiceResponse<boolean>> {
     try {
-      const guild = await guildRepository.findOne({
+      const guild = await this.guildRepository.findOne({
         where: { code: guildCode },
       });
       if (!guild) {
@@ -139,13 +149,13 @@ export class ResourceService {
         );
       }
 
-      const guildResources = await guildResourceRepository.find({
+      const guildResources = await this.guildResourceRepository.find({
         where: { guildCode },
       });
       const existingIds = guildResources.map((e) => e.resourceId);
       const newIds = resourceIds.filter((id) => !existingIds.includes(id));
 
-      const resources = await resourceRepository.find({
+      const resources = await this.resourceRepository.find({
         where: { id: In(newIds) },
       });
 
@@ -160,7 +170,7 @@ export class ResourceService {
         return guildResource;
       });
 
-      await guildResourceRepository.save(newGuildResources);
+      await this.guildResourceRepository.save(newGuildResources);
     } catch (ex) {
       const errorMessage = `Error importing resources to guild ${guildCode}:, ${
         (ex as Error).message
@@ -226,7 +236,7 @@ export class ResourceService {
         { fieldName: "id" },
       );
 
-      await resourceRepository.save(ruleSet);
+      await this.resourceRepository.save(ruleSet);
     }
     if (options?.termSetData) {
       const termSet: Partial<ResourceEntity> = {
@@ -255,7 +265,7 @@ export class ResourceService {
         `${termSet.code}.${COLLECTION_SUFFIX.TERM_SET}`,
         { fieldName: "id" },
       );
-      await resourceRepository.save(termSet);
+      await this.resourceRepository.save(termSet);
     }
   }
 
@@ -272,7 +282,7 @@ export class ResourceService {
 
       let code = generateRandomCode();
       while (true) {
-        const existing = await resourceRepository.findOne({
+        const existing = await this.resourceRepository.findOne({
           where: [
             {
               code: `R-${code}`,
@@ -325,7 +335,7 @@ export class ResourceService {
       // 처리 프로세스는 서버에서 진행하고, 캐시 등에 진행상황만 저장.
       // 사용자는 별도 API로 진행상황을 조회. 조회 중인 클라이언트에 실시간 프로세싱 상태를 소켓으로 전달 여부는 추후 고민...
 
-      const resource = await resourceRepository.findOne({
+      const resource = await this.resourceRepository.findOne({
         where: { id },
       });
 
@@ -372,7 +382,7 @@ export class ResourceService {
         );
 
         // check term set existence & term processing
-        let termResource = await resourceRepository.findOne({
+        let termResource = await this.resourceRepository.findOne({
           where: { code: `T-${getCodeWithoutPrefix(resource?.code || "")}` },
         });
         if (!termResource) {
@@ -387,7 +397,7 @@ export class ResourceService {
             ...resourceDefaultData,
           });
         }
-        await resourceRepository.save(termResource);
+        await this.resourceRepository.save(termResource);
 
         // term set 생성
         const keywords = result.flatMap((rule) => rule.keywords || []) as {
@@ -420,7 +430,7 @@ export class ResourceService {
           })),
         );
 
-        await resourceRepository.save(resource);
+        await this.resourceRepository.save(resource);
       }
 
       // term processing

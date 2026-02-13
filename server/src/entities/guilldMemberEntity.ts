@@ -68,6 +68,3 @@ export class GuildMemberEntity extends BaseEntity implements GuildMember {
     });
   }
 }
-
-export const guildMemberRepository =
-  AppDataSource.getRepository(GuildMemberEntity);
