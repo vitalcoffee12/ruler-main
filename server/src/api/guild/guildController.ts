@@ -11,7 +11,9 @@ class GuildController {
   };
 
   public getGuild: RequestHandler = async (req: Request, res: Response) => {
-    const serviceResponse = await this.guildService.findByCode(req.params.code);
+    const serviceResponse = await this.guildService.findByCode(
+      req.params.code as string,
+    );
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 

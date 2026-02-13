@@ -94,6 +94,7 @@ export class ResourceService {
     page: number,
   ): Promise<ServiceResponse<{ data: Resource[]; maxPage: number } | null>> {
     try {
+      console.log(type, code, page);
       const collection = await mongoose.connection.collection(
         `${code}.${
           type === "ruleSet"
@@ -133,46 +134,85 @@ export class ResourceService {
     }
   }
 
-  public async importResourcesToGuild(
-    guildCode: string,
-    resourceIds: number[],
+  public async importResourceToGuilds(
+    id: string,
+    guildCodes: string[],
   ): Promise<ServiceResponse<boolean>> {
+    console.log(id, guildCodes);
     try {
-      const guild = await this.guildRepository.findOne({
-        where: { code: guildCode },
+      const resource = await this.resourceRepository.findOne({
+        where: { id: Number(id) },
       });
-      if (!guild) {
+
+      const guilds = await this.guildRepository.find({
+        where: { code: In(guildCodes) },
+      });
+      if (!resource || !guilds || guilds.length === 0) {
         return ServiceResponse.failure(
-          "Guild not found",
+          "Guild or Resource not found",
           false,
           StatusCodes.NOT_FOUND,
         );
       }
+      const resourceCollection = await mongoose.connection.collection(
+        `${resource.code}.${
+          resource.type === "ruleSet"
+            ? COLLECTION_SUFFIX.RULE_SET
+            : COLLECTION_SUFFIX.TERM_SET
+        }`,
+      );
+      const docs = await resourceCollection.find<any>({}).toArray();
 
-      const guildResources = await this.guildResourceRepository.find({
-        where: { guildCode },
-      });
-      const existingIds = guildResources.map((e) => e.resourceId);
-      const newIds = resourceIds.filter((id) => !existingIds.includes(id));
-
-      const resources = await this.resourceRepository.find({
-        where: { id: In(newIds) },
-      });
-
-      const newGuildResources = resources.map((resource) => {
-        const guildResource = new GuildResourceEntity({
-          guildId: guild.id,
-          guildCode: guildCode,
-          resourceId: resource.id,
-          resourceCode: resource.code,
-          type: resource.type,
+      const insertGuildResources: GuildResourceEntity[] = [];
+      for (const guild of guilds) {
+        const guildResources = await this.guildResourceRepository.find({
+          where: { guildCode: guild.code, resourceId: Number(id) },
         });
-        return guildResource;
-      });
+        if (!guildResources || guildResources.length === 0) {
+          const ngr = new GuildResourceEntity({
+            guildId: guild.id,
+            guildCode: guild.code,
+            resourceId: resource.id,
+            resourceCode: resource.code,
+            type: resource.type,
+          });
+          insertGuildResources.push(ngr);
+        }
 
-      await this.guildResourceRepository.save(newGuildResources);
+        if (resource.type === "ruleSet") {
+          const guildCollection = await mongoose.connection.collection(
+            `${guild.code}.${COLLECTION_SUFFIX.RULE_SET}`,
+          );
+          let lastId = await guildCollection.countDocuments();
+
+          for (let j = 0; j < docs.length; j++) {
+            docs[j].id = lastId + j;
+            if (docs[j].children && Array.isArray(docs[j].children)) {
+              docs[j].children = docs[j].children.map(
+                (n: number) => lastId + n,
+              );
+            }
+          }
+          await guildCollection.insertMany(docs);
+
+          lastId += docs.length;
+        } else if (resource.type === "termSet") {
+          const guildCollection = await mongoose.connection.collection(
+            `${guild.code}.${COLLECTION_SUFFIX.TERM_SET}`,
+          );
+          let lastId = await guildCollection.countDocuments();
+
+          for (let j = 0; j < docs.length; j++) {
+            docs[j].id = lastId + j;
+          }
+          await guildCollection.insertMany(docs);
+          lastId += docs.length;
+        }
+      }
+
+      await this.guildResourceRepository.save(insertGuildResources);
     } catch (ex) {
-      const errorMessage = `Error importing resources to guild ${guildCode}:, ${
+      const errorMessage = `Error importing resource ${id}:, ${
         (ex as Error).message
       }`;
       logger.error(errorMessage);

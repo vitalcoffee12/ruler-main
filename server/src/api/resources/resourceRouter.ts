@@ -118,3 +118,28 @@ resourceRouter.post(
   validateToken(),
   resourceController.formatResource,
 );
+
+resourceRegistry.registerPath({
+  method: "post",
+  path: "/resource/import",
+  tags: ["Resource"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            id: z.number(),
+            guildCodes: z.array(z.string()),
+          }),
+        },
+      },
+    },
+  },
+  responses: createApiResponse(ResourceSchema, "Resource Imported"),
+});
+
+resourceRouter.post(
+  "/import",
+  validateToken(),
+  resourceController.importResource,
+);

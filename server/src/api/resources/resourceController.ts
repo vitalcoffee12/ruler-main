@@ -25,7 +25,7 @@ class ResourceController {
     req: Request,
     res: Response,
   ) => {
-    const { type, code, page } = req.params;
+    const { type, code, page } = req.query;
     const serviceResponse = await resourceService.findByGuildCode(
       type as "ruleSet" | "termSet",
       code as string,
@@ -34,17 +34,17 @@ class ResourceController {
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 
-  public importResourcesToGuild: RequestHandler = async (
-    req: Request,
-    res: Response,
-  ) => {
-    const { guildCode, resourceIds } = req.body;
-    const serviceResponse = await resourceService.importResourcesToGuild(
-      guildCode as string,
-      resourceIds as number[],
-    );
-    res.status(serviceResponse.statusCode).send(serviceResponse);
-  };
+  // public importResourcesToGuild: RequestHandler = async (
+  //   req: Request,
+  //   res: Response,
+  // ) => {
+  //   const { guildCode, resourceIds } = req.body;
+  //   const serviceResponse = await resourceService.importResourcesToGuild(
+  //     guildCode as string,
+  //     resourceIds as number[],
+  //   );
+  //   res.status(serviceResponse.statusCode).send(serviceResponse);
+  // };
 
   public uploadResource: RequestHandler = async (
     req: Request,
@@ -70,6 +70,20 @@ class ResourceController {
     resourceService.format(id);
     const serviceResponse = ServiceResponse.success<boolean>(
       "Request to format resource successfully received",
+      true,
+      StatusCodes.OK,
+    );
+    res.status(serviceResponse.statusCode).send(serviceResponse);
+  };
+
+  public importResource: RequestHandler = async (
+    req: Request,
+    res: Response,
+  ) => {
+    const { id, guildCodes } = req.body;
+    await resourceService.importResourceToGuilds(id, guildCodes);
+    const serviceResponse = ServiceResponse.success<boolean>(
+      "Request to import resource to knowledge base successfully received",
       true,
       StatusCodes.OK,
     );

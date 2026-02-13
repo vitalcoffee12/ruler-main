@@ -31,7 +31,7 @@ export default function GuildList(props: {
 
   useEffect(() => {
     fetchGuilds();
-  }, [user, props.refreshGuildList]);
+  }, [user.code, props.refreshGuildList]);
 
   useEffect(() => {
     if (hoveredGuildCode) {

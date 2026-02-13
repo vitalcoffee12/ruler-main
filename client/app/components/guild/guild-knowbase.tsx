@@ -1,6 +1,7 @@
 import { getRequest } from "~/request";
 import type { Guild } from "../common.interface";
 import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
 
 export default function GuildKnowledgeBase(props: { guild: Guild }) {
   const [type, setType] = useState<"ruleSet" | "termSet">("ruleSet");
@@ -10,7 +11,7 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
   const highlighterRef = useRef<HTMLDivElement>(null);
   const typeRef = useRef<Record<string, HTMLLIElement>>({});
 
-  const fetchGuildKnowBase = async () => {
+  const fetchGuildKnowledgeBase = async () => {
     const response = await getRequest(`/resource/guild`, {
       type: type,
       code: props.guild.code,
@@ -21,7 +22,7 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
   };
 
   useEffect(() => {
-    fetchGuildKnowBase();
+    fetchGuildKnowledgeBase();
   }, [page, type]);
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
         </span>
         <span
           className="material-symbols-outlined p-2 cursor-pointer text-stone-500 hover:text-stone-900 transition duration-200 text-sm"
-          onClick={fetchGuildKnowBase}
+          onClick={fetchGuildKnowledgeBase}
         >
           refresh
         </span>
@@ -77,7 +78,11 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
           ))}
         </ul>
       </div>
-      <div className="min-h-full overflow-y-auto no-scrollbar rounded-md bg-white row-start-3 row-end-4 shadow-sm"></div>
+      <div className="min-h-full overflow-y-auto no-scrollbar rounded-md bg-white row-start-3 row-end-4 shadow-sm">
+        {data.map((item, index) => (
+          <KnowledgeBaseItem key={index} item={item} />
+        ))}
+      </div>
       <div className="min-h-full overflow-y-auto row-start-4 row-end-5 flex justify-center items-center">
         <ul className="flex items-center gap-4 text-stone-600  no-select">
           <li
@@ -103,11 +108,57 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
   );
 }
 
-function KnowledgeBaseItem(props: Record<string, any>) {
+function KnowledgeBaseItem(props: { item: Record<string, any> }) {
   return (
-    <div className="border-b border-stone-200 p-4 hover:bg-stone-50 cursor-pointer transition duration-200">
-      <div className="font-semibold text-stone-800 mb-2">{props.title}</div>
-      <div className="text-sm text-stone-600">{props.description}</div>
+    <div className="border-b border-stone-200 p-4">
+      {props.item.categories && (
+        <div className="mb-3 flex gap-1 items-center flex-wrap">
+          {props.item.categories.map((cat: string, idx: number) => {
+            let splitter = <></>;
+            if (idx != props.item.categories.length - 1) {
+              splitter = (
+                <span className="text-stone-400 material-symbols-outlined">
+                  arrow_right
+                </span>
+              );
+            }
+            return (
+              <>
+                <span
+                  key={idx}
+                  className="text-xs text-stone-500 bg-stone-100 px-2 py-1 rounded-full"
+                >
+                  {cat}
+                </span>
+                {splitter}
+              </>
+            );
+          })}
+        </div>
+      )}
+      <div className="font-semibold text-stone-800 mb-2 flex items-center gap-2">
+        {props.item.id}. {props.item.title} {props.item.term}
+      </div>
+      <div></div>
+      <div className="text-sm text-stone-600">
+        {props.item.description}
+        {props.item.summary}
+      </div>
+      <div>
+        {props.item.content && props.item.content.length > 0 && (
+          <>
+            <div className="flex items-center mt-3 text-stone-500 text-sm">
+              <h3>Contents</h3>
+              <span className="material-symbols-outlined">
+                keyboard_arrow_down
+              </span>
+            </div>
+            <div className="text-sm leading-6 p-4">
+              <Markdown>{props.item.content.join(" ")}</Markdown>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

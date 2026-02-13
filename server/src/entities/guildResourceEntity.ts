@@ -6,22 +6,24 @@ import {
   Column,
   DeleteDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
 } from "typeorm";
 
 @Entity({ name: "guild_resources" })
+@Index(["guildId", "resourceId"], { unique: true })
 export class GuildResourceEntity extends BaseEntity implements GuildResource {
   @PrimaryGeneratedColumn({ type: "int", unsigned: true, comment: "Guild ID" })
   id: number;
 
   @Column({ type: "int", nullable: false })
   guildId: number;
-  @Column({ type: "varchar", length: 255, nullable: true, unique: true })
+  @Column({ type: "varchar", length: 255, nullable: true })
   guildCode: string;
 
   @Column({ type: "int", nullable: false })
   resourceId: number;
-  @Column({ type: "varchar", length: 255, nullable: true, unique: true })
+  @Column({ type: "varchar", length: 255, nullable: true })
   resourceCode: string;
 
   @Column({ type: "enum", enum: ["ruleSet", "termSet"], nullable: false })
