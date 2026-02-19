@@ -102,12 +102,32 @@ export class ResourceService {
             : COLLECTION_SUFFIX.TERM_SET
         }`,
       );
-      const resources = await collection
-        .find<any>({})
-        .skip((page - 1) * 10)
-        .limit(10)
-        .toArray();
-      const counts = await collection.countDocuments();
+      let resources;
+      let counts = 0;
+
+      if (type === "ruleSet") {
+        resources = await collection
+          .find<any>({
+            content: { $exists: true, $not: { $size: 0 } },
+          })
+          .skip((page - 1) * 10)
+          .limit(10)
+          .toArray();
+        counts = await collection.countDocuments({
+          content: { $exists: true, $not: { $size: 0 } },
+        });
+      } else if (type === "termSet") {
+        resources = await collection
+          .find<any>({
+            description: { $exists: true, $not: { $size: 0 } },
+          })
+          .skip((page - 1) * 10)
+          .limit(10)
+          .toArray();
+        counts = await collection.countDocuments({
+          description: { $exists: true, $not: { $size: 0 } },
+        });
+      }
       const maxPage = Math.ceil(counts / 10);
 
       if (!resources || resources.length === 0) {

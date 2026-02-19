@@ -1,12 +1,16 @@
 import { getRequest } from "~/request";
 import type { Guild } from "../common.interface";
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
+import "./_guild.css";
 
 export default function GuildKnowledgeBase(props: { guild: Guild }) {
   const [type, setType] = useState<"ruleSet" | "termSet">("ruleSet");
   const [maxPage, setMaxPage] = useState(1);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState<Record<string, number>>({
+    ruleSet: 1,
+    termSet: 1,
+  });
   const [data, setData] = useState<any[]>([]);
   const highlighterRef = useRef<HTMLDivElement>(null);
   const typeRef = useRef<Record<string, HTMLLIElement>>({});
@@ -15,13 +19,19 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
     const response = await getRequest(`/resource/guild`, {
       type: type,
       code: props.guild.code,
-      page: page,
+      page: page[type],
     });
     setData(response.data.responseObject.data || []);
     setMaxPage(response.data.responseObject.maxPage || 1);
   };
 
   useEffect(() => {
+    if (!props.guild.code) return;
+    fetchGuildKnowledgeBase();
+  }, [props.guild.code]);
+
+  useEffect(() => {
+    if (!props.guild.code) return;
     fetchGuildKnowledgeBase();
   }, [page, type]);
 
@@ -51,7 +61,7 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
         </span>
       </h2>
       <div>
-        <ul className="relative flex rounded-md bg-white p-1 text-sm shadow-sm">
+        <ul className="relative flex rounded-md bg-white p-1 text-sm shadow-sm no-select">
           <div
             className="absolute bg-lime-100 rounded-md transition duration-120 top-1 left-0 h-full z-0"
             ref={highlighterRef}
@@ -70,7 +80,6 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
               }}
               onClick={() => {
                 setType(item === "Documents" ? "ruleSet" : "termSet");
-                setPage(1);
               }}
             >
               {item}
@@ -79,25 +88,29 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
         </ul>
       </div>
       <div className="min-h-full overflow-y-auto no-scrollbar rounded-md bg-white row-start-3 row-end-4 shadow-sm">
-        {data.map((item, index) => (
-          <KnowledgeBaseItem key={index} item={item} />
-        ))}
+        {showItems({ type, data })}
       </div>
       <div className="min-h-full overflow-y-auto row-start-4 row-end-5 flex justify-center items-center">
         <ul className="flex items-center gap-4 text-stone-600  no-select">
           <li
             className="material-symbols-outlined cursor-pointer active:scale-95"
             onClick={() => {
-              setPage(page > 1 ? page - 1 : page);
+              setPage((prev) => ({
+                ...prev,
+                [type]: prev[type] > 1 ? prev[type] - 1 : prev[type],
+              }));
             }}
           >
             arrow_back
           </li>
-          {` Page ${page} of ${maxPage} `}
+          {` Page ${page[type]} of ${maxPage} `}
           <li
             className="material-symbols-outlined cursor-pointer active:scale-95"
             onClick={() => {
-              setPage(page < maxPage ? page + 1 : page);
+              setPage((prev) => ({
+                ...prev,
+                [type]: prev[type] < maxPage ? prev[type] + 1 : prev[type],
+              }));
             }}
           >
             arrow_forward
@@ -108,53 +121,163 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
   );
 }
 
-function KnowledgeBaseItem(props: { item: Record<string, any> }) {
+function showItems({
+  type,
+  data,
+}: {
+  type: string;
+  data: Record<string, any>[];
+}) {
+  if (type === "ruleSet") {
+    return (
+      <>
+        {data.map((item, index) => (
+          <KnowledgeBaseItemRule key={index} item={item} />
+        ))}
+      </>
+    );
+  } else if (type === "termSet") {
+    return (
+      <>
+        {data.map((item, index) => (
+          <KnowledgeBaseItemTerm key={index} item={item} />
+        ))}
+      </>
+    );
+  }
+}
+
+function KnowledgeBaseItemTerm(props: { item: Record<string, any> }) {
+  if (!props.item || !props.item.term) {
+    return <></>;
+  }
+  const term = props.item.term
+    .split(" ")
+    .map((w: string) => {
+      if (w.length === 0) return w;
+      w = w.toLowerCase();
+      w = w[0].toUpperCase() + w.slice(1);
+      return w;
+    })
+    .join(" ");
+
   return (
-    <div className="border-b border-stone-200 p-4">
-      {props.item.categories && (
-        <div className="mb-3 flex gap-1 items-center flex-wrap">
-          {props.item.categories.map((cat: string, idx: number) => {
-            let splitter = <></>;
-            if (idx != props.item.categories.length - 1) {
-              splitter = (
-                <span className="text-stone-400 material-symbols-outlined">
-                  arrow_right
-                </span>
-              );
-            }
-            return (
-              <>
-                <span
-                  key={idx}
-                  className="text-xs text-stone-500 bg-stone-100 px-2 py-1 rounded-full"
-                >
-                  {cat}
-                </span>
-                {splitter}
-              </>
-            );
-          })}
+    <>
+      <div
+        className="relative border-b border-stone-200 p-4"
+        title={`item ${props.item.id}: ${term} `}
+      >
+        <div className="font-semibold text-stone-800 mb-2 flex items-center gap-2 rounded-md">
+          <div>{term}</div>
         </div>
-      )}
-      <div className="font-semibold text-stone-800 mb-2 flex items-center gap-2">
-        {props.item.id}. {props.item.title} {props.item.term}
+        <div className="text-sm text-stone-600">{props.item.description}</div>
       </div>
-      <div></div>
-      <div className="text-sm text-stone-600">
-        {props.item.description}
-        {props.item.summary}
+    </>
+  );
+}
+
+function KnowledgeBaseItemRule(props: { item: Record<string, any> }) {
+  const [expanded, setExpanded] = useState(false);
+  const categories = props.item.categories || [];
+
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      if (expanded) {
+        ref.current.style.display = `block`;
+        ref.current.style.opacity = `1`;
+        ref.current.style.maxHeight = `${ref.current.scrollHeight}px`;
+      } else {
+        ref.current.style.maxHeight = `0px`;
+        ref.current.style.opacity = `0`;
+        setTimeout(() => {
+          if (ref.current) {
+            ref.current.style.display = `none`;
+          }
+        }, 200);
+      }
+    }
+
+    return () => {};
+  }, [expanded]);
+
+  if (!props.item || !props.item.content || !props.item.content.length) {
+    return <></>;
+  }
+
+  return (
+    <div
+      className="relative border-b border-stone-200 p-4"
+      title={`item ${props.item.id}: ${props.item.title} `}
+    >
+      <div className="relative">
+        {/* <div
+          ref={catPrevRef}
+          className="absolute material-symbols-outlined bg-white p-1 drop-shadow-sm rounded-full left-0 top-1/2 -translate-y-1/2 text-stone-400 cursor-pointer"
+          style={{ display: "none" }}
+        >
+          arrow_left
+        </div> */}
+        {categories && (
+          <div className="mb-3 overflow-y-hidden flex items-center min-w-full no-scrollbar">
+            {categories.map((cat: string, idx: number) => {
+              let splitter = <></>;
+              if (idx != categories.length - 1) {
+                splitter = (
+                  <span className="text-stone-400 material-symbols-outlined">
+                    arrow_right
+                  </span>
+                );
+              }
+              return (
+                <div
+                  key={idx}
+                  className="items-center gap-2 w-auto inline-flex"
+                >
+                  <span className="text-xs text-stone-500 bg-stone-100 px-2 py-1 rounded-full inline-block whitespace-nowrap">
+                    {cat}
+                  </span>
+                  {splitter}
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {/* <div
+          ref={catNextRef}
+          className="absolute material-symbols-outlined bg-white p-1 drop-shadow-sm rounded-full right-0 top-1/2 -translate-y-1/2 text-stone-400 cursor-pointer"
+          style={{ display: "none" }}
+        >
+          arrow_right
+        </div> */}
       </div>
+      <div className="font-semibold text-stone-800 mb-2 flex items-center gap-2 rounded-md">
+        <div>{props.item.title}</div>
+      </div>
+      <div className="text-sm text-stone-600">{props.item.summary}</div>
       <div>
         {props.item.content && props.item.content.length > 0 && (
           <>
-            <div className="flex items-center mt-3 text-stone-500 text-sm">
+            <div className="flex items-center mt-3 text-stone-500 text-sm no-select">
               <h3>Contents</h3>
-              <span className="material-symbols-outlined">
+              <span
+                className="material-symbols-outlined cursor-pointer transition duration-200"
+                style={{
+                  transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+                }}
+                onClick={() => setExpanded(!expanded)}
+              >
                 keyboard_arrow_down
               </span>
             </div>
-            <div className="text-sm leading-6 p-4">
-              <Markdown>{props.item.content.join(" ")}</Markdown>
+            <div
+              className="overflow-hidden transition-all duration-200 none max-h-0 opacity-0"
+              ref={ref}
+            >
+              <div className="text-sm leading-6 bg-stone-50 rounded-md text-stone-700 p-4 mt-2">
+                <Markdown>{props.item.content.join(" ")}</Markdown>
+              </div>
             </div>
           </>
         )}
