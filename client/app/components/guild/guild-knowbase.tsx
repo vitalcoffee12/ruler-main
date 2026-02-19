@@ -12,6 +12,7 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
     termSet: 1,
   });
   const [data, setData] = useState<any[]>([]);
+  const [search, setSearch] = useState<string>("");
   const highlighterRef = useRef<HTMLDivElement>(null);
   const typeRef = useRef<Record<string, HTMLLIElement>>({});
 
@@ -20,6 +21,7 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
       type: type,
       code: props.guild.code,
       page: page[type],
+      search: search,
     });
     setData(response.data.responseObject.data || []);
     setMaxPage(response.data.responseObject.maxPage || 1);
@@ -48,9 +50,9 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
   }, [type]);
 
   return (
-    <div className="p-4 grid grid-rows-[auto_auto_1fr_50px] gap-2 h-full box-border">
+    <div className="p-4 grid grid-rows-[auto_auto_auto_1fr_50px] gap-2 h-full box-border">
       <h2 className="text-lg flex justify-between items-center mb-4">
-        <span className=" playwrite-font mr-2 font-semibold ">
+        <span className="playwrite-font mr-2 font-semibold">
           {props.guild.name} Knowledge Base
         </span>
         <span
@@ -87,10 +89,40 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
           ))}
         </ul>
       </div>
-      <div className="min-h-full overflow-y-auto no-scrollbar rounded-md bg-white row-start-3 row-end-4 shadow-sm">
+      <div className="relative row-start-3 row-end-4 bg-white rounded-md border border-stone-300 text-sm flex items-center gap-1 outline-1 -outline-offset-1 focus-within:outline-2 focus-within:-outline-offset-2 sm:text-sm/6 outline-stone-300 focus-within:outline-stone-600 border border-stone-300 w-full">
+        <input
+          type="text"
+          placeholder={`Search in ${type === "ruleSet" ? "Documents" : "Terms"}...`}
+          className="w-full px-3 py-2 rounded-md focus:outline-none focus:outline-none "
+          onChange={(e) => {
+            setSearch(e.target.value);
+          }}
+          onKeyDown={(e) => {
+            if (e.key == "Enter") {
+              console.log("Searching for:", search);
+            }
+          }}
+          value={search}
+        />
+        <div
+          className="material-symbols-outlined p-1.5 no-select cursor-pointer text-stone-400 hover:text-stone-600 
+          hover:bg-stone-100 transition duration-200 rounded-full"
+          onClick={() => setSearch("")}
+          style={{
+            fontSize: "14px",
+            visibility: search.length > 0 ? "visible" : "hidden",
+          }}
+        >
+          close
+        </div>
+        <div className="material-symbols-outlined no-select cursor-pointer text-stone-400 p-2 hover:text-stone-600 hover:bg-stone-100 transition duration-200 ">
+          search
+        </div>
+      </div>
+      <div className="min-h-full overflow-y-auto no-scrollbar rounded-md bg-white row-start-4 row-end-5 shadow-sm">
         {showItems({ type, data })}
       </div>
-      <div className="min-h-full overflow-y-auto row-start-4 row-end-5 flex justify-center items-center">
+      <div className="min-h-full overflow-y-auto row-start-5 row-end-6 flex justify-center items-center">
         <ul className="flex items-center gap-4 text-stone-600  no-select">
           <li
             className="material-symbols-outlined cursor-pointer active:scale-95"
@@ -231,10 +263,7 @@ function KnowledgeBaseItemRule(props: { item: Record<string, any> }) {
                 );
               }
               return (
-                <div
-                  key={idx}
-                  className="items-center gap-2 w-auto inline-flex"
-                >
+                <div key={idx} className="items-center w-auto inline-flex">
                   <span className="text-xs text-stone-500 bg-stone-100 px-2 py-1 rounded-full inline-block whitespace-nowrap">
                     {cat}
                   </span>
