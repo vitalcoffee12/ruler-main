@@ -1,6 +1,7 @@
 import { ollama } from "../llms/llama/ollama";
 import { Entity, Rule } from "../game/gameModel";
 import { FORMAT, MODELS, PROMPT } from "../constants";
+import { gameLib } from "./game.lib";
 
 export class AgentLib {
   // 기본 챗, 이후 여러 모델 또는, 상용 LLM의 API로 확장을 고려할 필요 있음.
@@ -94,10 +95,27 @@ export class AgentLib {
   async generateEntities(
     topic: string,
     options?: {
+      refs?: string;
       model?: string;
       maxCounts?: number;
     },
-  ) {}
+  ): Promise<Entity[]> {
+    const mc = options?.maxCounts || 5;
+    const prompt = PROMPT.GAME_DESIGNER(topic, mc, options?.refs || "");
+    const res = await this.chat(
+      MODELS.llama3,
+      [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      FORMAT.CREATE_WORLD,
+    );
+    const parsed = JSON.parse(res);
+
+    return parsed;
+  }
 
   async generateNarrative(
     messages: { role: string; content: string }[],

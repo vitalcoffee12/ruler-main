@@ -52,6 +52,19 @@ export default function GuildWorld(props: { guild: Guild }) {
     }
   }, [hoveredNodeId]);
 
+  const { isConnected, payloads, sendMessage } = useSocket();
+  useEffect(() => {
+    if (!isConnected) return;
+    for (const payload of payloads) {
+      if (
+        payload.type === "GUILD_HISTORY_UPDATE" &&
+        payload.guildCode === props.guild.code
+      ) {
+        setWorld(payload.content.world);
+      }
+    }
+  }, [isConnected, payloads, props.guild.code]);
+
   return (
     <div className="guild-world">
       <div className="row-start-1 row-end-2 p-4">
@@ -112,10 +125,16 @@ export default function GuildWorld(props: { guild: Guild }) {
       />
       <Modal>
         {modalType === "generate" && (
-          <AddElementModal guildCode={props.guild.code} />
+          <AddElementModal
+            guildCode={props.guild.code}
+            closeModal={closeModal}
+          />
         )}
         {modalType === "add" && (
-          <AddElementManualModal guildCode={props.guild.code} />
+          <AddElementManualModal
+            guildCode={props.guild.code}
+            closeModal={closeModal}
+          />
         )}
       </Modal>
     </div>
@@ -177,16 +196,15 @@ function GuildWorldNode(
     >
       <div className="flex items-center gap-2">
         <div
-          className="text-xs text-stone-700 bg-stone-300 rounded-sm px-1 hover:bg-stone-400 transition duration-300 ease-in-out"
+          className="text-sm text-stone-700 bg-stone-200 rounded-sm px-2 py-1 hover:bg-stone-400 transition duration-300 ease-in-out cursor-pointer mb-1"
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           onClick={(e) => {
             e.stopPropagation();
           }}
         >
-          {props.nodeId}
+          <div className="font-bold">{props.name}</div>
         </div>
-        <div className="font-bold">{props.name}</div>
       </div>
       <div className="text-sm text-stone-600">{props.description}</div>
     </div>

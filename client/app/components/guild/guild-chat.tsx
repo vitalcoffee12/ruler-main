@@ -15,7 +15,7 @@ export interface GameHistory {
 
 export interface GuildChatMessage {
   _id: string;
-  isGm: boolean;
+  type: string;
   userId: number;
   userCode: string;
   iconPath: string;
@@ -61,6 +61,12 @@ export default function GuildChat(props: {
     for (const payload of payloads) {
       if (
         payload.type === "GUILD_CHAT_UPDATE" &&
+        payload.guildCode === props.guild.code
+      ) {
+        setHistories(payload.content);
+      }
+      if (
+        payload.type === "GUILD_HISTORY_UPDATE" &&
         payload.guildCode === props.guild.code
       ) {
         setHistories(payload.content.gameHistories);
@@ -187,7 +193,7 @@ const MessageList = memo(function MessageList(props: {
         <MessageItem
           key={msg._id}
           _id={msg._id}
-          isGm={msg.isGm}
+          type={msg.type}
           userId={msg.userId}
           userCode={msg.userCode}
           iconPath={msg.iconPath}
@@ -216,7 +222,7 @@ function MessageItem(props: GuildChatMessage) {
         <div className="pr-3">
           <div className="mb-1 text-stone-500 text-sm">{props.displayName}</div>
           <div className="relative rounded mb-1 whitespace-pre-wrap pr-30">
-            {props.isGm && (
+            {props.type === "GUILD" && (
               <div
                 className="material-symbols-outlined absolute right-10 py-1 px-2 bg-stone-200 text-stone-600 text-xs rounded-md top-0 -translate-y-1/2 hover:bg-stone-300 cursor-pointer"
                 style={{ fontSize: "16px" }}
@@ -225,7 +231,7 @@ function MessageItem(props: GuildChatMessage) {
                 rotate_left
               </div>
             )}
-            {props.isGm && (
+            {props.type === "GUILD" && (
               <div
                 className={`material-symbols-outlined absolute right-0 py-1 px-2 bg-stone-200 text-xs rounded-md top-0 -translate-y-1/2  cursor-pointer ${
                   props.entities ? "hover:bg-stone-300" : ""
@@ -241,8 +247,7 @@ function MessageItem(props: GuildChatMessage) {
                 menu
               </div>
             )}
-            {props.isGm && <Markdown>{props.content}</Markdown>}
-            {!props.isGm && props.content}
+            <Markdown>{props.content}</Markdown>
           </div>
 
           <div>
@@ -279,7 +284,7 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
     entities={[]}
     displayName={guild.name}
     iconPath={guild.iconPath || "https://picsum.photos/400"}
-    isGm={true}
+    type={"SYSTEM"}
     timestamp={guild.createdAt}
     userCode=""
     userId={0}
@@ -301,9 +306,22 @@ function mapHistoriesToMessages(
 ): GuildChatMessage[] {
   return histories.map((history) => {
     const memberInfo = memberDic ? memberDic[history.chat.userCode] : undefined;
+    let type = "PLAYER";
+    switch (history.chat.userId) {
+      case 0:
+        type = "GUILD";
+        break;
+      case -1:
+        type = "SYSTEM";
+        break;
+      default:
+        type = "PLAYER";
+        break;
+    }
+
     return {
       _id: history._id,
-      isGm: memberInfo?.userId === 0 ? true : false,
+      type: type,
       userId: history.chat.userId,
       userCode: history.chat.userCode,
       iconPath: memberInfo

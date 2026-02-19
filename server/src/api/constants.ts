@@ -15,6 +15,19 @@ export const DEFAULT_PAGINATION = {
   OFFSET: 0,
 };
 
+export const PREDEFINED_USER = {
+  GUILD: (code: string, name: string) => ({
+    id: 0,
+    code: code,
+    name: name,
+  }),
+  SYSTEM: {
+    id: -1,
+    code: "SYSTEM",
+    name: "System",
+  },
+};
+
 export const BASE_PROMPT = `{role} {task}
 {ref}
 
@@ -49,7 +62,7 @@ export const MODEL_TASK = {
   GAME_MASTER:
     "Create and narrate an immersive text-based adventure game experience for the players. Guide players through the story, present challenges, and respond to their actions in a dynamic and engaging manner. Given the context, craft compelling scenarios that captivate the players' imagination. Ensure that the narrative is coherent, interactive, and tailored to the players' choices. If necessary, give rule description from base knowledge to guide players",
   CREATE_WORLD:
-    "Create a rich and immersive text-based adventure game world with detailed descriptions, story hooks, and settings.",
+    "Create a rich and immersive text-based adventure game world with detailed descriptions, story hooks, and settings. The existing world entities may be provided as reference. But you are encouraged to create new entities and story hooks to make the world more engaging and interesting.",
   CONTINUE_STORY:
     "Continue the text-based adventure game story, building upon the existing narrative while introducing new elements and maintaining coherence.",
   EDIT_WORLD:
@@ -63,7 +76,7 @@ export const MODEL_INSTRUCTION = {
   - Examples or scenarios illustrating how the rule can be applied during gameplay.
 - Give clear summaries for each rule, ensuring they are easy to understand. Also optimize them for effective retrieval using contextual embedding techniques during gameplay.`,
 
-  CREATE_WORLD: `- Develop a captivating setting with unique locations, characters, and lore.
+  CREATE_WORLD: `- Develop a captivating setting with unique locations, characters, or lore.
 - Introduce intriguing story hooks to engage players from the start.
 - Ensure the world is coherent and offers opportunities for exploration and interaction.`,
   CONTINUE_STORY: `- Build upon the existing narrative while maintaining consistency with established plot points and character development.
@@ -84,6 +97,13 @@ export const MODEL_OUTPUT_FORMAT = {
   ],
   "summary": "string" // A summary of the rules * required
 }`,
+  CREATE_WORLD: `[
+  {
+    "name": "string", // Name of the location, character, or story hook
+    "description": "string", // A detailed description of the entity markdown format is supported
+    "type": "string" // The type of entity (e.g., location, character, story hook)
+  }
+]`,
 };
 
 export const FORMAT = {
@@ -106,6 +126,18 @@ export const FORMAT = {
       },
       summary: {
         type: "string",
+      },
+    },
+  },
+
+  CREATE_WORLD: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        description: { type: "string" },
+        type: { type: "string" },
       },
     },
   },
@@ -139,5 +171,16 @@ export const PROMPT = {
       outputFormat: MODEL_OUTPUT_FORMAT.RULE_EDITOR,
       examples: "",
       input: documents,
+    }),
+
+  GAME_DESIGNER: (topic: string, maxCounts: number, refs: string) =>
+    formatPrompt({
+      role: MODEL_ROLE.GAME_DESIGNER,
+      task: MODEL_TASK.CREATE_WORLD,
+      ref: refs,
+      instructions: MODEL_INSTRUCTION.CREATE_WORLD,
+      outputFormat: MODEL_OUTPUT_FORMAT.CREATE_WORLD,
+      examples: "",
+      input: `player's preferences: ${topic}\nmax count you can generate: ${maxCounts}`,
     }),
 };

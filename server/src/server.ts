@@ -10,6 +10,7 @@ import requestLogger from "@/common/middleware/requestLogger";
 import { userRouter } from "@/api/user/userRouter";
 import { guildRouter } from "./api/guild/guildRouter";
 import { resourceRouter } from "./api/resources/resourceRouter";
+import { gameRouter } from "./api/game/gameRouter";
 
 const logger = pino({ name: "server start" });
 const app: Express = express();
@@ -32,6 +33,7 @@ app.use("/health-check", healthCheckRouter);
 app.use("/api/user", userRouter);
 app.use("/api/guild", guildRouter);
 app.use("/api/resource", resourceRouter);
+app.use("/api/game", gameRouter);
 
 // Swagger UI
 app.use(openAPIRouter);

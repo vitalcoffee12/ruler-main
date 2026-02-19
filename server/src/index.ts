@@ -5,7 +5,7 @@ import "reflect-metadata";
 import { ollama } from "./api/llms/llama/ollama";
 import { createServer } from "http";
 import { Server, WebSocket } from "ws";
-import { ExtendedWebSocket, socketHandler } from "./api/game/socketHandler";
+import { ExtendedWebSocket, socketHandler } from "./api/_lib/socketHandler";
 
 const server = createServer(app);
 const ws = new Server({ server });

@@ -1,7 +1,7 @@
 import { Data, Server, WebSocket } from "ws";
 
 import { GuildService } from "../guild/guildService";
-import { gameLib } from "../_lib/game.lib";
+import { gameLib } from "./game.lib";
 
 const defaultUser = {
   userId: 1,
@@ -115,14 +115,14 @@ export class SocketHandler {
 
   async sendHistoryUpdate(guildCode: string) {
     const guildData = await this.guildService.getHistoryByCode(guildCode);
-    this.sendMessageToGuild("GUILD_CHAT_UPDATE", guildCode, {
+    this.sendMessageToGuild("GUILD_HISTORY_UPDATE", guildCode, {
       content: guildData.responseObject,
     });
   }
-  async sendWorldUpdate(guildCode: string) {
+  async sendChatUpdate(guildCode: string) {
     const guildData = await this.guildService.getHistoryByCode(guildCode);
-    this.sendMessageToGuild("GUILD_WORLD_UPDATE", guildCode, {
-      content: guildData.responseObject,
+    this.sendMessageToGuild("GUILD_CHAT_UPDATE", guildCode, {
+      content: guildData.responseObject?.gameHistories,
     });
   }
 
