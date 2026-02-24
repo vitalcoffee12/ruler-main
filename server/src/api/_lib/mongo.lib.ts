@@ -64,6 +64,38 @@ export class MongoLib {
     return document as T | null;
   }
 
+  async searchByEmbedding(
+    collectionName: string,
+    embedding: number[],
+    topK: number = 5,
+    options?: {
+      fieldName?: string;
+    },
+  ): Promise<any[]> {
+    const fieldName = options?.fieldName || "embedding";
+
+    const results = await mongoose.connection
+      .collection(collectionName)
+      .aggregate([
+        {
+          $vectorSearch: {
+            index: `${fieldName}_vector_index`,
+            queryVector: embedding,
+            path: fieldName,
+            numCandidates: topK,
+            limit: topK,
+          },
+        },
+        {
+          $addFields: {
+            score: { $meta: "vectorSearchScore" },
+          },
+        },
+      ])
+      .toArray();
+    return results;
+  }
+
   async bulkWriteDocuments(
     collectionName: string,
     operations: mongoose.mongo.AnyBulkWriteOperation<any>[],

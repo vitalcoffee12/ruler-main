@@ -7,11 +7,12 @@ import { GuildEntity } from "@/entities/guildEntity";
 import { UserEntity } from "@/entities/userEntity";
 import { Entity, GameHistory, SceneHistory } from "../game/gameModel";
 import { gameLib } from "../_lib/game.lib";
-import { COLLECTION_SUFFIX } from "../constants";
+import { COLLECTION_SUFFIX, PREDEFINED_USER } from "../constants";
 import mongoose from "mongoose";
 import { OAUTH_PROVIDERS } from "@/common/constants";
 import AppDataSource from "@/dataSource";
 import { Repository } from "typeorm/repository/Repository";
+import { mongoLib } from "../_lib/mongo.lib";
 
 export class GuildService {
   constructor(
@@ -152,18 +153,54 @@ export class GuildService {
       }),
     );
 
-    mongoose.connection.createCollection(
+    await mongoose.connection.createCollection(
       `${newGuild.code}.${COLLECTION_SUFFIX.GAME_HISTORY}`,
     );
-    mongoose.connection.createCollection(
+    await mongoose.connection.createCollection(
       `${newGuild.code}.${COLLECTION_SUFFIX.SCENE_HISTORY}`,
     );
-    mongoose.connection.createCollection(
+    await mongoose.connection.createCollection(
       `${newGuild.code}.${COLLECTION_SUFFIX.RULE_SET}`,
     );
-    mongoose.connection.createCollection(
+    mongoLib.createEmbeddingIndex(
+      `${newGuild.code}.${COLLECTION_SUFFIX.RULE_SET}`,
+      {
+        embeddingSize: 4096,
+        fieldName: "embedding",
+      },
+    );
+
+    await mongoose.connection.createCollection(
       `${newGuild.code}.${COLLECTION_SUFFIX.TERM_SET}`,
     );
+    mongoLib.createEmbeddingIndex(
+      `${newGuild.code}.${COLLECTION_SUFFIX.TERM_SET}`,
+      {
+        embeddingSize: 4096,
+        fieldName: "embedding",
+      },
+    );
+
+    const newCharacter: Entity = {
+      id: `${user.code}`,
+      name: user.displayName,
+      description: `A player who joined the guild as ${user.displayName}`,
+      state: "active",
+      score: 100,
+      rules: [],
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    };
+
+    const predUser = PREDEFINED_USER.SYSTEM;
+    await gameLib.insertGameHistory(newGuild.code, {
+      chat: {
+        userId: predUser.id,
+        userCode: predUser.code,
+        message: `Player ${user.displayName} has created the guild.`,
+      },
+      entities: [newCharacter],
+    });
 
     return newGuild;
   }
@@ -176,13 +213,14 @@ export class GuildService {
   }) {
     try {
       const guildCode = GenerateGuildCode();
-      const guild = await this.guildRepository.create({
+      const guild = await this.createWithCollections({
         code: guildCode,
         ownerId: createGuildData.ownerId,
         name: createGuildData.name,
         description: createGuildData.description,
         iconPath: createGuildData.iconPath,
       });
+
       return ServiceResponse.success<Guild>(
         "Guild created successfully",
         guild,

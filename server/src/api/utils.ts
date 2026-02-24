@@ -112,6 +112,10 @@ export function GenerateUserCode(): string {
   const randomCode = generateRandomCode(8);
   return prefix + randomCode;
 }
+export function GenerateEntityCode(): string {
+  const randomCode = generateRandomCode(6);
+  return `${randomCode}_${Date.now().toString().slice(-5)}`;
+}
 
 export function getCodeWithoutPrefix(code: string): string {
   return code.split("-")[1] || code;

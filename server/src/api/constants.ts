@@ -28,11 +28,17 @@ export const PREDEFINED_USER = {
   },
 };
 
+export const ENTITY_STATE = {
+  UNLISTED: "unlisted",
+  ACTIVE: "active",
+  REMOVED: "removed",
+};
+
 export const BASE_PROMPT = `{role} {task}
 {ref}
 
-# Instructions:
-{instructions}
+# Rule:
+{rules}
 
 # Output Format:
 Return the result in the following JSON format:
@@ -45,50 +51,28 @@ Return the result in the following JSON format:
 {input}
 `;
 
-export const MODEL_ROLE = {
-  RULE_EDITOR: "You are a rule editor for text-based role-playing games.",
+export const PROMPTS = {
+  RULE_EDITOR: (documents: string) =>
+    `This document describes rules for a text-based role-playing system. 
 
-  GAME_DESIGNER:
-    "You are an imaginative and skilled game designer specializing in text-based adventure games.",
-  STORYTELLER:
-    "You are a creative and engaging storyteller for a text-based adventure game.",
-  EDITOR:
-    "You are a meticulous game designer specializing in refining and enhancing text-based adventure game worlds.",
-};
+Your tasks:
 
-export const MODEL_TASK = {
-  RULE_EDITOR:
-    "Given document, you need to refine and structure the rules for a text-based role-playing game. The games run based on user input and AI generation, and rule may work as reference for both users and AI agents during the game play. Ensure that the rules can be searched by contextual embedding and retrieved effectively when needed during the game play.",
-  GAME_MASTER:
-    "Create and narrate an immersive text-based adventure game experience for the players. Guide players through the story, present challenges, and respond to their actions in a dynamic and engaging manner. Given the context, craft compelling scenarios that captivate the players' imagination. Ensure that the narrative is coherent, interactive, and tailored to the players' choices. If necessary, give rule description from base knowledge to guide players",
-  CREATE_WORLD:
-    "Create a rich and immersive text-based adventure game world with detailed descriptions, story hooks, and settings. The existing world entities may be provided as reference. But you are encouraged to create new entities and story hooks to make the world more engaging and interesting.",
-  CONTINUE_STORY:
-    "Continue the text-based adventure game story, building upon the existing narrative while introducing new elements and maintaining coherence.",
-  EDIT_WORLD:
-    "Edit and enhance the existing text-based adventure game world and state to improve engagement and coherence. Based on the current world and story and Game Master's history, identify entities that changed by previous history, update their descriptions, attributes, and relationships accordingly. or introduce new entities to enrich the game world while ensuring consistency with established lore and rules.",
-};
+1. Identify keywords.
+  - Keywords must represent important concepts, mechanics, or elements relevant to the game
+  - Avoid generic language terms unless they have a specific rule meaning
+  - Prefer multi-word phrases when they represent a distinct concept
 
-export const MODEL_INSTRUCTION = {
-  RULE_EDITOR: `- Analyze the provided document to identify keywords relevant to the game.
-- For each identified keyword, create a rule entry that includes:
-  - A detailed description that explains the rule's purpose and application within the game.
-  - Examples or scenarios illustrating how the rule can be applied during gameplay.
-- Give clear summaries for each rule, ensuring they are easy to understand. Also optimize them for effective retrieval using contextual embedding techniques during gameplay.`,
+2. For each keyword, provide a description that:
+  - Is strictly grounded in the document
+  - Explains the rule's purpose and application within the game
 
-  CREATE_WORLD: `- Develop a captivating setting with unique locations, characters, or lore.
-- Introduce intriguing story hooks to engage players from the start.
-- Ensure the world is coherent and offers opportunities for exploration and interaction.`,
-  CONTINUE_STORY: `- Build upon the existing narrative while maintaining consistency with established plot points and character development.
-- Introduce new challenges, characters, and plot twists to keep the story engaging.
-- Ensure smooth transitions between story segments.`,
-  EDIT_WORLD: `- Review the existing game world and story content.
-- Suggest and implement enhancements to locations, characters, and story hooks.
-- Ensure the world offers a rich and immersive experience for players.`,
-};
+3. Produce a high-recall summary of the document that:
+  - Preserves rule logic and constraints
+  - Avoids flavor text unless mechanically relevant
+  - Is written for retrieval
 
-export const MODEL_OUTPUT_FORMAT = {
-  RULE_EDITOR: `{
+Output format:
+{
   "keywords": [
     {
       "term": "string", // The identified keyword or term
@@ -96,14 +80,108 @@ export const MODEL_OUTPUT_FORMAT = {
     }
   ],
   "summary": "string" // A summary of the rules * required
-}`,
-  CREATE_WORLD: `[
+}
+
+Document:
+${documents}
+  `,
+  ENTITY_ENDITOR: (
+    topic: string,
+    entities: string,
+    refs: string,
+  ) => `Edit the following entities based on the topic and reference entities.
+
+Topic:
+${topic}
+  
+Entities to edit:
+${entities}
+
+Reference entities:
+${refs}
+
+Guidelines:
+- No new entities should be created, only edit the provided entities.
+- Edit the entities to better fit the topic while maintaining their core identity.
+- Use the reference entities to ensure consistency in style and content.
+- Do not change the entity IDs.
+- Focus on improving descriptions and names for better gameplay and retrieval.
+  
+Output format (STRICT JSON):
+[
   {
-    "name": "string", // Name of the location, character, or story hook
-    "description": "string", // A detailed description of the entity markdown format is supported
-    "type": "string" // The type of entity (e.g., location, character, story hook)
+    "id": "string", // Must match the input entity ID
+    "name": "string", // Edited name, should be concise and unique
+    "description": "string" // Edited description, should be useful for gameplay and retrieval
   }
-]`,
+]
+`,
+  GAME_DESIGNER: (
+    terms: string,
+    topic: string,
+    maxCounts: number,
+    refs: string,
+    ids: string,
+  ) =>
+    `Generate entities for a text-based adventure game world.
+
+Inputs:
+- Core terms and definitions (optional):
+${terms}
+
+- Player instructions / theme (optional):
+${topic}
+
+- Existing entities for continuity (optional):
+${refs}
+
+- Ids for new entities (mandatory for new entities):
+${ids}
+
+Guidelines:
+
+1. If player instructions are empty, generate entities by yourself.
+
+2. If existing entities are provided:
+   - New entities should be thematically consistent with existing ones
+   - Avoid creating entities that are too similar to existing ones
+   - The id is immutable and must not change
+
+3. Generate no more than ${maxCounts} NEW entities.
+
+4. New entities:
+   - MUST use one id from the provided ${ids} list
+   - Do NOT invent or modify ids
+   - Each id may be used only once
+
+Entity Guidelines:
+- Each entity must represent a distinct gameplay-useful concept
+- Avoid generic filler entities
+- Names must be unique, concise, and setting-consistent
+- Prefer concrete, interactable world elements
+- Use the provided terms and references as inspiration but do not copy them directly
+
+Description Guidelines:
+- Write descriptions useful for gameplay and retrieval
+- Avoid excessive lore or narrative padding
+- Focus on function, atmosphere, and possible interactions
+- Markdown allowed but keep concise
+
+Output format (STRICT JSON):
+
+[
+  {
+    "id": "string",
+    "name": "string",
+    "description": "string",
+  }
+]
+
+Before generating entities, internally verify that:
+- No ids are reused
+- No names collide with existing entities
+Do not output this verification step.
+  `,
 };
 
 export const FORMAT = {
@@ -129,58 +207,15 @@ export const FORMAT = {
       },
     },
   },
-
   CREATE_WORLD: {
     type: "array",
     items: {
       type: "object",
       properties: {
+        id: { type: "string" },
         name: { type: "string" },
         description: { type: "string" },
-        type: { type: "string" },
       },
     },
   },
-};
-
-function formatPrompt(replace: {
-  role: string;
-  task: string;
-  instructions: string;
-  outputFormat: string;
-  ref: string;
-  examples: string;
-  input: string;
-}) {
-  let prompt = BASE_PROMPT;
-  for (const key in replace) {
-    const value = replace[key as keyof typeof replace];
-    const regex = new RegExp(`{${key}}`, "g");
-    prompt = prompt.replace(regex, value);
-  }
-  return prompt;
-}
-
-export const PROMPT = {
-  RULE_EDITOR: (documents: string) =>
-    formatPrompt({
-      role: MODEL_ROLE.RULE_EDITOR,
-      task: MODEL_TASK.RULE_EDITOR,
-      ref: "",
-      instructions: MODEL_INSTRUCTION.RULE_EDITOR,
-      outputFormat: MODEL_OUTPUT_FORMAT.RULE_EDITOR,
-      examples: "",
-      input: documents,
-    }),
-
-  GAME_DESIGNER: (topic: string, maxCounts: number, refs: string) =>
-    formatPrompt({
-      role: MODEL_ROLE.GAME_DESIGNER,
-      task: MODEL_TASK.CREATE_WORLD,
-      ref: refs,
-      instructions: MODEL_INSTRUCTION.CREATE_WORLD,
-      outputFormat: MODEL_OUTPUT_FORMAT.CREATE_WORLD,
-      examples: "",
-      input: `player's preferences: ${topic}\nmax count you can generate: ${maxCounts}`,
-    }),
 };

@@ -23,13 +23,13 @@ export default function CreateGuildModal(props: {
       await postRequest(
         "/guild/create",
         {
-          iconPath: "",
+          iconPath: `https://picsum.photos/${Math.floor(Math.random() * 100 + 300)}`,
           name: data.guildName,
           ownerId: user.id,
         },
         {
           Authorization: `Bearer ${user.accessToken}`,
-          "x-refrehsh-token": user.refreshToken,
+          "x-refresh-token": user.refreshToken,
         },
       );
       setIsLoading(false);

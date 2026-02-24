@@ -11,6 +11,8 @@ import { COLLECTION_SUFFIX } from "../constants";
 import { Repository } from "typeorm";
 import { GuildEntity } from "@/entities/guildEntity";
 import AppDataSource from "@/dataSource";
+import { mongoLib } from "./mongo.lib";
+import { agentLib } from "./agent.lib";
 
 export class GameLib {
   constructor(
@@ -48,26 +50,33 @@ export class GameLib {
 
     for (const history of gameHistories) {
       for (const entity of history.entities) {
-        const key = `${entity.name}`;
+        const key = `${entity.id}`;
         if (!entities.has(key)) {
-          entities.set(key, { ...entity, scoreDiff: entity.scoreDiff ?? 0 });
+          entities.set(key, { ...entity, score: entity.score ?? 0 });
         } else {
           const existing = entities.get(key)!;
-          existing.scoreDiff =
-            (existing.scoreDiff ?? 0) + (entity.scoreDiff ?? 0);
+          existing.score = (existing.score ?? 0) + (entity.score ?? 0);
           existing.description = entity.description;
         }
       }
     }
-    return Array.from(entities.values()).sort(
-      (a, b) => (a.scoreDiff ?? 0) - (b.scoreDiff ?? 0),
-    );
+    return Array.from(entities.values())
+      .sort((a, b) => (a.score ?? 0) - (b.score ?? 0))
+      .filter((e) => e.state !== "removed");
   }
 
   // insert single game history document into the guild-specific collection
   async insertGameHistory(
     guildCode: string,
-    data: Pick<GameHistory, "chat" | "entities">,
+    data: Pick<
+      GameHistory,
+      | "chat"
+      | "entities"
+      | "rankedTerms"
+      | "rankedEntities"
+      | "tasks"
+      | "citations"
+    >,
   ) {
     const guild = await this.guildRepository.findOne({
       where: { code: guildCode },
@@ -251,12 +260,12 @@ export class GameLib {
   }
 
   async findTermsFromTermSet(
-    code: string,
+    guildCode: string,
     searchKeywords: string[],
     limit: number = 10,
   ) {
     const exactMatch = await mongoose.connection
-      .collection(`${code}.${COLLECTION_SUFFIX.TERM_SET}`)
+      .collection(`${guildCode}.${COLLECTION_SUFFIX.TERM_SET}`)
       .find<Term>({
         term: { $in: searchKeywords },
       })
@@ -266,12 +275,29 @@ export class GameLib {
     // fill the rest with context matches
     // TODO: improve relevance scoring
     const contextMatch = await mongoose.connection
-      .collection(`${code}.${COLLECTION_SUFFIX.TERM_SET}`)
+      .collection(`${guildCode}.${COLLECTION_SUFFIX.TERM_SET}`)
       .find<Term>({ definition: { $in: searchKeywords } })
       .toArray();
     if (exactMatch.length > 0) {
       return exactMatch;
     }
+  }
+
+  async getRankedTerms(
+    guildCode: string,
+    queryString: string,
+  ): Promise<Term[]> {
+    const embedding = await agentLib.embedText(queryString);
+    if (!embedding) {
+      return [];
+    }
+
+    const termSet = await mongoLib.searchByEmbedding(
+      `${guildCode}.${COLLECTION_SUFFIX.TERM_SET}`,
+      embedding,
+    );
+
+    return termSet.sort((a, b) => (b.version ?? 0) - (a.version ?? 0));
   }
 }
 

@@ -3,7 +3,12 @@ import { StatusCodes } from "http-status-codes";
 import { Repository } from "typeorm/repository/Repository";
 import mongoose from "mongoose";
 import AppDataSource from "@/dataSource";
-import { GenerateGuildCode, GenerateRandomColorCode } from "../utils";
+import {
+  GenerateEntityCode,
+  GenerateGuildCode,
+  generateRandomCode,
+  GenerateRandomColorCode,
+} from "../utils";
 import { GuildEntity } from "@/entities/guildEntity";
 import { UserEntity } from "@/entities/userEntity";
 import { gameLib } from "../_lib/game.lib";
@@ -39,10 +44,11 @@ export class GameService {
       }
 
       const newEntity: Entity = {
+        id: `${generateRandomCode(6)}_${Date.now().toString().slice(-5)}`,
         name: element.name,
-        type: element.type || "Unknown",
+        state: element.state || "unlisted",
         description: element.description,
-        scoreDiff: element.scoreDiff || 0,
+        score: element.score || 0,
         rules: [],
         updatedAt: new Date(),
         createdAt: new Date(),
@@ -88,9 +94,21 @@ export class GameService {
           StatusCodes.NOT_FOUND,
         );
       }
-
+      const terms = await gameLib.getRankedTerms(guildCode, description);
       const world = (await gameLib.getWorld(guildCode)).world;
+      const existingIds = world.map((e) => e.id);
+
+      const newIds: string[] = [];
+      while (newIds.length < 3) {
+        const newId = GenerateEntityCode();
+        if (newIds.includes(newId) || existingIds.includes(newId)) {
+          continue;
+        }
+        newIds.push(newId);
+      }
+
       const refs = world
+        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
         .slice(0, 5)
         .map((entity) => `\n- ${entity.name}: ${entity.description}`);
 
@@ -100,10 +118,15 @@ export class GameService {
         refs.unshift("\nHere are some existing entities in the world:");
       }
 
-      const elements = await agentLib.generateEntities(description, {
-        refs: refs.join("\n"),
-        maxCounts: 5,
-      });
+      const { data: elements, prompt } = await agentLib.generateEntities(
+        description,
+        {
+          ids: newIds.join(", "),
+          terms: terms.map((t) => `${t.term}: ${t.description}`).join("\n"),
+          refs: refs.join("\n"),
+          maxCounts: 3,
+        },
+      );
 
       const responseUser = PREDEFINED_USER.GUILD(
         guildCode,
@@ -119,6 +142,21 @@ export class GameService {
             .join(", ")}`,
         },
         entities: elements,
+        rankedTerms: terms.map((t) => ({
+          termId: t.id!,
+          score: t.score ?? 0,
+        })),
+        rankedEntities: world.map((e) => ({
+          entityId: e.id,
+          score: e.score ?? 0,
+        })),
+        tasks: [
+          {
+            type: "generate_entities",
+            input: prompt,
+            output: `${elements.length} elements are created`,
+          },
+        ],
       });
 
       socketHandler.sendHistoryUpdate(guildCode);

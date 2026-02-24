@@ -1,7 +1,6 @@
 import { ollama } from "../llms/llama/ollama";
 import { Entity, Rule } from "../game/gameModel";
-import { FORMAT, MODELS, PROMPT } from "../constants";
-import { gameLib } from "./game.lib";
+import { FORMAT, MODELS, PROMPTS } from "../constants";
 
 export class AgentLib {
   // 기본 챗, 이후 여러 모델 또는, 상용 LLM의 API로 확장을 고려할 필요 있음.
@@ -28,20 +27,21 @@ export class AgentLib {
       model: MODELS.qwen_embedding,
       input: text,
     });
+
     return (res?.embeddings ?? [])[0] ?? null;
   }
 
-  async embedObject<T>(
-    target: T,
-    key: keyof T,
-    field: string = "embedding",
-  ): Promise<any> {
-    const targetString = target[key];
-    const embedding = await this.embedText(targetString as string);
-    (target as any)[field] = embedding;
+  // async embedObject<T>(
+  //   target: T,
+  //   key: keyof T,
+  //   field: string = "embedding",
+  // ): Promise<any> {
+  //   const targetString = target[key];
+  //   const embedding = await this.embedText(targetString as string);
+  //   (target as any)[field] = embedding;
 
-    return target;
-  }
+  //   return target;
+  // }
 
   // MD 파일로부터 규칙 세트를 포맷팅
   async formatRuleSet(resource: Rule[]): Promise<Rule[] | null> {
@@ -65,7 +65,7 @@ export class AgentLib {
           );
           const chunk = item.content.slice(i, i + split).join("\n");
 
-          const prompt = PROMPT.RULE_EDITOR(chunk);
+          const prompt = PROMPTS.RULE_EDITOR(chunk);
 
           const res = await this.chat(
             MODELS.llama3,
@@ -95,13 +95,21 @@ export class AgentLib {
   async generateEntities(
     topic: string,
     options?: {
+      terms?: string;
       refs?: string;
       model?: string;
       maxCounts?: number;
+      ids?: string;
     },
-  ): Promise<Entity[]> {
+  ): Promise<{ data: Entity[]; prompt: string }> {
     const mc = options?.maxCounts || 5;
-    const prompt = PROMPT.GAME_DESIGNER(topic, mc, options?.refs || "");
+    const prompt = PROMPTS.GAME_DESIGNER(
+      options?.terms || "",
+      topic,
+      mc,
+      options?.refs || "",
+      options?.ids || "",
+    );
     const res = await this.chat(
       MODELS.llama3,
       [
@@ -114,7 +122,7 @@ export class AgentLib {
     );
     const parsed = JSON.parse(res);
 
-    return parsed;
+    return { data: parsed, prompt };
   }
 
   async generateNarrative(

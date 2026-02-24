@@ -13,7 +13,8 @@ export const ChatSchema = z.object({
 
 export type Entity = z.infer<typeof EntitySchema>;
 export const EntitySchema = z.object({
-  type: z.string(),
+  id: z.string(),
+  state: z.string(),
   name: z.string(),
   description: z.string().optional(),
   rules: z.array(
@@ -22,7 +23,7 @@ export const EntitySchema = z.object({
       version: z.number(),
     }),
   ),
-  scoreDiff: z.number().optional(),
+  score: z.number().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -30,14 +31,15 @@ export const EntitySchema = z.object({
 export type Rule = z.infer<typeof RuleSchema>;
 export const RuleSchema = z.object({
   id: z.number().optional(),
-  version: z.number(),
+  categories: z.array(z.string()),
   title: z.string(),
   content: z.array(z.string()),
   keywords: z.array(z.object({ term: z.string(), description: z.string() })),
-  categories: z.array(z.string()),
   children: z.array(z.number()),
   summary: z.string().optional(),
   embedding: z.array(z.number()).optional(),
+  score: z.number().optional(),
+  version: z.number(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -45,10 +47,11 @@ export const RuleSchema = z.object({
 export type Term = z.infer<typeof TermSchema>;
 export const TermSchema = z.object({
   id: z.number().optional(),
-  version: z.number(),
   term: z.string(),
   description: z.string(),
   embedding: z.array(z.number()).optional(),
+  score: z.number().optional(),
+  version: z.number(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
@@ -105,7 +108,7 @@ export const GameHistorySchema = z.object({
   rankedEntities: z
     .array(
       z.object({
-        entityId: z.number(),
+        entityId: z.string(),
         score: z.number(),
       }),
     )
@@ -119,6 +122,7 @@ export const SceneHistorySchema = z.object({
   message: z.string(), // ai agent's message for the scene
   sceneDescription: z.string(), // description of the scene
   gameHistories: z.array(GameHistorySchema), // game histories within the scene
+  entities: z.array(EntitySchema), // entities restored until the scene
   tasks: z // tasks performed in the scene
     .array(
       z.object({
