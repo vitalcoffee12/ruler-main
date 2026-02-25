@@ -6,12 +6,13 @@ import useSocket from "~/hooks/use-socket.hook";
 import type { Guild } from "../common.interface";
 
 export interface Entity {
-  _id: string;
-  type: string;
+  id: string;
   name: string;
   description: string;
+  info?: string; // Optional field for GM's reference, not used in gameplay
   rules: { id: number; version: number }[];
   scoreDiff?: number;
+  favorite?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -29,7 +30,7 @@ export default function GuildWorld(props: { guild: Guild }) {
   useEffect(() => {
     if (!hoveredNodeId) {
       for (const w of world) {
-        refs.current[w._id]?.classList.remove("bg-yellow-50");
+        refs.current[w.id]?.classList.remove("bg-yellow-50");
       }
     }
     const rels = relations.filter(
@@ -44,10 +45,10 @@ export default function GuildWorld(props: { guild: Guild }) {
     });
 
     for (const w of world) {
-      if (connectedNodeIds.has(w._id) && w._id !== hoveredNodeId) {
-        refs.current[w._id]?.classList.add("bg-yellow-50");
+      if (connectedNodeIds.has(w.id) && w.id !== hoveredNodeId) {
+        refs.current[w.id]?.classList.add("bg-yellow-50");
       } else {
-        refs.current[w._id]?.classList.remove("bg-yellow-50");
+        refs.current[w.id]?.classList.remove("bg-yellow-50");
       }
     }
   }, [hoveredNodeId]);
@@ -157,11 +158,9 @@ const GuildWorldNodes = memo(function GuildWorldNodes(props: {
     <div className="row-start-2 row-end-3 overflow-y-auto no-scrollbar p-4 max-h-[calc(100vh-var(--spacing)*42)] mt-2">
       {props.world.map((w) => (
         <ForwardedGuildWorldNode
-          key={w._id}
-          nodeId={w._id}
-          name={w.name}
-          description={w.description}
-          onMouseEnter={() => props.setHoveredNodeId(w._id)}
+          key={w.id}
+          node={w}
+          onMouseEnter={() => props.setHoveredNodeId(w.id)}
           onMouseLeave={() => props.setHoveredNodeId(null)}
           ref={props.refs}
         />
@@ -172,42 +171,203 @@ const GuildWorldNodes = memo(function GuildWorldNodes(props: {
 
 function GuildWorldNode(
   props: {
-    nodeId: string;
-    name: string;
-    description: string;
+    node: Entity;
+
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
   },
   ref: React.Ref<{ [key: string]: HTMLDivElement | null }>,
 ) {
   const [isHovered, setIsHovered] = useState(false);
+  const [noteVisible, setNoteVisible] = useState(false);
+  const [imageVisible, setImageVisible] = useState(false);
+  const [chartVisible, setChartVisible] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      if (menuRef.current && menuRef.current.style.display === "block") {
+        menuRef.current?.style.setProperty("display", "none");
+      }
+    };
+    window.addEventListener("click", handleClick);
+    return () => {
+      window.removeEventListener("click", handleClick);
+    };
+  }, []);
+
+  const topMenues: { icon: string; label: string; onClick: () => void }[] = [
+    {
+      icon: "edit",
+      label: "Edit",
+      onClick: () => {
+        // Implement the edit logic here
+      },
+    },
+    {
+      icon: "delete",
+      label: "Delete",
+      onClick: () => {
+        // Implement the delete logic here
+      },
+    },
+  ];
+  const botMenues: {
+    icon: string;
+    label: string;
+    class?: string;
+    onClick: () => void;
+  }[] = [
+    {
+      icon: "description",
+      label: "Toggle GM Note",
+      class: noteVisible ? "'FILL' 1" : "'FILL' 0",
+      onClick: () => {
+        setNoteVisible((prev) => !prev);
+      }, // Implement the toggle logic for GM Note visibility
+    },
+    {
+      icon: "image",
+      label: "Toggle Image",
+      class: imageVisible ? "'FILL' 1" : "'FILL' 0",
+      onClick: () => {
+        setImageVisible((prev) => !prev);
+      }, // Implement the toggle logic for Image visibility
+    },
+    {
+      icon: "favorite",
+      label: isFavorite ? "Unfavorite" : "Favorite",
+      class: isFavorite ? "'FILL' 1" : "'FILL' 0",
+      onClick: () => {
+        setIsFavorite((prev) => !prev);
+        // Implement the logic to update favorite status in the backend if needed
+      },
+    },
+    {
+      icon: "signal_cellular_alt",
+      label: chartVisible ? "Hide history" : "Show history",
+      class: chartVisible ? "'FILL' 1" : "'FILL' 0",
+      onClick: () => {
+        setChartVisible((prev) => !prev);
+        // Implement the logic to update chart visibility in the backend if needed
+      },
+    },
+  ];
 
   return (
-    <div
-      className="top-0 left-0  border border-stone-300 rounded-lg p-3 mb-3 bg-white hover:shadow-md cursor-pointer"
-      onMouseEnter={props.onMouseEnter}
-      onMouseLeave={props.onMouseLeave}
-      ref={(el) => {
-        if (ref && typeof ref !== "function") {
-          ref.current![props.nodeId] = el;
-        }
-      }}
-      onClick={(e) => {}}
-    >
-      <div className="flex items-center gap-2">
+    <>
+      <div
+        className="top-0 left-0 border border-stone-300 rounded-lg mb-3 bg-white hover:shadow-md cursor-pointer transition-shadow duration-200 relative"
+        onMouseEnter={props.onMouseEnter}
+        onMouseLeave={props.onMouseLeave}
+        ref={(el) => {
+          if (ref && typeof ref !== "function") {
+            ref.current![props.node.id] = el;
+          }
+        }}
+        onClick={(e) => {}}
+      >
+        <div className="flex items-center justify-between mt-1 px-1">
+          <div
+            className="text-sm text-stone-700 font-bold px-3"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            {props.node.name}
+          </div>
+          <div
+            className="material-symbols-outlined text-stone-400 px-3 py-2 no-select"
+            style={{
+              fontSize: "1.2rem",
+            }}
+            onClick={() => {
+              if (menuRef.current) {
+                const display = menuRef.current.style.display;
+                menuRef.current.style.display = "block";
+              }
+            }}
+          >
+            more_horiz
+          </div>
+        </div>
+        <div className="text-sm text-stone-600 px-4">
+          {props.node.description}
+        </div>
+        <div className="mb-1 px-1">
+          <ul className="flex items-center justify-between no-select">
+            {botMenues.map((menu) => (
+              <li
+                key={menu.icon}
+                title={menu.label}
+                className={`p-1 rounded cursor-pointer flex items-center justify-start mt-1`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  menu.onClick();
+                  // Handle other menu actions like Edit and Delete here
+                }}
+              >
+                <span
+                  className={`material-symbols-outlined text-stone-400 transition-all duration-100 p-2`}
+                  style={{
+                    fontVariationSettings: `${menu.class}`,
+                    fontSize: "1.2rem",
+                  }}
+                >
+                  {menu.icon}
+                  {/* Use the icon name from the menu configuration */}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        {props.node.info && (
+          <div
+            className="p-2 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 text-sm m-3 rounded-r overflow-hidden transition-height duration-300"
+            style={{
+              display: noteVisible ? "block" : "none",
+              height: noteVisible ? "fit-content" : "0",
+            }}
+          >
+            <div className="font-semibold">GM's Note:</div>
+            <div>{props.node.info}</div>
+          </div>
+        )}
+
         <div
-          className="text-sm text-stone-700 bg-stone-200 rounded-sm px-2 py-1 hover:bg-stone-400 transition duration-300 ease-in-out cursor-pointer mb-1"
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
+          className="node-menu absolute top-10 right-2 z-99 transition-opacity duration-200 bg-white border border-stone-300 rounded-md shadow-lg"
+          ref={menuRef}
         >
-          <div className="font-bold">{props.name}</div>
+          {topMenues.map((menu) => (
+            <div
+              key={menu.icon}
+              title={menu.label}
+              className={`p-2 rounded cursor-pointer flex items-center gap-1 text-stone-700 transition-opacity duration-200 text-sm hover:bg-stone-100`}
+              onClick={(e) => {
+                e.stopPropagation();
+                menu.onClick();
+                // Handle other menu actions like Edit and Delete here
+              }}
+            >
+              <span
+                className={`material-symbols-outlined `}
+                style={{
+                  fontVariationSettings: `'FILL' 1`,
+                  fontSize: "1.2rem",
+                }}
+              >
+                {menu.icon}
+                {/* Use the icon name from the menu configuration */}
+              </span>
+              <span>{menu.label}</span>
+            </div>
+          ))}
         </div>
       </div>
-      <div className="text-sm text-stone-600">{props.description}</div>
-    </div>
+    </>
   );
 }
 

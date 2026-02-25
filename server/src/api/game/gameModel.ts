@@ -17,6 +17,7 @@ export const EntitySchema = z.object({
   state: z.string(),
   name: z.string(),
   description: z.string().optional(),
+  info: z.string().optional(), // Optional field for GM's reference, not used in gameplay
   rules: z.array(
     z.object({
       id: z.number(),

@@ -95,10 +95,10 @@ export class AgentLib {
   async generateEntities(
     topic: string,
     options?: {
-      terms?: string;
-      refs?: string;
       model?: string;
       maxCounts?: number;
+      terms?: string;
+      refs?: string;
       ids?: string;
     },
   ): Promise<{ data: Entity[]; prompt: string }> {
@@ -130,10 +130,28 @@ export class AgentLib {
     options?: {
       model?: string;
       topic?: string;
-      entities?: string[];
+      terms?: string;
+      refs?: string;
     },
   ) {
-    return "";
+    const prompt = PROMPTS.NARRATOR(options?.refs || "");
+    const res = await this.chat(
+      MODELS.llama3,
+      [
+        ...messages,
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      FORMAT.NARRATIVE,
+    );
+    const parsed = JSON.parse(res);
+
+    return {
+      data: parsed,
+      prompt,
+    };
   }
 
   async generateRuleDescription(

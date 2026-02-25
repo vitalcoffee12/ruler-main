@@ -19,12 +19,12 @@ export const PREDEFINED_USER = {
   GUILD: (code: string, name: string) => ({
     id: 0,
     code: code,
-    name: name,
+    name: "assistant",
   }),
   SYSTEM: {
     id: -1,
     code: "SYSTEM",
-    name: "System",
+    name: "system",
   },
 };
 
@@ -161,11 +161,21 @@ Entity Guidelines:
 - Prefer concrete, interactable world elements
 - Use the provided terms and references as inspiration but do not copy them directly
 
-Description Guidelines:
-- Write descriptions useful for gameplay and retrieval
-- Avoid excessive lore or narrative padding
-- Focus on function, atmosphere, and possible interactions
-- Markdown allowed but keep concise
+Description Field Guidelines:
+- Focus on gameplay relevance and retrieval utility
+- Important details include potential interactions, functions, and atmosphere
+- Engage the imagination but avoid excessive lore or narrative padding
+- Markdown formatting is allowed
+
+Info Field Guidelines:
+- The "info" field is for the GM's reference and should not contain information that players can access through gameplay.
+- Focus on providing information that helps the GM understand the entity's role, potential interactions, and how it fits into the world.
+- Secrets, behind-the-scenes mechanics, or design intentions can be included here.
+
+Terms Field Guidelines:
+- Ensure that the provided ids are used correctly and not reused across entities.
+- If no terms are used, the "terms" field can be an empty array.
+
 
 Output format (STRICT JSON):
 
@@ -174,6 +184,8 @@ Output format (STRICT JSON):
     "id": "string",
     "name": "string",
     "description": "string",
+    "info": "string" // Optional field for GM's reference, not used in gameplay
+    "terms": ["number"] // Optional field for referencing term ids that inspired this entity
   }
 ]
 
@@ -181,6 +193,19 @@ Before generating entities, internally verify that:
 - No ids are reused
 - No names collide with existing entities
 Do not output this verification step.
+  `,
+
+  NARRATOR: (entities: string) =>
+    `Generate a narrative description for a text-based adventure game world.
+Guidelines:
+- The narrative should be engaging and immersive, setting the tone for the game world.
+- Focus on describing the environment, atmosphere, and any relevant background information that would help players understand the setting.
+- Avoid introducing specific entities or mechanics in the narrative; instead, create a vivid picture of the world that encourages exploration.
+- Use rich, descriptive language to evoke emotions and stimulate the imagination of players.
+- The narrative should be concise enough to maintain player interest but detailed enough to provide a clear sense of place.
+Output format (STRING):
+
+A single string containing the narrative description of the game world.
   `,
 };
 
@@ -215,6 +240,39 @@ export const FORMAT = {
         id: { type: "string" },
         name: { type: "string" },
         description: { type: "string" },
+        info: { type: "string" },
+        terms: {
+          type: "array",
+          items: {
+            type: "number",
+          },
+        },
+      },
+    },
+  },
+  NARRATIVE: {
+    type: "object",
+    properties: {
+      content: { type: "string" },
+      citations: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "number" },
+            comment: { type: "string" },
+          },
+        },
+      },
+      entities: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            comment: { type: "string" },
+          },
+        },
       },
     },
   },

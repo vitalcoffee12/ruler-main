@@ -283,7 +283,18 @@ export class GameLib {
     }
   }
 
-  async getRankedTerms(
+  async searchRankedTerms(guildCode: string): Promise<Term[]> {
+    const termSet = await mongoose.connection
+      .collection(`${guildCode}.${COLLECTION_SUFFIX.TERM_SET}`)
+      .find<Term>({})
+      .sort({ score: 1 })
+      .limit(10)
+      .toArray();
+
+    return termSet;
+  }
+
+  async searchContextualTerms(
     guildCode: string,
     queryString: string,
   ): Promise<Term[]> {
