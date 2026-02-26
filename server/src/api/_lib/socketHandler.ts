@@ -72,6 +72,12 @@ export class SocketHandler {
         break;
       case "GUILD_FLAG_UP":
         // Handle flag up message
+        this.sendMessageToGuild("GUILD_FLAG_WAITING", parsed.guildCode, {});
+        await this.receiveFlagUp(parsed);
+        this.sendHistoryUpdate(parsed.guildCode);
+        await this.requestEdit(parsed.guildCode);
+        this.sendMessageToGuild("GUILD_FLAG_DOWN", parsed.guildCode, {});
+
         break;
       default:
         console.log(`Unknown message type: ${parsed.type}`);
@@ -139,6 +145,23 @@ export class SocketHandler {
     } catch (ex) {
       const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
       console.error(`Error handling guild chat message: ${errorMessage}`);
+    }
+  }
+
+  async receiveFlagUp(payload: Payload) {
+    try {
+      await gameLib.requestNarrative(payload.guildCode);
+    } catch (ex) {
+      const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
+      console.error(`Error handling flag up message: ${errorMessage}`);
+    }
+  }
+  async requestEdit(guildCode: string) {
+    try {
+      await gameLib.requestEdit(guildCode);
+    } catch (ex) {
+      const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
+      console.error(`Error handling entity update: ${errorMessage}`);
     }
   }
 }

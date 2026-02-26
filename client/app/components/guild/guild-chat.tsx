@@ -47,6 +47,7 @@ export default function GuildChat(props: {
   const [taggedNodes, setTaggedNodes] = useState<string[]>([]);
   const [flagged, setFlagged] = useState<boolean>(false);
   const [flagCount, setFlagCount] = useState<number>(0);
+  const [isWaiting, setIsWaiting] = useState<boolean>(false);
 
   const [rows, setRows] = useState<number>(1);
 
@@ -71,8 +72,26 @@ export default function GuildChat(props: {
       ) {
         setHistories(payload.content.gameHistories);
       }
+      if (
+        payload.type === "GUILD_FLAG_DOWN" &&
+        payload.guildCode === props.guild.code
+      ) {
+        setFlagged(false);
+        setIsWaiting(false);
+        setFlagCount(0);
+      }
+      if (
+        payload.type === "GUILD_FLAG_WAITING" &&
+        payload.guildCode === props.guild.code
+      ) {
+        setIsWaiting(true);
+      }
     }
   }, [isConnected, payloads, props.guild.code]);
+
+  const onFalgup = () => {
+    sendMessage("GUILD_FLAG_UP", {});
+  };
 
   return (
     <div className="guild-chat">
@@ -116,22 +135,34 @@ export default function GuildChat(props: {
             <span className="text-stone-500 text-sm">
               {flagCount} / {3}
             </span>
-            <button
-              className={`flex items-center text-stone-700 rounded-md pl-2 pr-3 py-1 text-sm cursor-pointer transition duration-200 ${
-                flagged
-                  ? "bg-lime-300 hover:bg-lime-400"
-                  : "bg-stone-200 hover:bg-stone-300"
-              }`}
-              onClick={() => setFlagged(!flagged)}
-            >
-              <span
-                className="material-symbols-outlined mr-2 mb-0.5"
-                style={{ fontSize: "16px" }}
-              >
-                {flagged ? "check_box" : "check_box_outline_blank"}
+            {isWaiting && (
+              <span className="text-lime-600 text-sm">
+                Waiting for Ruler's response...
               </span>
-              Ready
-            </button>
+            )}
+            {!isWaiting && (
+              <button
+                className={`flex items-center text-stone-700 rounded-md pl-2 pr-3 py-1 text-sm cursor-pointer transition duration-200 ${
+                  flagged
+                    ? "bg-lime-300 hover:bg-lime-400"
+                    : "bg-stone-200 hover:bg-stone-300"
+                }`}
+                onClick={() => {
+                  if (isWaiting) return;
+                  setFlagged(true);
+                  setFlagCount((prev) => prev + 1);
+                  onFalgup();
+                }}
+              >
+                <span
+                  className="material-symbols-outlined mr-2 mb-0.5"
+                  style={{ fontSize: "16px" }}
+                >
+                  {flagged ? "check_box" : "check_box_outline_blank"}
+                </span>
+                Ready
+              </button>
+            )}
           </div>
         </div>
         <div
@@ -209,12 +240,21 @@ function MessageTypeGuild(props: { message: GuildChatMessage }) {
         <div className="w-10 h-10 rounded-full overflow-hidden inline-block align-top mt-1">
           <img
             src={props.message.iconPath}
-            alt={props.message.displayName}
+            alt={"Guild Icon"}
             className="w-10 h-10 object-cover"
           />
         </div>
         <div className="pr-3">
           <div className="mb-1 text-stone-500 text-sm">
+            <span
+              className="material-symbols-outlined mr-1"
+              style={{
+                fontSize: "1rem",
+                verticalAlign: "middle",
+              }}
+            >
+              smart_toy
+            </span>
             {props.message.displayName}
           </div>
           <div className="relative rounded mb-1 whitespace-pre-wrap pr-30">

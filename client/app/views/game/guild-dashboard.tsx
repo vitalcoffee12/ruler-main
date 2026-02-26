@@ -36,10 +36,21 @@ export default function Dashboard() {
   const setInitialData = (data: any) => {
     setGuild(data.guild);
     setMemberDic(
-      data.members.reduce((acc: any, member: any) => {
-        acc[member.userCode] = member;
-        return acc;
-      }, {}),
+      data.members.reduce(
+        (acc: any, member: any) => {
+          acc[member.userCode] = member;
+          return acc;
+        },
+        {
+          [guildCode]: {
+            userId: 0,
+            userCode: data.guild.code,
+            displayName: data.guild.name,
+            role: "guild",
+            iconPath: data.guild.iconPath,
+          },
+        },
+      ),
     );
   };
 

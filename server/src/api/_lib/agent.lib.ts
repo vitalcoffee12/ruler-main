@@ -1,6 +1,7 @@
 import { ollama } from "../llms/llama/ollama";
 import { Entity, Rule } from "../game/gameModel";
-import { FORMAT, MODELS, PROMPTS } from "../constants";
+import { MODELS } from "../constants";
+import { FORMAT, PROMPTS } from "./prompts";
 
 export class AgentLib {
   // 기본 챗, 이후 여러 모델 또는, 상용 LLM의 API로 확장을 고려할 필요 있음.
@@ -125,26 +126,43 @@ export class AgentLib {
     return { data: parsed, prompt };
   }
 
-  async generateNarrative(
-    messages: { role: string; content: string }[],
-    options?: {
-      model?: string;
-      topic?: string;
-      terms?: string;
-      refs?: string;
-    },
-  ) {
-    const prompt = PROMPTS.NARRATOR(options?.refs || "");
+  async generateNarrative(options?: {
+    model?: string;
+    topic?: string;
+    prevScene?: string;
+    chatHistories?: string;
+    documents?: string;
+    terms?: string;
+    entities?: string;
+  }): Promise<{
+    data: {
+      content: string;
+      documents?: { id: number; comment: string }[];
+      terms?: { id: number; comment: string }[];
+      summary: string;
+    };
+    prompt: string;
+  }> {
+    const prompt = PROMPTS.NARRATOR(
+      options?.prevScene || "No previous scene",
+      options?.chatHistories || "No chat history",
+      options?.documents || "No documents",
+      options?.terms || "No terms",
+      options?.entities || "No entities",
+    );
     const res = await this.chat(
       MODELS.llama3,
       [
-        ...messages,
+        {
+          role: "system",
+          content: PROMPTS.NARRATOR_SYSTEM(),
+        },
         {
           role: "user",
           content: prompt,
         },
       ],
-      FORMAT.NARRATIVE,
+      FORMAT.NARRATOR,
     );
     const parsed = JSON.parse(res);
 
@@ -161,26 +179,49 @@ export class AgentLib {
     },
   ) {}
 
-  async generateEdits(
-    narrative: string,
-    options?: {
-      model?: string;
-      entities?: string[];
-    },
-  ): Promise<Entity[]> {
+  async generateEdits(options?: {
+    model?: string;
+    narrative?: string;
+    sceneDescription?: string;
+    documents?: string;
+    terms?: string;
+    entities?: string;
+  }): Promise<{
+    data: {
+      created: Entity[];
+      updated: Entity[];
+      deleted: string[];
+    };
+    prompt: string;
+  }> {
+    const prompt = PROMPTS.EDITOR(
+      options?.narrative || "No narrative",
+      options?.sceneDescription || "No scene description",
+      options?.documents || "No documents",
+      options?.terms || "No terms",
+      options?.entities || "No entities",
+    );
+
     const res = await this.chat(
-      options?.model || "llama3.3b",
+      MODELS.llama3,
       [
         {
           role: "system",
-          content: `You are an expert game designer. Your task is to help create a list of entities for a game based on the provided narrative and existing entities.`,
+          content: PROMPTS.EDITOR_SYSTEM(),
         },
-        { role: "user", content: `Narrative: ${narrative}` },
+        {
+          role: "user",
+          content: prompt,
+        },
       ],
-      "",
+      FORMAT.EDITOR,
     );
+    const parsed = JSON.parse(res);
 
-    return [];
+    return {
+      data: parsed,
+      prompt,
+    };
   }
 
   async searchEntities(

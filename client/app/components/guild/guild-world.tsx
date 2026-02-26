@@ -25,6 +25,7 @@ export default function GuildWorld(props: { guild: Guild }) {
     { fromNodeId: string; toNodeId: string; type: string }[]
   >([]);
   const refs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const [isWaiting, setIsWaiting] = useState(false);
   const { Modal, openModal, closeModal } = useModal();
 
   useEffect(() => {
@@ -63,6 +64,18 @@ export default function GuildWorld(props: { guild: Guild }) {
       ) {
         setWorld(payload.content.world);
       }
+      if (
+        payload.type === "GUILD_FLAG_WAITING" &&
+        payload.guildCode === props.guild.code
+      ) {
+        setIsWaiting(true);
+      }
+      if (
+        payload.type === "GUILD_FLAG_DOWN" &&
+        payload.guildCode === props.guild.code
+      ) {
+        setIsWaiting(false);
+      }
     }
   }, [isConnected, payloads, props.guild.code]);
 
@@ -84,38 +97,51 @@ export default function GuildWorld(props: { guild: Guild }) {
         <div>
           <div className="border-b border-stone-300 my-4 flex items-center justify-between ">
             <span className="text-stone-600 text-sm">Worlds</span>
-            <div>
-              <div
-                className="inline-flex items-center cursor-pointer text-stone-600 hover:text-stone-800 mr-1"
-                onClick={() => {
-                  setModalType("generate");
-                  openModal();
-                }}
-              >
+            {isWaiting && (
+              <div className="inline-flex items-center text-sm text-yellow-600">
                 <span
-                  className="material-symbols-outlined"
+                  className="material-symbols-outlined animate-pulse"
                   style={{ fontSize: "1.2rem" }}
                 >
-                  wand_stars
+                  hourglass_top
                 </span>
-                <span className="text-sm ml-1">Ask Gm to Create</span>
+                <span className="ml-1">Waiting for GM's response...</span>
               </div>
-              <div
-                className="inline-flex items-center ml-1 mr-2 cursor-pointer text-stone-600 hover:text-stone-800"
-                onClick={() => {
-                  setModalType("add");
-                  openModal();
-                }}
-              >
-                <span
-                  className="material-symbols-outlined"
-                  style={{ fontSize: "1.2rem" }}
+            )}
+            {!isWaiting && (
+              <div>
+                <div
+                  className="inline-flex items-center cursor-pointer text-stone-600 hover:text-stone-800 mr-1"
+                  onClick={() => {
+                    setModalType("generate");
+                    openModal();
+                  }}
                 >
-                  add
-                </span>
-                <span className="text-sm ml-1">Add Element</span>
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: "1.2rem" }}
+                  >
+                    wand_stars
+                  </span>
+                  <span className="text-sm ml-1">Ask Gm to Create</span>
+                </div>
+                <div
+                  className="inline-flex items-center ml-1 mr-2 cursor-pointer text-stone-600 hover:text-stone-800"
+                  onClick={() => {
+                    setModalType("add");
+                    openModal();
+                  }}
+                >
+                  <span
+                    className="material-symbols-outlined"
+                    style={{ fontSize: "1.2rem" }}
+                  >
+                    add
+                  </span>
+                  <span className="text-sm ml-1">Add Element</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

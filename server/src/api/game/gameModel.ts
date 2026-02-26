@@ -18,12 +18,8 @@ export const EntitySchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   info: z.string().optional(), // Optional field for GM's reference, not used in gameplay
-  rules: z.array(
-    z.object({
-      id: z.number(),
-      version: z.number(),
-    }),
-  ),
+  documents: z.array(z.number()),
+  terms: z.array(z.number()),
   score: z.number().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
@@ -89,28 +85,19 @@ export const GameHistorySchema = z.object({
       }),
     )
     .optional(),
-  citations: z
+  documents: z
     .array(
       z.object({
-        ruleId: z.number(),
-        content: z.string(),
-        description: z.string().optional(),
+        id: z.number(),
+        comment: z.string().optional(),
       }),
     )
     .optional(),
-  rankedTerms: z
+  terms: z
     .array(
       z.object({
-        termId: z.number(),
-        score: z.number(),
-      }),
-    )
-    .optional(),
-  rankedEntities: z
-    .array(
-      z.object({
-        entityId: z.string(),
-        score: z.number(),
+        id: z.number(),
+        comment: z.string().optional(),
       }),
     )
     .optional(),
@@ -123,7 +110,6 @@ export const SceneHistorySchema = z.object({
   message: z.string(), // ai agent's message for the scene
   sceneDescription: z.string(), // description of the scene
   gameHistories: z.array(GameHistorySchema), // game histories within the scene
-  entities: z.array(EntitySchema), // entities restored until the scene
   tasks: z // tasks performed in the scene
     .array(
       z.object({
@@ -133,30 +119,22 @@ export const SceneHistorySchema = z.object({
       }),
     )
     .optional(),
-  citations: z // citations used in the scene
+  documents: z // citations used in the scene
     .array(
       z.object({
-        ruleId: z.number(),
-        content: z.string(),
-        description: z.string().optional(),
+        id: z.number(),
+        comment: z.string().optional(),
       }),
     )
     .optional(),
-  rankedTerms: z // ranked terms in the scene
+  terms: z // ranked terms in the scene
     .array(
       z.object({
-        termId: z.number(),
-        score: z.number(),
+        id: z.number(),
+        comment: z.string().optional(),
       }),
     )
     .optional(),
-  rankedEntities: z // ranked entities in the scene
-    .array(
-      z.object({
-        entityId: z.number(),
-        score: z.number(),
-      }),
-    )
-    .optional(),
+  entities: z.array(EntitySchema), // entities restored until the scene
   createdAt: z.date(),
 });
