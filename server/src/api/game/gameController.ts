@@ -29,6 +29,31 @@ class GameController {
 
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
+
+  public updateElement: RequestHandler = async (
+    req: Request,
+    res: Response,
+  ) => {
+    const { guildCode, elementId, element } = req.body;
+    const serviceResponse = await this.gameService.updateElement(
+      guildCode,
+      elementId,
+      element,
+    );
+    res.status(serviceResponse.statusCode).send(serviceResponse);
+  };
+
+  public getElementById: RequestHandler = async (
+    req: Request,
+    res: Response,
+  ) => {
+    const { guildCode, elementId } = req.params;
+    const serviceResponse = await this.gameService.getElementById(
+      guildCode as string,
+      elementId as string,
+    );
+    res.status(serviceResponse.statusCode).send(serviceResponse);
+  };
 }
 
 export const gameController = new GameController();

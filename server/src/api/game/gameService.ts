@@ -57,8 +57,8 @@ export class GameService {
 
       await gameLib.insertGameHistory(guildCode, {
         chat: {
-          userId: PREDEFINED_USER.GUILD(guildCode, guild.name).id,
-          userCode: PREDEFINED_USER.GUILD(guildCode, guild.name).code,
+          userId: PREDEFINED_USER.SYSTEM.id,
+          userCode: PREDEFINED_USER.SYSTEM.code,
           message: `Player added new element with name: ${newEntity.name}`,
         },
         entities: [newEntity],
@@ -111,8 +111,7 @@ export class GameService {
       const refs = world
         .slice(0, 5)
         .map(
-          (entity) =>
-            `\n- id : ${entity.id} / name : ${entity.name}\n    - ${entity.description}`,
+          (entity) => `[${entity.id}] ${entity.name}: ${entity.description}`,
         );
 
       if (refs.length === 0) {
@@ -126,7 +125,7 @@ export class GameService {
         {
           ids: newIds.join(", "),
           terms: terms
-            .map((t) => `id: ${t.id} / ${t.term}: ${t.description}`)
+            .map((t) => `[${t.id}] ${t.term}: ${t.description}`)
             .join("\n"),
           refs: refs.join("\n"),
           maxCounts: 3,
@@ -162,6 +161,107 @@ export class GameService {
       return ServiceResponse.success<boolean>(
         "Element requested successfully",
         true,
+      );
+    } catch (ex) {
+      const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
+      return ServiceResponse.failure(
+        `Error retrieving guilds: ${errorMessage}`,
+        null,
+        StatusCodes.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async updateElement(
+    guildCode: string,
+    elementId: string,
+    updatedFields: Partial<Entity>,
+  ): Promise<ServiceResponse<boolean | null>> {
+    try {
+      const guild = await this.guildRepository.findOne({
+        where: { code: guildCode },
+      });
+      if (!guild) {
+        return ServiceResponse.failure(
+          "No guilds found",
+          null,
+          StatusCodes.NOT_FOUND,
+        );
+      }
+
+      const world = (await gameLib.getWorld(guildCode)).world;
+      const elementIndex = world.findIndex((e) => e.id === elementId);
+      if (elementIndex === -1) {
+        return ServiceResponse.failure(
+          "Element not found",
+          null,
+          StatusCodes.NOT_FOUND,
+        );
+      }
+      const existingElement = world[elementIndex];
+      const updatedElement = {
+        ...existingElement,
+        ...updatedFields,
+        updatedAt: new Date(),
+      };
+
+      await gameLib.insertGameHistory(guildCode, {
+        chat: {
+          userId: PREDEFINED_USER.SYSTEM.id,
+          userCode: PREDEFINED_USER.SYSTEM.code,
+          message: `Element updated: ${updatedElement.name}`,
+        },
+        entities: [updatedElement],
+        tasks: [
+          {
+            type: "update_entity",
+            input: JSON.stringify(updatedFields),
+            output: JSON.stringify(updatedElement),
+          },
+        ],
+      });
+      socketHandler.sendHistoryUpdate(guildCode);
+      return ServiceResponse.success<boolean>(
+        "Element updated successfully",
+        true,
+      );
+    } catch (ex) {
+      const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
+      return ServiceResponse.failure(
+        `Error retrieving guilds: ${errorMessage}`,
+        null,
+        StatusCodes.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async getElementById(
+    guildCode: string,
+    elementId: string,
+  ): Promise<ServiceResponse<Entity | null>> {
+    try {
+      const guild = await this.guildRepository.findOne({
+        where: { code: guildCode },
+      });
+      if (!guild) {
+        return ServiceResponse.failure(
+          "No guilds found",
+          null,
+          StatusCodes.NOT_FOUND,
+        );
+      }
+      const world = (await gameLib.getWorld(guildCode)).world;
+      const element = world.find((e) => e.id === elementId);
+      if (!element) {
+        return ServiceResponse.failure(
+          "Element not found",
+          null,
+          StatusCodes.NOT_FOUND,
+        );
+      }
+      return ServiceResponse.success<Entity>(
+        "Element retrieved successfully",
+        element,
       );
     } catch (ex) {
       const errorMessage = ex instanceof Error ? ex.message : "Unknown error";

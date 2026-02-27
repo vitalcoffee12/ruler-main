@@ -55,3 +55,42 @@ gameRegistry.registerPath({
 gameRouter.post("/request-element", gameController.requestElement);
 
 //
+gameRegistry.registerPath({
+  method: "post",
+  path: "/game/modify-element",
+  tags: ["Game"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            guildCode: z.string(),
+            elementId: z.string(),
+            element: z.any(),
+          }),
+        },
+      },
+    },
+  },
+  responses: createApiResponse(z.boolean(), "Element Successfully updated"),
+});
+
+gameRouter.post("/modify-element", gameController.updateElement);
+
+gameRegistry.registerPath({
+  method: "get",
+  path: "/game/element-details/{guildCode}/{elementId}",
+  tags: ["Game"],
+  request: {
+    params: z.object({
+      guildCode: z.string(),
+      elementId: z.string(),
+    }),
+  },
+  responses: createApiResponse(z.boolean(), "Element Successfully retrieved"),
+});
+
+gameRouter.get(
+  "/element-details/:guildCode/:elementId",
+  gameController.getElementById,
+);

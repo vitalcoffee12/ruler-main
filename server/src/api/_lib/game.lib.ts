@@ -41,22 +41,39 @@ export class GameLib {
     return {
       sceneHistories,
       gameHistories,
-      world: this.restoreWorld(gameHistories),
+      world: this.restoreWorld(sceneHistories[0] ?? null, gameHistories),
     };
   }
 
-  restoreWorld(gameHistories: GameHistory[]): Entity[] {
+  restoreWorld(
+    latestScene: SceneHistory | null,
+    gameHistories: GameHistory[],
+  ): Entity[] {
     const entities = new Map<string, Entity>();
 
+    if (latestScene) {
+      latestScene.entities.forEach((entity) => {
+        entities.set(entity.id, entity);
+      });
+    }
+
     for (const history of gameHistories) {
+      if (latestScene && history.sceneId < latestScene.id!) {
+        continue;
+      }
       for (const entity of history.entities) {
         const key = `${entity.id}`;
         if (!entities.has(key)) {
           entities.set(key, { ...entity, score: entity.score ?? 0 });
         } else {
           const existing = entities.get(key)!;
-          existing.score = (existing.score ?? 0) + (entity.score ?? 0);
+          existing.name = entity.name;
           existing.description = entity.description;
+          existing.state = entity.state;
+          existing.score = (existing.score ?? 0) + (entity.score ?? 0);
+          existing.documents = entity.documents ?? existing.documents;
+          existing.terms = entity.terms ?? existing.terms;
+          existing.updatedAt = entity.updatedAt;
         }
       }
     }
@@ -296,6 +313,7 @@ export class GameLib {
       if (!guild) {
         return null;
       }
+      const systemUser = PREDEFINED_USER.SYSTEM;
       const responseUser = PREDEFINED_USER.GUILD(guildCode, guild.name);
       const terms = await this.searchRankedTerms(guildCode);
       const history = await this.getWorld(guildCode, guild.sceneId - 1);
@@ -303,7 +321,10 @@ export class GameLib {
       const chatHistories = history.gameHistories
         .filter(
           (gh) =>
-            gh.chat && gh.chat.message && gh.chat.userId !== responseUser.id,
+            gh.chat &&
+            gh.chat.message &&
+            gh.chat.userId !== responseUser.id &&
+            gh.chat.userId !== systemUser.id,
         )
         .map((ch) => `[${ch?.chat?.userCode}] ${ch?.chat?.message}`);
       const sceneHistories = history.sceneHistories;
@@ -426,7 +447,7 @@ export class GameLib {
         chat: {
           userId: responseUser.id,
           userCode: responseUser.code,
-          message: `[System] The game world has been edited. updates: ${data.created.length} created, ${data.updated.length} updated, ${data.deleted.length} deleted. Check the latest scene for details.`,
+          message: `The game world has been edited. updates: ${data.created.length} created, ${data.updated.length} updated, ${data.deleted.length} deleted. Check the latest scene for details.`,
         },
         entities: [
           ...data.created,

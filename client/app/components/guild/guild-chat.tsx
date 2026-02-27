@@ -1,5 +1,5 @@
 import Markdown from "react-markdown";
-import { memo, useContext, useEffect, useState } from "react";
+import { memo, useContext, useEffect, useRef, useState } from "react";
 import useSocket from "~/hooks/use-socket.hook";
 import { UserContext } from "~/contexts/userContext";
 import type { Guild } from "../common.interface";
@@ -39,7 +39,7 @@ export default function GuildChat(props: {
     }
   >;
 }) {
-  const user = useContext(UserContext);
+  const chatRef = useRef<HTMLDivElement>(null);
   const { payloads, isConnected, sendMessage } = useSocket();
 
   const [message, setMessage] = useState<string>("");
@@ -89,13 +89,21 @@ export default function GuildChat(props: {
     }
   }, [isConnected, payloads, props.guild.code]);
 
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [histories]);
   const onFalgup = () => {
     sendMessage("GUILD_FLAG_UP", {});
   };
 
   return (
     <div className="guild-chat">
-      <div className="guild-chat-messages no-scrollbar box-sizing-border">
+      <div
+        className="guild-chat-messages no-scrollbar box-sizing-border"
+        ref={chatRef}
+      >
         <div>{introMessage(props.guild)}</div>
         <div className="w-full border-b border-stone-200 mb-2 mt-2" />
         <MessageList
