@@ -72,10 +72,11 @@ export class SocketHandler {
         break;
       case "GUILD_FLAG_UP":
         // Handle flag up message
-        this.sendMessageToGuild("GUILD_FLAG_WAITING", parsed.guildCode, {});
+        await this.sendMessageToGuild("GUILD_FLAG_WAITING", parsed.guildCode, {});
         await this.receiveFlagUp(parsed);
-        this.sendHistoryUpdate(parsed.guildCode);
+        await this.sendHistoryUpdate(parsed.guildCode);
         await this.requestEdit(parsed.guildCode);
+        await this.sendHistoryUpdate(parsed.guildCode);
         this.sendMessageToGuild("GUILD_FLAG_DOWN", parsed.guildCode, {});
 
         break;
