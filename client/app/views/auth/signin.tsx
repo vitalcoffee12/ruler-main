@@ -18,13 +18,13 @@ export default function Signin() {
   return (
     <>
       <div
-        className="flex items-center justify-center bg-stone-50 dark:bg-stone-900 p-4"
+        className="flex items-center justify-center bg-white dark:bg-stone-900 p-4"
         style={{
           width: "100vw",
           height: "100vh",
         }}
       >
-        <div className="mb-16 mt-12 border border-stone-300 rounded-lg p-8 max-w-md bg-stone-50 w-full">
+        <div className="mb-16 mt-12 border border-stone-300 rounded-lg p-8 max-w-md bg-white w-full">
           {/** Header */}
           <img
             src={logoLight}
@@ -80,7 +80,7 @@ export default function Signin() {
             </div>
             <div className="flex justify-end">
               <button
-                className="mt-10 rounded-3xl w-full border border-lime-600 bg-lime-600 px-6 py-3 text-white font-medium hover:bg-lime-700 transition duration-150 cursor-pointer"
+                className="mt-10 rounded-xl w-full bg-lime-500 px-6 py-3 text-white font-medium hover:bg-lime-600 transition duration-150 cursor-pointer active:scale-95"
                 onClick={() => {
                   nav("/game");
                 }}

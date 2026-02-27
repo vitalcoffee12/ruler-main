@@ -210,11 +210,17 @@ function GuildWorldNode(
   const [chartVisible, setChartVisible] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const menuOpenRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
       if (menuRef.current && menuRef.current.style.display === "block") {
-        menuRef.current?.style.setProperty("display", "none");
+        if (
+          !menuRef.current.contains(event.target as Node) &&
+          !menuOpenRef.current?.contains(event.target as Node)
+        ) {
+          menuRef.current.style.setProperty("display", "none");
+        }
       }
     };
     window.addEventListener("click", handleClick);
@@ -229,6 +235,13 @@ function GuildWorldNode(
       label: "Edit",
       onClick: () => {
         // Implement the edit logic here
+      },
+    },
+    {
+      icon: "smart_toy",
+      label: "Ask AI Edit",
+      onClick: () => {
+        // Implement the AI assist logic here
       },
     },
     {
@@ -310,10 +323,14 @@ function GuildWorldNode(
             style={{
               fontSize: "1.2rem",
             }}
+            ref={menuOpenRef}
             onClick={() => {
               if (menuRef.current) {
-                const display = menuRef.current.style.display;
-                menuRef.current.style.display = "block";
+                if (menuRef.current?.style.display === "block") {
+                  menuRef.current.style.setProperty("display", "none");
+                } else {
+                  menuRef.current.style.setProperty("display", "block");
+                }
               }
             }}
           >
@@ -364,7 +381,7 @@ function GuildWorldNode(
         )}
 
         <div
-          className="node-menu absolute top-10 right-2 z-99 transition-opacity duration-200 bg-white border border-stone-300 rounded-md shadow-lg"
+          className="absolute top-10 right-2 z-99 transition-opacity duration-200 bg-white border border-stone-300 rounded-md shadow-lg hidden"
           ref={menuRef}
         >
           {topMenues.map((menu) => (
@@ -375,6 +392,7 @@ function GuildWorldNode(
               onClick={(e) => {
                 e.stopPropagation();
                 menu.onClick();
+                menuRef.current?.style.setProperty("display", "none");
                 // Handle other menu actions like Edit and Delete here
               }}
             >
