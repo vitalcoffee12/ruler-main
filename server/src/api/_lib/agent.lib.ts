@@ -126,15 +126,18 @@ export class AgentLib {
     return { data: parsed, prompt };
   }
 
-  async generateNarrative(options?: {
-    model?: string;
-    topic?: string;
-    prevScene?: string;
-    chatHistories?: string;
-    documents?: string;
-    terms?: string;
-    entities?: string;
-  }): Promise<{
+  async generateNarrative(
+    players: string,
+    options?: {
+      model?: string;
+      topic?: string;
+      prevScene?: string;
+      chatHistories?: string;
+      documents?: string;
+      terms?: string;
+      entities?: string;
+    },
+  ): Promise<{
     data: {
       content: string;
       documents?: { id: number; comment: string }[];
@@ -144,7 +147,7 @@ export class AgentLib {
     prompt: string;
   }> {
     const prompt = PROMPTS.NARRATOR(
-      options?.prevScene || "No previous scene",
+      players || "No players",
       options?.chatHistories || "No chat history",
       options?.documents || "No documents",
       options?.terms || "No terms",
@@ -156,6 +159,10 @@ export class AgentLib {
         {
           role: "system",
           content: PROMPTS.NARRATOR_SYSTEM(),
+        },
+        {
+          role: "assistant",
+          content: options?.prevScene || "No previous scene",
         },
         {
           role: "user",
@@ -181,6 +188,7 @@ export class AgentLib {
 
   async generateEdits(options?: {
     model?: string;
+    players?: string;
     narrative?: string;
     sceneDescription?: string;
     documents?: string;
@@ -195,6 +203,7 @@ export class AgentLib {
     prompt: string;
   }> {
     const prompt = PROMPTS.EDITOR(
+      options?.players || "No players",
       options?.narrative || "No narrative",
       options?.sceneDescription || "No scene description",
       options?.documents || "No documents",

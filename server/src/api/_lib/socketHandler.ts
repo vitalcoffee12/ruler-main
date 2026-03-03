@@ -72,11 +72,17 @@ export class SocketHandler {
         break;
       case "GUILD_FLAG_UP":
         // Handle flag up message
-        await this.sendMessageToGuild("GUILD_FLAG_WAITING", parsed.guildCode, {});
-        await this.receiveFlagUp(parsed);
+        await this.sendMessageToGuild(
+          "GUILD_FLAG_WAITING",
+          parsed.guildCode,
+          {},
+        );
+        const previousData = await this.receiveFlagUp(parsed);
         await this.sendHistoryUpdate(parsed.guildCode);
-        await this.requestEdit(parsed.guildCode);
-        await this.sendHistoryUpdate(parsed.guildCode);
+        if (previousData) {
+          await this.requestEdit(previousData, parsed.guildCode);
+          await this.sendHistoryUpdate(parsed.guildCode);
+        }
         this.sendMessageToGuild("GUILD_FLAG_DOWN", parsed.guildCode, {});
 
         break;
@@ -151,15 +157,25 @@ export class SocketHandler {
 
   async receiveFlagUp(payload: Payload) {
     try {
-      await gameLib.requestNarrative(payload.guildCode);
+      return await gameLib.requestNarrative(payload.guildCode);
     } catch (ex) {
       const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
       console.error(`Error handling flag up message: ${errorMessage}`);
     }
   }
-  async requestEdit(guildCode: string) {
+  async requestEdit(
+    previousData: {
+      memberCodes: string;
+      narrative: string;
+      sceneDescription: string;
+      documents: string;
+      terms: string;
+      entities: string;
+    },
+    guildCode: string,
+  ) {
     try {
-      await gameLib.requestEdit(guildCode);
+      await gameLib.requestEdit(previousData, guildCode);
     } catch (ex) {
       const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
       console.error(`Error handling entity update: ${errorMessage}`);

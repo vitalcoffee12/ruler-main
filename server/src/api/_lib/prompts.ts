@@ -147,9 +147,11 @@ Do not output this verification step.
 
   NARRATOR_SYSTEM:
     () => `Based on the current game world state and chat history, generate a narrative for a text-based adventure game world.
+The game is a text-based adventure game where players interact with the world through text commands and receive narrative descriptions in response. The narrative should be engaging, immersive, and consistent with the provided information.
 
-User Input may contain:
-- Previous Narrative: The last narrative generated for the game world, which can be used for continuity and reference.
+Input may contain:
+- Player List: The List of Player Ids separated by commas
+- Previous Narrative: The last narrative generated for the game world by assistant which can be used for continuity and reference. 
 - Chat History: A chronological list of player actions, messages, and system messages that have occurred in the game world.
 - Documents: A collection of documents that provide rules about the game world. These documents can be referred to for accurate narrative generation.
 - Terms: A list of important keywords and their descriptions that are relevant to the current game world.
@@ -158,6 +160,8 @@ User Input may contain:
 Player chat message look like:
 [Player Id] player message 
 - Player Id is a unique identifier for each player.
+- Player message can be an action, a dialogue, or any form of interaction with the game world.
+- If Player Id is same with entity Id, it means the message is an in-character message from a player character, which can be used for narrative generation.
 
 System message look like:
 [System] system message
@@ -173,13 +177,19 @@ Term look like:
 Entity look like:
 [Entity Id] entity name: entity description (entity info, not visible to players, secrests, behind-the-scenes mechanics, or design intentions can be included here)
 - Entity Id is a unique identifier for each entity. Do not modify.
+- If Entity Id is same with player Id, it means the entity is a player. 
+- Generate in players character's view
+
 
 Guidelines:
-- Describe changes or reactions in the world based on player actions and system messages.
-- Generate a engaging and immersive narrative that sets the tone for the game world.
-- Drive the story forward while maintaining consistency with the provided documents, terms, and existing entities.
-- Provide new challenges, discoveries, or developments in the world that encourage player interaction and exploration.
+- Include
+1. Provide descriptive and immersive narrative that reflects the current state of the game world, player actions, and system messages.
+2. Ensure the narrative is consistent with the provided documents, terms, and existing entities.
+3. if needed, role NPC characters to interact with players and drive the story forward, but avoid excessive dialogue that can be handled through player interactions.
+4. Provide new challenges, discoveries, or developments in the world that encourage player interaction and exploration.
+
 - Use rich, descriptive language to evoke emotions and stimulate the imagination of players.
+- Use Markdown formatting.
 
 - Also give a summary of the history of the current adventure, and the current state of the world, or changes. This will be contained in the next messages for coherent narrative generation.
 
@@ -202,15 +212,15 @@ Output format (JSON):
 }
   `,
   NARRATOR: (
-    prev: string,
+    players: string,
     chatHistory: string,
     documents: string,
     terms: string,
     entities: string,
   ) =>
     `
-Previous Narrative:
-${prev}
+Player List:
+${players}
 
 Chat History:
 ${chatHistory}
@@ -229,7 +239,8 @@ ${entities}
   EDITOR_SYSTEM:
     () => `Based on the current game world state and narrative description, generate changes for the game world.
 
-User Input may contain:
+Player Input may contain:
+- Player List: The List of Player Ids separated by commas
 - Narrative: The last narrative generated for the game world, which can be used for continuity and reference.
 - Scene Description: A brief description of the current scene, which can provide context for the changes.
 - Documents: A collection of documents that provide rules about the game world. These documents can be referred to for accurate narrative generation.
@@ -288,12 +299,16 @@ Output format (JSON):
   `,
 
   EDITOR: (
+    players: string,
     narrative: string,
     sceneDescription: string,
     documents: string,
     terms: string,
     entities: string,
   ) => `
+Player List:
+${players}
+
 Narrative:
 ${narrative}
 

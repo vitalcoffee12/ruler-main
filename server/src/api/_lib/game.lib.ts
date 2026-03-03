@@ -13,11 +13,15 @@ import { GuildEntity } from "@/entities/guildEntity";
 import AppDataSource from "@/dataSource";
 import { mongoLib } from "./mongo.lib";
 import { agentLib } from "./agent.lib";
+import { GuildMemberEntity } from "@/entities/guilldMemberEntity";
 
 export class GameLib {
   constructor(
     private guildRepository: Repository<GuildEntity> = AppDataSource.getRepository(
       GuildEntity,
+    ),
+    private guildMemberRepository: Repository<GuildMemberEntity> = AppDataSource.getRepository(
+      GuildMemberEntity,
     ),
   ) {}
 
@@ -78,7 +82,7 @@ export class GameLib {
       }
     }
     return Array.from(entities.values())
-      .sort((a, b) => (a.score ?? 0) - (b.score ?? 0))
+      .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
       .filter((e) => e.state !== "removed");
   }
 
@@ -305,7 +309,14 @@ export class GameLib {
     return termSet.sort((a, b) => (b.version ?? 0) - (a.version ?? 0));
   }
 
-  async requestNarrative(guildCode: string): Promise<boolean | null> {
+  async requestNarrative(guildCode: string): Promise<{
+    memberCodes: string;
+    narrative: string;
+    sceneDescription: string;
+    documents: string;
+    terms: string;
+    entities: string;
+  } | null> {
     try {
       const guild = await this.guildRepository.findOne({
         where: { code: guildCode },
@@ -313,6 +324,14 @@ export class GameLib {
       if (!guild) {
         return null;
       }
+      // const guildMembers = await this.guildMemberRepository.createQueryBuilder("guildMember").leftJoin("user", "user", "guildMember.userId = user.id").where("guildMember.guildCode = :guildCode", { guildCode }).getMany();
+
+      const guildMembers = await this.guildMemberRepository.find({
+        where: { guildCode },
+      });
+
+      const memberCodes = guildMembers.map((v) => v.userCode);
+
       const systemUser = PREDEFINED_USER.SYSTEM;
       const responseUser = PREDEFINED_USER.GUILD(guildCode, guild.name);
       const terms = await this.searchRankedTerms(guildCode);
@@ -334,21 +353,33 @@ export class GameLib {
         prevScene = latestScene.sceneDescription;
       }
 
+      const playerCharacters = world.filter((e) => memberCodes.includes(e.id));
       const entities = world
+        .filter((e) => !memberCodes.includes(e.id))
         .slice(0, 5)
         .map(
-          (entity) => `[${entity.id}] ${entity.name}: ${entity.description}`,
+          (entity) =>
+            `[${entity.id}] ${entity.name}: ${entity.description} (${entity.info})`,
         );
 
-      const { data, prompt } = await agentLib.generateNarrative({
-        chatHistories: chatHistories.join("\n") || "No chat history",
-        prevScene: prevScene || "No previous scene",
-        documents: "",
-        terms: terms
-          .map((t) => `[${t.id}] ${t.term}: ${t.description}`)
-          .join("\n"),
-        entities: entities.join("\n"),
-      });
+      entities.unshift(
+        ...playerCharacters.map(
+          (entity) => `[${entity.id}] ${entity.name}: ${entity.description}`,
+        ),
+      );
+
+      const { data, prompt } = await agentLib.generateNarrative(
+        memberCodes.join(", "),
+        {
+          chatHistories: chatHistories.join("\n") || "No chat history",
+          prevScene: prevScene || "No previous scene",
+          documents: "",
+          terms: terms
+            .map((t) => `[${t.id}] ${t.term}: ${t.description}`)
+            .join("\n"),
+          entities: entities.join("\n"),
+        },
+      );
 
       await this.insertGameHistory(guildCode, {
         chat: {
@@ -399,14 +430,33 @@ export class GameLib {
       guild.sceneId += 1;
       await this.guildRepository.save(guild);
 
-      return true;
+      return {
+        memberCodes: memberCodes.join(", "),
+        narrative: data.content,
+        sceneDescription: data.summary,
+        documents: "",
+        terms: terms
+          .map((t) => `[${t.id}] ${t.term}: ${t.description}`)
+          .join("\n"),
+        entities: entities.join("\n"),
+      };
     } catch (ex) {
       console.error("Error in requestNarrative:", ex);
       return null;
     }
   }
 
-  async requestEdit(guildCode: string): Promise<boolean | null> {
+  async requestEdit(
+    previousData: {
+      memberCodes: string;
+      narrative: string;
+      sceneDescription: string;
+      documents: string;
+      terms: string;
+      entities: string;
+    },
+    guildCode: string,
+  ): Promise<boolean | null> {
     try {
       const guild = await this.guildRepository.findOne({
         where: { code: guildCode },
@@ -416,31 +466,25 @@ export class GameLib {
       }
 
       const responseUser = PREDEFINED_USER.SYSTEM;
-      const terms = await this.searchRankedTerms(guildCode);
-      const history = await this.getWorld(guildCode, guild.sceneId - 1);
-      const world = history.world;
-      const sceneHistories = history.sceneHistories;
+      // const terms = await this.searchRankedTerms(guildCode);
+      // const history = await this.getWorld(guildCode, guild.sceneId - 1);
+      // const world = history.world;
+      // const sceneHistories = history.sceneHistories;
 
-      const entities = world
-        .slice(0, 5)
-        .map(
-          (entity) => `[${entity.id}] ${entity.name}: ${entity.description}`,
-        );
+      // const entities = world
+      //   .slice(0, 5)
+      //   .map(
+      //     (entity) =>
+      //       `[${entity.id}] ${entity.name}: ${entity.description} (${entity.info})`,
+      //   );
 
       const { data, prompt } = await agentLib.generateEdits({
-        narrative:
-          sceneHistories.length > 0
-            ? sceneHistories[sceneHistories.length - 1].message
-            : "No previous narrative",
-        sceneDescription:
-          sceneHistories.length > 0
-            ? sceneHistories[sceneHistories.length - 1].sceneDescription
-            : "No previous scene",
-        documents: "",
-        terms: terms
-          .map((t) => `[${t.id}] ${t.term}: ${t.description}`)
-          .join("\n"),
-        entities: entities.join("\n"),
+        players: previousData.memberCodes || "No players",
+        narrative: previousData.narrative || "No previous narrative",
+        sceneDescription: previousData.sceneDescription || "No previous scene",
+        documents: previousData.documents || "No previous documents",
+        terms: previousData.terms || "No previous terms",
+        entities: previousData.entities || "No previous entities",
       });
 
       await this.insertGameHistory(guildCode, {
@@ -450,11 +494,18 @@ export class GameLib {
           message: `The game world has been edited. updates: ${data.created.length} created, ${data.updated.length} updated, ${data.deleted.length} deleted. Check the latest scene for details.`,
         },
         entities: [
-          ...data.created,
-          ...data.updated,
+          ...data.created.map((e) => ({
+            ...e,
+            score: 1,
+          })),
+          ...data.updated.map((e) => ({
+            ...e,
+            score: 1,
+          })),
           ...data.deleted.map((id) => ({
             ...defaultEntity,
             id,
+            score: -1,
             state: "removed",
           })),
         ],

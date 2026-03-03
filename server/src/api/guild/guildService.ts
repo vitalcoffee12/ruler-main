@@ -187,7 +187,8 @@ export class GuildService {
       description: `A player who joined the guild as ${user.displayName}`,
       state: "active",
       score: 100,
-      rules: [],
+      documents: [],
+      terms: [],
       updatedAt: new Date(),
       createdAt: new Date(),
     };
