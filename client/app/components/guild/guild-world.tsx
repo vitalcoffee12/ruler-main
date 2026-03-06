@@ -3,21 +3,9 @@ import { useModal } from "~/hooks/use-modal.hook";
 import AddElementModal from "./add-element.modal";
 import AddElementManualModal from "./add-element-manual.modal";
 import useSocket from "~/hooks/use-socket.hook";
-import type { Guild } from "../common.interface";
-import ModifyElementManualModal from "./modify-element-manual.modal";
-import { GuildWorldElements } from "./guild-world-element";
+import type { Entity, Guild } from "../common.interface";
 
-export interface Entity {
-  id: string;
-  name: string;
-  description: string;
-  info?: string; // Optional field for GM's reference, not used in gameplay
-  rules: { id: number; version: number }[];
-  scoreDiff?: number;
-  favorite?: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { GuildWorldElements } from "./guild-world-element";
 
 export default function GuildWorld(props: { guild: Guild }) {
   const [modalType, setModalType] = useState<"generate" | "add" | null>(null);

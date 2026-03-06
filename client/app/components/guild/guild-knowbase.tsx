@@ -1,10 +1,12 @@
 import { getRequest } from "~/request";
 import type { Guild } from "../common.interface";
-import { use, useEffect, useRef, useState } from "react";
+import { use, useContext, useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import "./_guild.css";
+import { AuthContext } from "~/contexts/authContext";
 
 export default function GuildKnowledgeBase(props: { guild: Guild }) {
+  const { auth } = useContext(AuthContext);
   const [type, setType] = useState<"ruleSet" | "termSet">("ruleSet");
   const [maxPage, setMaxPage] = useState(1);
   const [page, setPage] = useState<Record<string, number>>({
@@ -17,14 +19,24 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
   const typeRef = useRef<Record<string, HTMLLIElement>>({});
 
   const fetchGuildKnowledgeBase = async () => {
-    const response = await getRequest(`/resource/guild`, {
-      type: type,
-      code: props.guild.code,
-      page: page[type],
-      search: search,
-    });
-    setData(response.data.responseObject.data || []);
-    setMaxPage(response.data.responseObject.maxPage || 1);
+    try {
+      const res = await getRequest(
+        `/resource/guild`,
+        {
+          type: type,
+          code: props.guild.code,
+          page: page[type],
+          search: search,
+        },
+        {
+          Authorization: `Bearer ${auth.accessToken}`,
+        },
+      );
+      if (res.data.responseObject) {
+        setData(res.data.responseObject.data || []);
+        setMaxPage(res.data.responseObject.maxPage || 1);
+      }
+    } catch (ex) {}
   };
 
   useEffect(() => {

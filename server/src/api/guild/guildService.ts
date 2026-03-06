@@ -13,6 +13,7 @@ import { OAUTH_PROVIDERS } from "@/common/constants";
 import AppDataSource from "@/dataSource";
 import { Repository } from "typeorm/repository/Repository";
 import { mongoLib } from "../_lib/mongo.lib";
+import { In } from "typeorm";
 
 export class GuildService {
   constructor(
@@ -237,16 +238,15 @@ export class GuildService {
     }
   }
 
-  async findGuildsByUser(user: {
-    userId?: number;
-    userCode?: string;
-  }): Promise<ServiceResponse<Guild[] | null>> {
+  async findGuildsByUser(
+    userId: number,
+  ): Promise<ServiceResponse<Guild[] | null>> {
     try {
       const guildMember = await this.guildMemberRepository.find({
-        where: { userId: user.userId, userCode: user.userCode },
+        where: { userId: userId },
       });
       const guilds = await this.guildRepository.find({
-        where: guildMember.map((gm) => ({ id: gm.guildId })),
+        where: { id: In(guildMember.map((gm) => gm.guildId)) },
       });
       if (!guilds || guilds.length === 0) {
         return ServiceResponse.failure(

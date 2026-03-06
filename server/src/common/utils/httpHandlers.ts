@@ -44,10 +44,13 @@ export const validateRequest =
 
 export const validateToken =
   () => async (req: Request, res: Response, next: NextFunction) => {
-    next();
     try {
       const accessToken = req.header("Authorization");
-      const refreshToken = req.header("x-refresh-token");
+      const refreshToken = req.headers.cookie
+        ?.split(";")
+        .find((c) => c.trim().startsWith("__session"))
+        ?.split("=")[1];
+
       if (accessToken) {
         const token = accessToken.replace("Bearer ", "");
         try {

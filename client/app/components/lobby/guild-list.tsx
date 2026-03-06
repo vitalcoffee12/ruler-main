@@ -1,13 +1,14 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import { UserContext } from "~/contexts/userContext";
+import { AuthContext } from "~/contexts/authContext";
+
 import { getRequest } from "~/request";
 
 export default function GuildList(props: {
   refreshGuildList?: boolean;
   onClickCreateGuild?: () => void;
 }) {
-  const user = useContext(UserContext);
+  const { auth } = useContext(AuthContext);
   const badgeRef = useRef<HTMLDivElement>(null);
   const refs = useRef<
     { code: string; name: string; element: HTMLDivElement }[]
@@ -18,10 +19,13 @@ export default function GuildList(props: {
 
   const fetchGuilds = async () => {
     try {
-      const res = await getRequest("/guild/user", {
-        userId: user?.id,
-        userCode: user?.code,
-      });
+      const res = await getRequest(
+        "/guild/user",
+        {},
+        {
+          Authorization: `Bearer ${auth?.accessToken}`,
+        },
+      );
 
       if (res.status === 200 && res.data) {
         setGuilds(res.data.responseObject);
@@ -31,7 +35,7 @@ export default function GuildList(props: {
 
   useEffect(() => {
     fetchGuilds();
-  }, [user.code, props.refreshGuildList]);
+  }, [auth?.code, props.refreshGuildList]);
 
   useEffect(() => {
     if (hoveredGuildCode) {
@@ -111,6 +115,7 @@ function GuildListItem(props: {
   const nav = useNavigate();
   const isCreateGuild = props.guild.code === "guild-create";
   const [isHovered, setIsHovered] = useState(false);
+  const { auth, setAuth } = useContext(AuthContext);
 
   return (
     <div
@@ -143,6 +148,7 @@ function GuildListItem(props: {
               props.onClick();
             }
           } else {
+            setAuth({ ...auth, guildCode: props.guild.code });
             nav(`/game/guild/code/${props.guild.code}`);
           }
         }}

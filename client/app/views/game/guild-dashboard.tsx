@@ -1,20 +1,21 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import type { Guild } from "~/components/common.interface";
-import GuildChat, {
-  type GuildChatMessage,
-} from "~/components/guild/guild-chat";
+import GuildChat from "~/components/guild/guild-chat";
+
 import GuildHeader from "~/components/guild/guild-header";
 import GuildMemberList from "~/components/guild/guild-member-list";
 import GuildRefs from "~/components/guild/guild-refs";
-import GuildWorld, { type Entity } from "~/components/guild/guild-world";
+import GuildWorld from "~/components/guild/guild-world";
+import { AuthContext } from "~/contexts/authContext";
 import useLoading from "~/hooks/use-loading.hook";
 import useSocket from "~/hooks/use-socket.hook";
 import { getRequest } from "~/request";
 
 export default function Dashboard() {
   const location = useLocation();
-  const guildCode = location.pathname.split("/")[4];
+  const nav = useNavigate();
+  const { auth } = useContext(AuthContext);
 
   const [guild, setGuild] = useState<Guild | null>(null);
   const [memberDic, setMemberDic] = useState<
@@ -35,35 +36,43 @@ export default function Dashboard() {
 
   const setInitialData = (data: any) => {
     setGuild(data.guild);
-    setMemberDic(
-      data.members.reduce(
-        (acc: any, member: any) => {
-          acc[member.userCode] = member;
-          return acc;
-        },
-        {
-          [guildCode]: {
-            userId: 0,
-            userCode: data.guild.code,
-            displayName: data.guild.name,
-            role: "guild",
-            iconPath: data.guild.iconPath,
+    if (auth.guildCode) {
+      setMemberDic(
+        data.members.reduce(
+          (acc: any, member: any) => {
+            acc[member.userCode] = member;
+            return acc;
           },
-        },
-      ),
-    );
+          {
+            [auth.guildCode]: {
+              userId: 0,
+              userCode: data.guild.code,
+              displayName: data.guild.name,
+              role: "guild",
+              iconPath: data.guild.iconPath,
+            },
+          },
+        ),
+      );
+    }
   };
 
   const fetchGuildData = async () => {
     // Fetch guild data here if needed
     setLoading(true);
     try {
-      const res = await getRequest(`/guild/code/${guildCode}`);
-      if (res.status === 200 && res.data) {
+      if (auth.guildCode) {
+        const res = await getRequest(
+          `/guild/code/${auth.guildCode}`,
+          {},
+          {
+            Authorization: `Bearer ${auth.accessToken}`,
+          },
+        );
+        console.log("Guild data response:", res.data.responseObject);
         setInitialData(res.data.responseObject);
       }
     } catch (error) {
-      console.error("Error fetching guild data:", error);
       // nav("/game");
     }
     //setLoading(false);
@@ -74,7 +83,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchGuildData();
-  }, [guildCode]);
+  }, [auth.guildCode]);
 
   useEffect(() => {
     if (!isConnected) return;

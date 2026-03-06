@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { SocketContext } from "~/contexts/socketContext";
-import { UserContext } from "~/contexts/userContext";
+import { AuthContext } from "~/contexts/authContext";
 
 export interface Payload {
   type: string;
@@ -12,7 +12,7 @@ export interface Payload {
 }
 
 export default function useSocket() {
-  const user = useContext(UserContext);
+  const { auth, setAuth } = useContext(AuthContext);
   const socketInstance = useContext(SocketContext);
 
   const sendMessage = (type: string, content?: any) => {
@@ -24,9 +24,9 @@ export default function useSocket() {
       socketInstance.socket.send(
         JSON.stringify({
           type,
-          userId: user?.id,
-          userCode: user?.code,
-          guildCode: user?.guildCode,
+          userId: auth?.id,
+          userCode: auth?.code,
+          guildCode: auth?.guildCode,
           content,
         } as Payload),
       );

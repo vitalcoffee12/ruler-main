@@ -88,21 +88,44 @@ class UserController {
   };
 
   public refreshToken: RequestHandler = async (req: Request, res: Response) => {
-    const { id, refreshToken } = req.body;
-    const serviceResponse = await userService.refreshToken(id, refreshToken);
+    const { __session: refreshToken } =
+      req.headers.cookie
+        ?.split("; ")
+        .reduce((acc: Record<string, string>, cookie) => {
+          const [key, value] = cookie.split("=");
+          acc[key.trim()] = value.trim();
+          return acc;
+        }, {}) || {};
+    if (!refreshToken) {
+      return res.status(200).send("OK");
+    }
+    const serviceResponse = await userService.refreshToken(refreshToken);
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 
   public signIn: RequestHandler = async (req: Request, res: Response) => {
-    const { email, password } = req.body;
+    const { email, password, remember } = req.body;
     const serviceResponse = await userService.signIn(email, password);
+    res.cookie("__session", serviceResponse.responseObject?.refreshToken, {
+      path: "/",
+      maxAge: remember ? 2 * 60 * 1000 : undefined, // 2 min  if remember is true
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      httpOnly: true,
+    });
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 
   public signOut: RequestHandler = async (req: Request, res: Response) => {
     const userId = req.headers["userId"] as unknown as number;
     const serviceResponse = await userService.signOut(userId);
-    res.status(serviceResponse.statusCode).send(serviceResponse);
+    res.clearCookie("__session", {
+      path: "/",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      httpOnly: true,
+    });
+    res.status(serviceResponse.statusCode).send("OK");
   };
 
   public loginWithOAuth: RequestHandler = async (

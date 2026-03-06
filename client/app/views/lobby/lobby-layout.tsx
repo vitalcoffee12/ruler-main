@@ -3,29 +3,74 @@ import "./lobby.css";
 import GuildList from "~/components/lobby/guild-list";
 import { useModal } from "~/hooks/use-modal.hook";
 import CreateGuildModal from "~/components/lobby/create-guild.modal";
-import { useContext, useEffect, useRef, useState } from "react";
-import { UserContext } from "~/contexts/userContext";
+import { useContext, useEffect, useState } from "react";
 import useSocket from "~/hooks/use-socket.hook";
+import { postRequest } from "~/request";
+import { AuthContext } from "~/contexts/authContext";
 
 export default function Layout() {
   const nav = useNavigate();
-  const user = useContext(UserContext);
-
+  const { auth, checkingAuth, setAuth } = useContext(AuthContext);
   const { Modal, openModal, closeModal } = useModal();
   const { isConnected, sendMessage } = useSocket();
 
   const [refreshGuildList, setRefreshGuildList] = useState(false);
+  const [showProfileOver, setShowProfileOver] = useState<boolean>(false);
 
   useEffect(() => {
-    console.log(`isConnected Changed :  `, isConnected);
     if (isConnected) {
       sendMessage("USER_ONLINE");
     }
   }, [isConnected]);
 
+  useEffect(() => {
+    if (!auth.id && !checkingAuth) {
+      nav("/auth/signin");
+    }
+    const handleClick = (e: MouseEvent) => {
+      if (showProfileOver) {
+        setShowProfileOver(false);
+      }
+    };
+    window.addEventListener("click", handleClick);
+    return () => {
+      window.removeEventListener("click", handleClick);
+    };
+  }, [checkingAuth]);
+
+  const handleLogout = async () => {
+    try {
+      // Perform any necessary cleanup, such as clearing tokens or session data
+      await postRequest(
+        "/user/signout",
+        {},
+        {
+          Authorization: `Bearer ${auth.accessToken}`,
+        },
+      ); // Optional: Notify the server about the logout action
+      // Redirect to the login page or home page
+      window.localStorage.removeItem("auth");
+      setAuth(null);
+      nav("/auth/signin");
+    } catch (error) {
+      console.error("Logout failed:", error);
+      alert("Logout failed. Please try again.");
+    }
+  };
+
+  const profileOverMenu = [
+    { icon: "settings", label: "Settings" },
+    { icon: "account_circle", label: "Profile" },
+    {
+      icon: "logout",
+      label: "Logout",
+      onClick: handleLogout,
+    },
+  ];
+
   return (
     <>
-      <div className="lobby-layout">
+      <div className="lobby-layout relative">
         <div className="lobby-leftside no-scrollbar">
           <div
             className="cursor-pointer row-start-1 row-end-2 p-2 flex justify-center items-center border-b border-stone-300"
@@ -34,7 +79,7 @@ export default function Layout() {
             }}
           >
             <div className="text-4xl font-bold w-full h-full flex justify-center items-center hover:text-lime-600 active:text-lime-300 active:scale-95 transition duration-200">
-              R
+              GG
             </div>
           </div>
           <GuildList
@@ -50,12 +95,12 @@ export default function Layout() {
                 }}
               >
                 notifications
-                <div className="absolute block bg-lime-500 w-2 h-2 rounded-full top-2 right-2" />
+                <div className="absolute block bg-[#a4b9bd] w-2 h-2 rounded-full top-2 right-2" />
               </span>
             </div>
           </div>
           <div className="cursor-pointer hover:bg-stone-100 rounded-lg m-4 row-start-4 row-end-5 no-select active:scale-95 transition duration-150">
-            <div>
+            <div onClick={() => setShowProfileOver(!showProfileOver)}>
               <img
                 src="https://picsum.photos/200"
                 alt="profile picture"
@@ -67,6 +112,34 @@ export default function Layout() {
         <div className="lobby-rightside">
           <Outlet />
         </div>
+      </div>
+      <div
+        className="bg-white shadow-md absolute bottom-16 left-18 z-99 rounded-lg w-48 overflow-hidden transition duration-150 text-stone-900"
+        style={{ display: showProfileOver ? "block" : "none" }}
+      >
+        <ul>
+          {profileOverMenu.map((item) => (
+            <li
+              key={item.label}
+              className="flex gap-2 items-center hover:bg-stone-100 p-2 cursor-pointer transition duration-150"
+              onClick={() => {
+                if (item.onClick) {
+                  item.onClick();
+                }
+              }}
+            >
+              <span
+                className="material-symbols-outlined"
+                style={{
+                  fontSize: "1.2rem",
+                }}
+              >
+                {item.icon}
+              </span>
+              <span>{item.label}</span>
+            </li>
+          ))}
+        </ul>
       </div>
       <Modal>
         <CreateGuildModal

@@ -1,20 +1,20 @@
 import { useContext, useEffect, useState } from "react";
 import type { Guild } from "../common.interface";
 import { getRequest, postRequest } from "~/request";
-import { UserContext } from "~/contexts/userContext";
+import { AuthContext } from "~/contexts/authContext";
 
 export default function ImportResourceModal(props: {
-  id: number;
+  resourceId: number;
   onClose: () => void;
 }) {
-  const user = useContext(UserContext);
+  const { auth } = useContext(AuthContext);
   const [guilds, setGuilds] = useState<(Guild & { selected?: boolean })[]>([]);
 
   const fetchGuilds = async () => {
     try {
       const res = await getRequest("/guild/user", {
-        userId: user?.id,
-        userCode: user?.code,
+        userId: auth?.id,
+        userCode: auth?.code,
       });
 
       if (res.status === 200 && res.data) {
@@ -26,7 +26,7 @@ export default function ImportResourceModal(props: {
   const onClickImport = async () => {
     const selectedGuilds = guilds.filter((g) => g.selected);
     await postRequest("/resource/import", {
-      id: props.id,
+      id: props.resourceId,
       guildCodes: selectedGuilds.map((g) => g.code),
     });
     props.onClose();
@@ -34,7 +34,7 @@ export default function ImportResourceModal(props: {
 
   useEffect(() => {
     fetchGuilds();
-  }, [user.code]);
+  }, [auth?.code]);
 
   return (
     <>

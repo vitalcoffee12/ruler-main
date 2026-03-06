@@ -50,12 +50,12 @@ guildRegistry.registerPath({
   method: "get",
   path: "/guild/user",
   tags: ["Guild"],
-  request: {
-    query: z.object({
-      userId: z.number().optional(),
-      userCode: z.string().optional(),
-    }),
-  },
+  // request: {
+  //   query: z.object({
+  //     userId: z.number().optional(),
+  //     userCode: z.string().optional(),
+  //   }),
+  // },
   responses: createApiResponse(z.array(GuildSchema), "Success"),
 });
 

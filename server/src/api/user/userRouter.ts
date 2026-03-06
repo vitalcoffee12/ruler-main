@@ -168,6 +168,19 @@ userRegistry.registerPath({
 
 userRouter.post("/signout", validateToken(), userController.signOut);
 
+// refreshtoken user
+userRegistry.registerPath({
+  method: "post",
+  path: "/user/refresh-token",
+  tags: ["User"],
+  responses: createApiResponse(
+    z.object({ accessToken: z.string() }),
+    "Access Token Refreshed Successfully",
+  ),
+});
+
+userRouter.post("/refresh-token", userController.refreshToken);
+
 // verify user email - no authentication
 userRegistry.registerPath({
   method: "post",
@@ -183,3 +196,23 @@ userRouter.post("/verify-email/:token", userController.verifyUserEmail);
 
 userRouter.post("/validate-token", userController.validateToken);
 //
+
+userRegistry.registerPath({
+  method: "post",
+  path: "/user/check-email",
+  tags: ["User"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({ email: z.string().email() }),
+        },
+      },
+    },
+  },
+  responses: createApiResponse(
+    z.object({ exists: z.boolean() }),
+    "Email Existence Checked Successfully",
+  ),
+});
+userRouter.post("/check-email", userController.checkEmailExists);

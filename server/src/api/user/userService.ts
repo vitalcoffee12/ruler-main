@@ -7,6 +7,7 @@ import { env } from "@/common/utils/envConfig";
 import {
   comparePass,
   compareToken,
+  hashPass,
   hashToken,
   issueAccessToken,
   issueRefreshToken,
@@ -74,6 +75,7 @@ export class UserService {
 
   async checkEmailExists(email: string): Promise<boolean> {
     const user = await this.userRepository.findOne({ where: { email } });
+    console.log(!!user);
     return !!user;
   }
 
@@ -83,11 +85,12 @@ export class UserService {
     password: string;
   }): Promise<ServiceResponse<boolean>> {
     try {
+      const hashedPassword = await hashPass(userData.password); // In real implementation, hash the password before saving
       const newUser = await this.userRepository.insert({
         code: GenerateUserCode(),
         displayName: userData.name,
         email: userData.email,
-        passwordHash: userData.password, // In real implementation, hash the password
+        passwordHash: hashedPassword,
       });
 
       return ServiceResponse.success<boolean>(
@@ -313,27 +316,63 @@ export class UserService {
     }
   }
 
-  async refreshToken(
-    id: number,
-    refreshToken: string,
-  ): Promise<ServiceResponse<null>> {
+  async refreshToken(refreshToken: string): Promise<
+    ServiceResponse<{
+      id: number;
+      code: string;
+      displayName?: string;
+      state: string;
+      role: string;
+      accessToken: string;
+    } | null>
+  > {
     try {
-      const user = await this.userRepository.findOne({ where: { id } });
-      if (!user) {
+      const verified = verify(refreshToken, env.REFRESHTOKEN_SECRET) as any;
+      if (!verified || !verified.userId || verified.userId <= 0) {
         return ServiceResponse.failure(
-          "User not found",
+          "Invalid or expired refresh token",
           null,
-          StatusCodes.NOT_FOUND,
+          StatusCodes.UNAUTHORIZED,
         );
       }
-      user.refreshTokenHash = refreshToken; // In real implementation, hash refreshToken
-      await this.userRepository.save(user); // Hash refreshToken in real implementation
-      return ServiceResponse.success<null>(
-        "Refresh token updated successfully",
-        null,
-      );
+      const user = await this.userRepository.findOne({
+        where: { id: verified.userId },
+      });
+
+      if (!user) {
+        return ServiceResponse.failure(
+          "Auth not refreshed",
+          null,
+          StatusCodes.UNAUTHORIZED,
+        );
+      }
+
+      if (user.refreshTokenHash !== refreshToken) {
+        return ServiceResponse.failure(
+          "Refresh token does not match",
+          null,
+          StatusCodes.UNAUTHORIZED,
+        );
+      }
+
+      const newAccessToken = issueAccessToken(user.id ?? 0, user.role);
+      return ServiceResponse.success<{
+        id: number;
+        code: string;
+        displayName?: string;
+        state: string;
+        role: string;
+        accessToken: string;
+      }>("Access token newly issued", {
+        id: user.id ?? 0,
+        code: user.code,
+        displayName: user.displayName,
+        state: user.state,
+        role: user.role,
+        accessToken: newAccessToken,
+      });
     } catch (ex) {
-      const errorMessage = `Error updating refresh token for user with id ${id}: ${
+      const errorMessage = `Error updating refresh token for user with refreshToken ${refreshToken}: ${
         (ex as Error).message
       }`;
       logger.error(errorMessage);
@@ -350,6 +389,11 @@ export class UserService {
     password: string,
   ): Promise<
     ServiceResponse<{
+      id: number;
+      code: string;
+      displayName?: string;
+      state: string;
+      role: string;
       accessToken: string;
       refreshToken: string;
     } | null>
@@ -375,16 +419,25 @@ export class UserService {
 
       const accessToken = issueAccessToken(user.id ?? 0, user.role);
       const refreshToken = issueRefreshToken(user.id ?? 0, user.role);
-      const hashedRefreshToken = await hashToken(refreshToken);
       await this.userRepository.save({
         ...user,
-        refreshTokenHash: hashedRefreshToken,
+        refreshTokenHash: refreshToken,
       });
 
       return ServiceResponse.success<{
+        id: number;
+        code: string;
+        displayName?: string;
+        state: string;
+        role: string;
         accessToken: string;
         refreshToken: string;
       }>("Sign-in successful", {
+        id: user.id ?? 0,
+        code: user.code,
+        displayName: user.displayName,
+        state: user.state,
+        role: user.role,
         accessToken,
         refreshToken,
       });

@@ -11,7 +11,7 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import Loading from "./components/loading";
 import { CookiesProvider } from "react-cookie";
-import { UserProvider } from "./contexts/userContext";
+import { AuthProvider } from "./contexts/authContext";
 import { SocketProvider } from "./contexts/socketContext";
 
 export const links: Route.LinksFunction = () => [
@@ -65,20 +65,21 @@ export function HydrateFallback() {
 
 export default function App() {
   const defaultCookieOptions = {
+    domain: "loggic.com",
     path: "/",
     maxAge: 60 * 60 * 24 * 7 * 2,
-    domain: "",
     secure: process.env.NODE_ENV === "production",
-    httpOnly: true,
+    sameSite: "lax" as const,
+    httpOnly: false,
   };
 
   return (
     <CookiesProvider defaultSetOptions={defaultCookieOptions}>
-      <UserProvider>
+      <AuthProvider>
         <SocketProvider>
           <Outlet />
         </SocketProvider>
-      </UserProvider>
+      </AuthProvider>
     </CookiesProvider>
   );
 }

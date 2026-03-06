@@ -22,7 +22,7 @@ export default function Welcome() {
       </Link>
       <div className="w-44 h-24 fixed flex items-center justify-end px-6 right-0">
         <div
-          className="cursor-pointer mr-4 border border-stone-100  px-4 py-2 rounded-2xl transition duration-200 shadow-md hover:shadow-lg hover:scale-105"
+          className="cursor-pointer mr-4 border border-stone-300  px-4 py-2 rounded-2xl transition duration-200 hover:shadow-md active:scale-95"
           onClick={() => {
             nav("/auth/signin");
           }}
@@ -57,7 +57,7 @@ export default function Welcome() {
         </div>
         <div className="flex justify-center mt-12">
           <div
-            className="cursor-pointer mr-4 px-4 py-2 rounded-2xl border border-stone-100 transition duration-200 shadow-md hover:shadow-lg hover:scale-105"
+            className="cursor-pointer mr-4 px-4 py-2 rounded-2xl border border-stone-300 transition duration-200 hover:shadow-md active:scale-95"
             onClick={() => {
               nav("/guides");
             }}
@@ -65,7 +65,7 @@ export default function Welcome() {
             How It Works
           </div>
           <div
-            className="cursor-pointer mr-4 px-4 py-2 rounded-2xl transition duration-200 bg-lime-500 text-white shadow-md hover:shadow-lg hover:scale-105"
+            className="cursor-pointer mr-4 px-4 py-2 rounded-2xl transition duration-200 bg-[#a4b9bd] text-white hover:shadow-lg active:scale-95"
             onClick={() => {
               nav("/auth/register");
             }}

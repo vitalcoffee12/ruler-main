@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import ServiceHeader from "~/components/lobby-services/service-header";
-import { UserContext } from "~/contexts/userContext";
+import { AuthContext } from "~/contexts/authContext";
 import { getRequest, postRequest } from "~/request";
 
 interface ResourceItemProps {
@@ -28,7 +28,7 @@ interface ResourceItemProps {
 }
 
 export default function Resources() {
-  const user = useContext(UserContext);
+  const { auth } = useContext(AuthContext);
   const [featuredResources, setFeaturedResources] = useState<
     ResourceItemProps[]
   >([]);
@@ -38,7 +38,7 @@ export default function Resources() {
 
   const onClickPublishNewResource = async () => {
     await postRequest("/resource/upload", {
-      writer: { userId: user.id!, userCode: user.code! },
+      writer: { userId: auth.id!, userCode: auth.code! },
       resourceData: {
         name: "BiD SRD",
         description: "BiD System Reference Document",
@@ -53,8 +53,8 @@ export default function Resources() {
     // setFeaturedResources(featuredResponse.data || []);
     // Fetch latest resources
     const latestResponse = await getRequest("/resource", {
-      userId: user?.id,
-      userCode: user?.code,
+      userId: auth?.id,
+      userCode: auth?.code,
     });
     setLatestResources(latestResponse.data.responseObject || []);
     setFeaturedResources(latestResponse.data.responseObject.slice(0, 5));
@@ -62,7 +62,7 @@ export default function Resources() {
 
   useEffect(() => {
     fetchResources();
-  }, []);
+  }, [auth?.id, auth?.code]);
 
   return (
     <div className="h-full min-h-full box-border flex flex-col">

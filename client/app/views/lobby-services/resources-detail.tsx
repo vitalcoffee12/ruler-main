@@ -49,7 +49,7 @@ export default function ResourceDetail() {
         Import to Knowledge Base
       </button>
       <Modal>
-        <ImportResourceModal id={Number(id)} onClose={closeModal} />
+        <ImportResourceModal resourceId={Number(id)} onClose={closeModal} />
       </Modal>
     </>
   );

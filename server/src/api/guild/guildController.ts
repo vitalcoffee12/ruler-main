@@ -26,12 +26,11 @@ class GuildController {
     req: Request,
     res: Response,
   ) => {
-    const userId = req.query.userId ? Number(req.query.userId) : undefined;
-    const userCode = req.query.userCode
-      ? req.query.userCode.toString()
-      : undefined;
-    const user = { userId, userCode };
-    const serviceResponse = await this.guildService.findGuildsByUser(user);
+    const userId = req.headers["userId"] as string; // Assuming the user info is passed in the header as a JSON string
+
+    const serviceResponse = await this.guildService.findGuildsByUser(
+      Number(userId),
+    );
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 

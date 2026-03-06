@@ -2,18 +2,41 @@ import { useContext, useEffect, useState } from "react";
 
 import logoLight from "../welcome/logo-light.png";
 import { useNavigate } from "react-router";
-import { UserContext } from "~/contexts/userContext";
+
+import { postRequest } from "~/request";
+import { AuthContext } from "~/contexts/authContext";
+import type { Auth } from "~/components/common.interface";
 
 export default function Signin() {
   const nav = useNavigate();
-  const user = useContext(UserContext);
+  const { auth, setAuth } = useContext(AuthContext);
 
-  const [select, setSelect] = useState("standard");
   useEffect(() => {
-    // if (user && user.id > 0) {
-    //   nav("/game");
-    // }
-  }, []);
+    if (auth && auth.id > 0) {
+      nav("/game");
+    }
+  }, [auth]);
+
+  const [data, setData] = useState({
+    email: "",
+    password: "",
+    remember: false,
+  });
+
+  const loginHandler = async () => {
+    try {
+      if (data.email.trim() === "" || data.password.trim() === "") {
+        return;
+      }
+      const res = await postRequest("/user/signin", data);
+      const authData = res.data.responseObject as Auth;
+      window.localStorage.setItem("auth", JSON.stringify(authData));
+      setAuth(authData);
+      nav("/game");
+    } catch (ex) {
+      alert("Login failed. Please check your credentials and try again.");
+    }
+  };
 
   return (
     <>
@@ -47,6 +70,8 @@ export default function Signin() {
               type="email"
               placeholder="Enter your email"
               className="block px-3 py-2 border border-stone-300 focus:outline-2 rounded-md mt-2 w-full "
+              value={data.email}
+              onChange={(e) => setData({ ...data, email: e.target.value })}
             />
             <label
               htmlFor="password"
@@ -59,7 +84,14 @@ export default function Signin() {
               name="password"
               type="password"
               placeholder="Enter your password"
-              className="block px-3 py-2 border border-stone-300 focus:outline-2 rounded-md mt-2 w-full "
+              className="block px-3 py-2 border border-stone-300 focus:outline-2 rounded-md mt-2 w-full"
+              value={data.password}
+              onChange={(e) => setData({ ...data, password: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  loginHandler();
+                }
+              }}
             />
             <div className="text-sm text-stone-400 mt-3 flex justify-between items-center">
               <div className="flex gap-2 items-center ml-1">
@@ -68,7 +100,11 @@ export default function Signin() {
                   id="remember"
                   aria-label="Remember me"
                   name="remember"
-                  className="accent-lime-600 w-4 h-4 rounded-sm transition duration-150"
+                  className="accent-[#a4b9bd] w-4 h-4 rounded-sm transition duration-150"
+                  checked={data.remember}
+                  onChange={(e) =>
+                    setData({ ...data, remember: e.target.checked })
+                  }
                 />
                 <label htmlFor="remember" className="cursor-pointer">
                   Remember me
@@ -80,10 +116,8 @@ export default function Signin() {
             </div>
             <div className="flex justify-end">
               <button
-                className="mt-10 rounded-xl w-full bg-lime-500 px-6 py-3 text-white font-medium hover:bg-lime-600 transition duration-150 cursor-pointer active:scale-95"
-                onClick={() => {
-                  nav("/game");
-                }}
+                className="mt-10 rounded-xl w-full bg-[#a4b9bd] hover:shadow-md px-6 py-3 text-white font-medium transition duration-150 cursor-pointer active:scale-95"
+                onClick={loginHandler}
               >
                 Sign In
               </button>
@@ -122,6 +156,7 @@ export default function Signin() {
     </>
   );
 }
+// hover:bg-[#8fa7ab]
 
 const oauthProviders = [
   {
@@ -218,8 +253,4 @@ function OAuthButton(props: {
       </div>
     </div>
   );
-}
-
-function GithunLogin() {
-  return <></>;
 }

@@ -1,6 +1,7 @@
 import { PlusIcon } from "@heroicons/react/20/solid";
 import { useContext, useState } from "react";
-import { UserContext } from "~/contexts/userContext";
+import { AuthContext } from "~/contexts/authContext";
+
 import useLoading from "~/hooks/use-loading.hook";
 import { postRequest } from "~/request";
 
@@ -8,7 +9,7 @@ export default function CreateGuildModal(props: {
   onClose: () => void;
   onRefresh: () => void;
 }) {
-  const user = useContext(UserContext);
+  const { auth } = useContext(AuthContext);
   const [iconHovered, setIconHovered] = useState(false);
   const [loading, setIsLoading] = useLoading();
 
@@ -16,7 +17,7 @@ export default function CreateGuildModal(props: {
     guildName: "",
     guildIcon: null,
   });
-  const handleIconClick = () => {};
+
   const handleCreateGuild = async () => {
     try {
       setIsLoading(true);
@@ -25,11 +26,10 @@ export default function CreateGuildModal(props: {
         {
           iconPath: `https://picsum.photos/${Math.floor(Math.random() * 100 + 300)}`,
           name: data.guildName,
-          ownerId: user.id,
+          ownerId: auth.id,
         },
         {
-          Authorization: `Bearer ${user.accessToken}`,
-          "x-refresh-token": user.refreshToken,
+          Authorization: `Bearer ${auth.accessToken}`,
         },
       );
       setIsLoading(false);

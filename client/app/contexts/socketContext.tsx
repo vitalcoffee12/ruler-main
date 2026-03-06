@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { UserContext } from "./userContext";
+import { AuthContext } from "./authContext";
 
 export interface SocketInstance {
   isConnected: boolean;
@@ -28,11 +28,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [socketInstance, setSocketInstance] = useState<SocketInstance | null>(
     null,
   );
-  const user = useContext(UserContext);
+  const { auth } = useContext(AuthContext);
 
   useEffect(() => {
-    if (!user.code) return;
-    console.log("SocketProvider - Initializing WebSocket", user);
+    if (!auth?.code) return;
+    console.log("SocketProvider - Initializing WebSocket", auth);
     const socket = new WebSocket(
       import.meta.env.REACT_APP_WS_URL || "ws://localhost:8080",
     );
@@ -69,10 +69,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     };
 
     return () => {
-      console.log("SocketProvider - Cleaning up", user);
       if (socket.readyState === WebSocket.OPEN) socket.close();
     };
-  }, [user.code]);
+  }, [auth?.code]);
 
   return (
     <SocketContext value={socketInstance || defaultSocket}>
