@@ -17,7 +17,7 @@ const app: Express = express();
 
 // Set the application to trust the reverse proxy
 app.set("trust proxy", true);
-app.use(express.static("public"));
+app.use(express.static(__dirname + "/../client"));
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -40,6 +40,9 @@ app.use("/api/guild", guildRouter);
 app.use("/api/resource", resourceRouter);
 app.use("/api/game", gameRouter);
 
+app.all("{*splat}", (req, res) => {
+  res.sendFile(__dirname + "/../client/index.html");
+});
 // Swagger UI
 app.use(openAPIRouter);
 

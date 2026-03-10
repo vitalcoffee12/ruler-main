@@ -50,12 +50,6 @@ guildRegistry.registerPath({
   method: "get",
   path: "/guild/user",
   tags: ["Guild"],
-  // request: {
-  //   query: z.object({
-  //     userId: z.number().optional(),
-  //     userCode: z.string().optional(),
-  //   }),
-  // },
   responses: createApiResponse(z.array(GuildSchema), "Success"),
 });
 
@@ -79,3 +73,28 @@ guildRouter.post(
 );
 
 //
+
+guildRegistry.registerPath({
+  method: "post",
+  path: "/guild/invite",
+  tags: ["Guild"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            guildCode: z.string(),
+            userId: z.number(),
+          }),
+        },
+      },
+    },
+  },
+  responses: createApiResponse(GuildSchema, "Guild Created Successfully"),
+});
+
+guildRouter.post(
+  "/invite",
+
+  guildController.sendInvitation,
+);

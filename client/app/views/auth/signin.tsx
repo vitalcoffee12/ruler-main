@@ -9,7 +9,7 @@ import type { Auth } from "~/components/common.interface";
 
 export default function Signin() {
   const nav = useNavigate();
-  const { auth, setAuth } = useContext(AuthContext);
+  const { auth, login } = useContext(AuthContext);
 
   useEffect(() => {
     if (auth && auth.id > 0) {
@@ -30,8 +30,7 @@ export default function Signin() {
       }
       const res = await postRequest("/user/signin", data);
       const authData = res.data.responseObject as Auth;
-      window.localStorage.setItem("auth", JSON.stringify(authData));
-      setAuth(authData);
+      login(authData);
       nav("/game");
     } catch (ex) {
       alert("Login failed. Please check your credentials and try again.");

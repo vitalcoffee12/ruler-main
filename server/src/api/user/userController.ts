@@ -142,10 +142,9 @@ class UserController {
     res: Response,
   ) => {
     const accessToken = req.headers["Authorization"] as string;
-    const refreshToken = req.headers["x-refresh-token"] as string;
     const serviceResponse = await userService.validateToken(
       accessToken,
-      refreshToken,
+    
     );
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };

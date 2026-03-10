@@ -32,8 +32,8 @@ userRegistry.registerPath({
 
 userRouter.get(
   "/",
-  validateToken(),
-  validateRole(["admin"]),
+  // validateToken(),
+  // validateRole(["admin"]),
   userController.getUsers,
 );
 
@@ -70,61 +70,6 @@ userRouter.post(
   userController.createUser,
 );
 
-// disable user - admin only
-userRegistry.registerPath({
-  method: "post",
-  path: "/user/disable",
-  tags: ["User"],
-  request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: DisableUserSchema,
-        },
-      },
-    },
-  },
-  responses: createApiResponse(
-    z.object({ success: z.boolean() }),
-    "User Disabled Successfully",
-  ),
-});
-
-userRouter.post(
-  "/disable",
-  validateRequest(DisableUserSchema),
-  validateToken(),
-  validateRole(["admin"]),
-  userController.disableUser,
-);
-
-// block user - admin only
-userRegistry.registerPath({
-  method: "post",
-  path: "/user/block",
-  tags: ["User"],
-  request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: BlockUserSchema,
-        },
-      },
-    },
-  },
-  responses: createApiResponse(
-    z.object({ success: z.boolean() }),
-    "User Blocked Successfully",
-  ),
-});
-
-userRouter.post(
-  "/block",
-  validateRequest(BlockUserSchema),
-  validateToken(),
-  validateRole(["admin"]),
-  userController.blockUser,
-);
 
 // sigin in user - no authentication
 userRegistry.registerPath({

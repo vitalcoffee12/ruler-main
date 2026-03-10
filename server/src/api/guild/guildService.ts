@@ -505,4 +505,76 @@ export class GuildService {
       .getMany();
     return guilds;
   }
+
+  async inviteMember(
+    guildCode: string,
+    userId: number,
+  ): Promise<ServiceResponse<boolean>> {
+    try {
+      const guild = await this.guildRepository.findOne({
+        where: { code: guildCode },
+      });
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!guild || !user) {
+        return ServiceResponse.failure(
+          "Not found",
+          false,
+          StatusCodes.NOT_FOUND,
+        );
+      }
+
+      const guildMember = await this.guildMemberRepository.findOne({
+        where: { guildCode: guildCode, userId: userId },
+      });
+      if (!guildMember) {
+        const newMember = {
+          userId: user.id,
+          userCode: user.code,
+          displayName: user.displayName,
+          guildId: guild.id,
+          guildCode: guild.code,
+          role: "member",
+          joinedAt: new Date(),
+        };
+        await this.guildMemberRepository.save(newMember);
+
+        await gameLib.insertGameHistory(guild.code, {
+          chat: {
+            userId: PREDEFINED_USER.SYSTEM.id,
+            userCode: PREDEFINED_USER.SYSTEM.code,
+            message: `Player ${user.displayName} has joined the guild.`,
+          },
+          entities: [
+            {
+              id: `${user.code}`,
+              name: user.displayName,
+              description: ``,
+              info: "No Description Provided, guide player to fill in their own character description.",
+              state: "active",
+              updatedAt: new Date(),
+              createdAt: new Date(),
+            },
+          ],
+        });
+
+        return ServiceResponse.success<boolean>(
+          "User invited to guild successfully",
+          true,
+          StatusCodes.OK,
+        );
+      }
+      return ServiceResponse.failure(
+        "User is already a member of the guild",
+        false,
+        StatusCodes.CONFLICT,
+      );
+    } catch (ex) {
+      const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
+      return ServiceResponse.failure(
+        `Error inviting member to guild: ${errorMessage}`,
+        false,
+        StatusCodes.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

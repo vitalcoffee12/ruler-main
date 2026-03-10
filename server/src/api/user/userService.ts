@@ -324,6 +324,7 @@ export class UserService {
       state: string;
       role: string;
       accessToken: string;
+      iconPath?: string;
     } | null>
   > {
     try {
@@ -363,6 +364,7 @@ export class UserService {
         state: string;
         role: string;
         accessToken: string;
+        iconPath?: string;
       }>("Access token newly issued", {
         id: user.id ?? 0,
         code: user.code,
@@ -370,6 +372,7 @@ export class UserService {
         state: user.state,
         role: user.role,
         accessToken: newAccessToken,
+        iconPath: user.iconPath,
       });
     } catch (ex) {
       const errorMessage = `Error updating refresh token for user with refreshToken ${refreshToken}: ${
@@ -396,6 +399,7 @@ export class UserService {
       role: string;
       accessToken: string;
       refreshToken: string;
+      iconPath?: string;
     } | null>
   > {
     try {
@@ -432,6 +436,7 @@ export class UserService {
         role: string;
         accessToken: string;
         refreshToken: string;
+        iconPath?: string;
       }>("Sign-in successful", {
         id: user.id ?? 0,
         code: user.code,
@@ -440,6 +445,7 @@ export class UserService {
         role: user.role,
         accessToken,
         refreshToken,
+        iconPath: user.iconPath,
       });
     } catch (ex) {
       const errorMessage = `Error signing in user with email ${email}: ${
@@ -534,7 +540,7 @@ export class UserService {
 
   async validateToken(
     accessToken: string,
-    refreshToken: string,
+    
   ): Promise<ServiceResponse<ValidateTokenResponse | null>> {
     try {
       if (accessToken && accessToken.length > 0) {
@@ -575,57 +581,7 @@ export class UserService {
           },
         );
       }
-      if (refreshToken && refreshToken.length > 0) {
-        const verified = verify(refreshToken, env.REFRESHTOKEN_SECRET) as any;
-        if (!verified || !verified.userId || verified.userId <= 0) {
-          return ServiceResponse.failure(
-            "Invalid or expired refresh token",
-            null,
-            StatusCodes.UNAUTHORIZED,
-          );
-        }
-
-        const userId = verified.userId;
-        const user = await this.userRepository.findOne({
-          where: { id: userId },
-        });
-        if (!user) {
-          return ServiceResponse.failure(
-            "User not found",
-            null,
-            StatusCodes.NOT_FOUND,
-          );
-        }
-
-        const isValid = await compareToken(
-          refreshToken,
-          user.refreshTokenHash!, // In real implementation, retrieve stored hashed refresh token
-        );
-        if (!isValid) {
-          return ServiceResponse.failure(
-            "Refresh token does not match",
-            null,
-            StatusCodes.UNAUTHORIZED,
-          );
-        }
-
-        const newAccessToken = issueAccessToken(user.id ?? 0, user.role);
-        const newRefreshToken = issueRefreshToken(user.id ?? 0, user.role);
-        user.refreshTokenHash = await hashToken(newRefreshToken);
-        await this.userRepository.save(user);
-        return ServiceResponse.success<ValidateTokenResponse>(
-          "Refresh token is valid",
-          {
-            id: user.id,
-            code: user.code,
-            displayName: user.displayName ?? undefined,
-            state: user.state,
-            role: user.role,
-            accessToken: newAccessToken,
-            refreshToken: newRefreshToken,
-          },
-        );
-      }
+     
       return ServiceResponse.failure(
         "Invalid Tokens",
         null,

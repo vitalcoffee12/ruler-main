@@ -8,7 +8,7 @@ export default function GuildList(props: {
   refreshGuildList?: boolean;
   onClickCreateGuild?: () => void;
 }) {
-  const { auth } = useContext(AuthContext);
+  const { auth, logout } = useContext(AuthContext);
   const badgeRef = useRef<HTMLDivElement>(null);
   const refs = useRef<
     { code: string; name: string; element: HTMLDivElement }[]
@@ -18,6 +18,7 @@ export default function GuildList(props: {
   const nav = useNavigate();
 
   const fetchGuilds = async () => {
+    if (!auth || !auth?.accessToken) return;
     try {
       const res = await getRequest(
         "/guild/user",
@@ -30,7 +31,10 @@ export default function GuildList(props: {
       if (res.status === 200 && res.data) {
         setGuilds(res.data.responseObject);
       }
-    } catch (ex) {}
+    } catch (ex) {
+      logout();
+      nav("/auth/signin");
+    }
   };
 
   useEffect(() => {
@@ -115,7 +119,7 @@ function GuildListItem(props: {
   const nav = useNavigate();
   const isCreateGuild = props.guild.code === "guild-create";
   const [isHovered, setIsHovered] = useState(false);
-  const { auth, setAuth } = useContext(AuthContext);
+  const { auth, login } = useContext(AuthContext);
 
   return (
     <div
@@ -148,7 +152,7 @@ function GuildListItem(props: {
               props.onClick();
             }
           } else {
-            setAuth({ ...auth, guildCode: props.guild.code });
+            login({ ...auth, guildCode: props.guild.code });
             nav(`/game/guild/code/${props.guild.code}`);
           }
         }}

@@ -1,5 +1,6 @@
 import { Request, RequestHandler, Response } from "express";
 import { GuildService } from "./guildService";
+import { socketHandler } from "../_lib/socketHandler";
 
 class GuildController {
   constructor(
@@ -54,7 +55,17 @@ class GuildController {
   public sendInvitation: RequestHandler = async (
     req: Request,
     res: Response,
-  ) => {};
+  ) => {
+    const { guildCode, userId } = req.body;
+    const servicecResponse = await this.guildService.inviteMember(
+      guildCode,
+      userId,
+    );
+    socketHandler.sendHistoryUpdate(guildCode);
+    socketHandler.sendMemberList(guildCode);
+
+    res.status(servicecResponse.statusCode).send(servicecResponse);
+  };
 
   public acceptInvitation: RequestHandler = async (
     req: Request,

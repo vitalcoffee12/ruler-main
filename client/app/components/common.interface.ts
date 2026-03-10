@@ -26,6 +26,7 @@ export interface Auth {
   role: string;
   guildCode?: string | null;
   accessToken: string;
+  iconPath?: string;
 }
 
 export interface GameHistory {

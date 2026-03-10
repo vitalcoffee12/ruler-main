@@ -1,6 +1,6 @@
+import type { l } from "node_modules/@react-router/dev/dist/routes-CZR-bKRt";
 import { createContext, useEffect, useState } from "react";
-import { useCookies } from "react-cookie";
-import { useLocation } from "react-router";
+import { useNavigate } from "react-router";
 import type { Auth } from "~/components/common.interface";
 import useLoading from "~/hooks/use-loading.hook";
 import { postRequest } from "~/request";
@@ -15,62 +15,70 @@ const defaultAuth: Auth = {
 
 export const AuthContext = createContext<{
   auth: Auth;
-  checkingAuth?: boolean;
-  setAuth: React.Dispatch<React.SetStateAction<Auth | null>>;
+  login: any;
+  logout: any;
 }>({
   auth: defaultAuth,
-  setAuth: () => {},
+  login: (auth: Auth) => {},
+  logout: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [auth, setAuth] = useState<Auth | null>(null);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const nav = useNavigate();
+  const [auth, setAuth] = useState<Auth | null>(defaultAuth);
   const [loading, setIsLoading] = useLoading();
 
-  useEffect(() => {
-    const storedAuth = window.localStorage.getItem("auth");
-    if (storedAuth) {
-      try {
-        const parsedAuth = JSON.parse(storedAuth) as Auth;
-        setAuth(parsedAuth);
-      } catch (error) {
-        console.error("Failed to parse auth from localStorage:", error);
-        setAuth(null);
-      }
-    }
-    setIsCheckingAuth(false);
-  }, []);
+  const login = (auth: Auth) => {
+    window.localStorage.setItem("auth", JSON.stringify(auth));
+    setAuth(auth);
+  };
+  const logout = () => {
+    window.localStorage.removeItem("auth");
+    setAuth(null);
+    nav("/auth/login");
+  };
 
   useEffect(() => {
-    if (auth && auth.id > 0) {
-      setIsLoading(false);
-      return;
-    }
     const fetchAuth = async () => {
       try {
-        if (!auth?.accessToken || auth.accessToken.trim() === "") {
-          const response = await postRequest(`/user/refresh-token`, {});
+        setIsLoading(true);
+        const storedAuth = window.localStorage.getItem("auth");
+        if (storedAuth) {
+          const parsedAuth = JSON.parse(storedAuth) as Auth;
+          setAuth(parsedAuth);
+        }
+
+        if (auth?.accessToken) {
+          const response = await postRequest(
+            `/user/validate-token`,
+            {},
+            {
+              Authorization: `Baerer ${auth?.accessToken}`,
+            },
+          );
+
           if (response.status === 200) {
             const authData = await response.data.responseObject;
-            setAuth(authData);
+            login(authData);
+          } else {
+            logout();
           }
         }
       } catch (error) {
-        console.error("Failed to fetch user:", error);
-        setAuth(null);
+        logout();
       }
       setIsLoading(false);
     };
 
     fetchAuth();
-  }, [auth]);
+  }, []);
 
   return (
     <AuthContext
       value={{
         auth: auth || defaultAuth,
-        checkingAuth: isCheckingAuth,
-        setAuth,
+        login,
+        logout,
       }}
     >
       {children}

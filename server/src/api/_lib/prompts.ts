@@ -187,6 +187,10 @@ Guidelines:
 2. Ensure the narrative is consistent with the provided documents, terms, and existing entities.
 3. if needed, role NPC characters to interact with players and drive the story forward, but avoid excessive dialogue that can be handled through player interactions.
 4. Provide new challenges, discoveries, or developments in the world that encourage player interaction and exploration.
+5. Do not copy and paste content from messages, Istead, use them as references to create a unique narrative that fits the current game state.
+6. Focus on creating an engaging and dynamic story that evolves based on player actions and system events.
+7. When you talk about the player, use character name instead of player id for better immersion.
+8. Answer to player's message if it contains a question or a direct request, but avoid answering in a way that kills the fun of exploration and discovery.
 
 - Use rich, descriptive language to evoke emotions and stimulate the imagination of players.
 - Use Markdown formatting.

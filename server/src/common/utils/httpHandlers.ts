@@ -22,19 +22,19 @@ export const validateRequest =
       });
       next();
     } catch (err) {
-      const errors = (err as any)?.errors.map((e: any) => {
-        const fieldPath = e?.path.length > 0 ? e?.path.join(".") : "root";
-        return `${fieldPath}: ${e.message}`;
-      });
+      // const errors = (err as any)?.errors.map((e: any) => {
+      //   const fieldPath = e?.path.length > 0 ? e?.path.join(".") : "root";
+      //   return `${fieldPath}: ${e.message}`;
+      // });
 
-      const errorMessage =
-        errors.length === 1
-          ? `Invalid input: ${errors[0]}`
-          : `Invalid input (${errors.length} errors): ${errors.join("; ")}`;
-
+      // const errorMessage =
+      //   errors.length === 1
+      //     ? `Invalid input: ${errors[0]}`
+      //     : `Invalid input (${errors.length} errors): ${errors.join("; ")}`;
+      
       const statusCode = StatusCodes.BAD_REQUEST;
       const serviceResponse = ServiceResponse.failure(
-        errorMessage,
+        `${err}`,
         null,
         statusCode,
       );
@@ -45,11 +45,17 @@ export const validateRequest =
 export const validateToken =
   () => async (req: Request, res: Response, next: NextFunction) => {
     try {
+      let isValid = false;
+      console.log("Validating token for request:", req.method, req.path);
       const accessToken = req.header("Authorization");
       const refreshToken = req.headers.cookie
         ?.split(";")
         .find((c) => c.trim().startsWith("__session"))
         ?.split("=")[1];
+
+      console.log(
+        `\t- Access Token: ${accessToken}\n\t- Refresh Token: ${refreshToken}`,
+      );
 
       if (accessToken) {
         const token = accessToken.replace("Bearer ", "");
@@ -60,13 +66,13 @@ export const validateToken =
           };
           if (decodedToken.userId && decodedToken.userId > 0) {
             req.headers["userId"] = decodedToken.userId.toString();
-            next();
+            isValid =true;
           }
         } catch (err) {
-          // access token invalid. Try refresh token below
+          console.log("Invalid Access Token");
         }
       }
-      if (refreshToken) {
+      if (refreshToken && !isValid) {
         try {
           const decodedRefresh = verifyRefreshToken(refreshToken);
           const hashed = await hashToken(refreshToken);
@@ -82,28 +88,39 @@ export const validateToken =
             if (user?.refreshTokenHash == hashed) {
               const newAccessToken = issueAccessToken(userId, user.role);
 
-              res.setHeader("Authorization", `Bearer ${newAccessToken}`);
+              
               req.headers["Authorization"] = `Bearer ${newAccessToken}`;
               req.headers["userId"] = userId.toString();
-              next();
+              isValid = true;
             }
           }
         } catch (err) {
-          // refresh token invalid
+          console.log("Invalid refresh token")
         }
       }
-
-      return ServiceResponse.failure(
-        "Invalid token",
-        null,
-        StatusCodes.UNAUTHORIZED,
-      );
+      if (isValid){
+        next()
+      }else {
+        return res
+        .status(StatusCodes.UNAUTHORIZED)
+        .send(
+          ServiceResponse.failure(
+            "Invalid token",
+            null,
+            StatusCodes.UNAUTHORIZED,
+          ),
+        );
+      }
     } catch (err) {
-      return ServiceResponse.failure(
-        "Invalid token",
-        null,
-        StatusCodes.UNAUTHORIZED,
-      );
+      return res
+        .status(StatusCodes.UNAUTHORIZED)
+        .send(
+          ServiceResponse.failure(
+            "Invalid token",
+            null,
+            StatusCodes.UNAUTHORIZED,
+          ),
+        );
     }
   };
 
@@ -116,7 +133,7 @@ export const validateRole =
       const accessToken = req.header("Authorization");
 
       if (!accessToken) {
-        return res.status(StatusCodes.UNAUTHORIZED).send("Unauthorized");
+        return res.status(StatusCodes.LOCKED).send("Locked");
       } else {
         // Validate access token and role
         const token = accessToken.replace("Bearer ", "");
@@ -126,12 +143,12 @@ export const validateRole =
         };
 
         if (!roles.includes(decodedToken.role)) {
-          return res.status(StatusCodes.UNAUTHORIZED).send("Unauthorized");
+          return res.status(StatusCodes.LOCKED).send("Locked");
         }
       }
 
       next();
     } catch (err) {
-      return res.status(StatusCodes.UNAUTHORIZED).send("Unauthorized");
+      return res.status(StatusCodes.LOCKED).send("Locked");
     }
   };

@@ -7,11 +7,15 @@ import { useContext, useEffect, useState } from "react";
 import useSocket from "~/hooks/use-socket.hook";
 import { postRequest } from "~/request";
 import { AuthContext } from "~/contexts/authContext";
+import useToast from "~/hooks/use-toast.hook";
+import useFetch from "~/hooks/use-fetch.hook";
 
 export default function Layout() {
   const nav = useNavigate();
-  const { auth, checkingAuth, setAuth } = useContext(AuthContext);
+
+  const { auth, logout } = useContext(AuthContext);
   const { Modal, openModal, closeModal } = useModal();
+  const [Toast, addToast] = useToast();
   const { isConnected, sendMessage } = useSocket();
 
   const [refreshGuildList, setRefreshGuildList] = useState(false);
@@ -24,33 +28,21 @@ export default function Layout() {
   }, [isConnected]);
 
   useEffect(() => {
-    if (!auth.id && !checkingAuth) {
+    if (!auth) {
       nav("/auth/signin");
     }
-    const handleClick = (e: MouseEvent) => {
-      if (showProfileOver) {
-        setShowProfileOver(false);
-      }
-    };
-    window.addEventListener("click", handleClick);
-    return () => {
-      window.removeEventListener("click", handleClick);
-    };
-  }, [checkingAuth]);
+  }, [auth]);
 
   const handleLogout = async () => {
     try {
       // Perform any necessary cleanup, such as clearing tokens or session data
-      await postRequest(
+      const {data, error, loading} = useFetch(
         "/user/signout",
-        {},
-        {
-          Authorization: `Bearer ${auth.accessToken}`,
-        },
+       {authorization : auth.accessToken}
       ); // Optional: Notify the server about the logout action
       // Redirect to the login page or home page
-      window.localStorage.removeItem("auth");
-      setAuth(null);
+      console.log(data, error);
+      logout();
       nav("/auth/signin");
     } catch (error) {
       console.error("Logout failed:", error);
@@ -93,6 +85,11 @@ export default function Layout() {
                 style={{
                   fontSize: "2rem",
                 }}
+                onClick={()=>{
+                  const rand = Math.floor(Math.random() * 4);
+                  const types = ["warning", "success", "info", "error", "default"];
+                  addToast(types[rand], `this message is for ${types[rand]}.` );
+                }}
               >
                 notifications
                 <div className="absolute block bg-[#a4b9bd] w-2 h-2 rounded-full top-2 right-2" />
@@ -102,7 +99,7 @@ export default function Layout() {
           <div className="cursor-pointer hover:bg-stone-100 rounded-lg m-4 row-start-4 row-end-5 no-select active:scale-95 transition duration-150">
             <div onClick={() => setShowProfileOver(!showProfileOver)}>
               <img
-                src="https://picsum.photos/200"
+                src={auth.iconPath || ""}
                 alt="profile picture"
                 className="overflow-hidden w-12 h-12 rounded-xl"
               />
@@ -141,6 +138,7 @@ export default function Layout() {
           ))}
         </ul>
       </div>
+      {Toast}
       <Modal>
         <CreateGuildModal
           onClose={() => {

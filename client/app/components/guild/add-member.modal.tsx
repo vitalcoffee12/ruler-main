@@ -1,11 +1,43 @@
+import { useEffect, useState } from "react";
+import { getRequest, postRequest } from "~/request";
+
 export default function AddMemberModal(props: {
   guildCode: string;
   guildName: string;
 }) {
+  const [users, setUsers] = useState<
+    {
+      id: number;
+      code: string;
+      displayName: string;
+      iconPath: string;
+    }[]
+  >([]);
+
+  useEffect(() => {
+    const fetchFriends = async () => {
+      try {
+        const res = await getRequest("/user");
+        if (res.status === 200) {
+          console.log(res.data.responseObject);
+          setUsers(res.data.responseObject);
+        } else {
+          console.error("Failed to fetch friends:", res.data);
+        }
+      } catch (error) {
+        console.error("Error fetching friends:", error);
+      }
+    };
+    fetchFriends();
+  }, []);
+
   return (
     <div className="">
       <div className="flex flex-col min-w-lg">
-        <h2 className="text-lg mb-4">Invite friends to {props.guildName}</h2>
+        <h2 className="text-lg mb-4">
+          Invite friends to
+          <span className="font-semibold ml-1"> {props.guildName}</span>
+        </h2>
         <div className="relative">
           <input
             type="text"
@@ -18,13 +50,14 @@ export default function AddMemberModal(props: {
           </span>
         </div>
         <div className="w-full border rounded-lg border-stone-300 max-h-[300px] overflow-y-auto mb-4 no-scrollbar">
-          {friends.map((friend) => (
+          {users.map((friend) => (
             <FriendItem
-              key={friend.userId}
-              userId={friend.userId}
-              userName={friend.userName}
+              guildCode={props.guildCode}
+              key={friend.id}
+              userId={friend.id}
+              userName={friend.code}
               displayName={friend.displayName}
-              icon={friend.icon}
+              icon={friend.iconPath}
             />
           ))}
         </div>
@@ -44,11 +77,19 @@ export default function AddMemberModal(props: {
 }
 
 function FriendItem(props: {
-  userId: string;
+  guildCode: string;
+  userId: number;
   userName: string;
   displayName: string;
   icon: string;
 }) {
+  const handleInvite = async () => {
+    await postRequest("/guild/invite", {
+      guildCode: props.guildCode,
+      userId: props.userId,
+    });
+  };
+
   return (
     <div className="flex items-center mb-2 hover:bg-stone-100 p-2 transition duration-200 ">
       <img
@@ -60,7 +101,10 @@ function FriendItem(props: {
         <span className="block font-semibold">{props.displayName}</span>
         <span className="text-sm text-stone-500">{props.userName}</span>
       </div>
-      <div className="ml-auto bg-lime-600 text-white px-2 py-1 rounded hover:bg-lime-700 transition duration-200 active:scale-95 cursor-pointer text-sm">
+      <div
+        className="ml-auto bg-lime-600 text-white px-2 py-1 rounded hover:bg-lime-700 transition duration-200 active:scale-95 cursor-pointer text-sm"
+        onClick={handleInvite}
+      >
         Invite
       </div>
     </div>
