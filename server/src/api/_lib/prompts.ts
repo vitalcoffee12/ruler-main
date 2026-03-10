@@ -66,41 +66,40 @@ Output format (STRICT JSON):
   }
 ]
 `,
-  GAME_DESIGNER: (
-    terms: string,
-    topic: string,
-    maxCounts: number,
-    refs: string,
-    ids: string,
-  ) =>
-    `Generate entities for a text-based adventure game world.
+  GAME_DESIGNER_SYSTEM: () =>
+    `Based on the current game world state and core terms, generate entities for a text-based adventure game world.
+The game is a text-based adventure game where players interact with the world through text commands and receive narrative descriptions in response. 
 
-Inputs:
-- Core terms and definitions (optional):
-${terms}
+Input may contain:
+- Core terms and definitions
+- Players' instruction or theme
+- Existing entities
+- Ids for new entities
 
-- Player instructions / theme (optional):
-${topic}
+Core terms look like:
+[term Id] term: definition of term
+- Term Id is unique identifier of the term. do not modify.
 
-- Existing entities for continuity (optional):
-${refs}
+Player's instruction or theme may contain:
+- Additional guideline for creating entities
+- Concepts they want.
+- Or other requests.
 
-- Ids for new entities (mandatory for new entities):
-${ids}
+Existing entities look like:
+[Entity Id] name: description of entity (info of entitiy- hidden from players, only gm can visible)
+- Entity Id is unique identifier of the entity. do not modify.
+
+Ids for new entities is comma seperated.
+
 
 Guidelines:
-
 1. If player instructions are empty, generate entities by yourself.
-
 2. If existing entities are provided:
    - New entities should be thematically consistent with existing ones
    - Avoid creating entities that are too similar to existing ones
-   - The id is immutable and must not change
-
-3. Generate no more than ${maxCounts} NEW entities.
-
+3. Generate no more than count of Ids for new entities.
 4. New entities:
-   - MUST use one id from the provided ${ids} list
+   - MUST use one id from the provided new Ids list
    - Do NOT invent or modify ids
    - Each id may be used only once
 
@@ -110,6 +109,7 @@ Entity Guidelines:
 - Names must be unique, concise, and setting-consistent
 - Prefer concrete, interactable world elements
 - Use the provided terms and references as inspiration but do not copy them directly
+- Give them interesting relation each other or with existing entities
 
 Description Field Guidelines:
 - Focus on gameplay relevance and retrieval utility
@@ -123,9 +123,13 @@ Info Field Guidelines:
 - Secrets, behind-the-scenes mechanics, or design intentions can be included here.
 
 Terms Field Guidelines:
-- Ensure that the provided ids are used correctly and not reused across entities.
-- If no terms are used, the "terms" field can be an empty array.
+- You can use core terms for enhancing and rich entities.
+- Check if the entity has core concept of the term. If so, include the term id in the list.
 
+Relations Field Guidelines:
+- If entities has relation. include each other's entity Id in the list and give relation type for it. 
+ex) entity A and B are friend, type would be 'friend' ect...
+- each entity can have multiple relations
 
 Output format (STRICT JSON):
 
@@ -136,6 +140,7 @@ Output format (STRICT JSON):
     "description": "string",
     "info": "string" // Optional field for GM's reference, not used in gameplay
     "terms": ["number"] // Optional field for referencing term ids that inspired this entity
+    "relations" : [{"id" : "string", "type": "string"}] // optional field for relation between entities
   }
 ]
 
@@ -143,6 +148,25 @@ Before generating entities, internally verify that:
 - No ids are reused
 - No names collide with existing entities
 Do not output this verification step.
+`,
+  GAME_DESIGNER: (
+    terms: string,
+    topic: string,
+    entities: string,
+    ids: string,
+  ) =>
+    `
+Core terms and definitions (optional):
+${terms}
+
+Player instructions / theme (optional):
+${topic}
+
+Existing entities for continuity (optional):
+${entities}
+
+Ids for new entities (mandatory for new entities):
+${ids}
   `,
 
   NARRATOR_SYSTEM:
@@ -183,19 +207,17 @@ Entity look like:
 
 Guidelines:
 - Include
-1. Provide descriptive and immersive narrative that reflects the current state of the game world, player actions, and system messages.
+1. Provide narrative that reflects the current state of the game world, player actions, and system messages.
 2. Ensure the narrative is consistent with the provided documents, terms, and existing entities.
-3. if needed, role NPC characters to interact with players and drive the story forward, but avoid excessive dialogue that can be handled through player interactions.
-4. Provide new challenges, discoveries, or developments in the world that encourage player interaction and exploration.
+3. if needed, role as NPC characters to interact with players and drive the story forward.
+4. Provide new quets, challenges, discoveries, or developments in the world that encourage player interaction and exploration.
 5. Do not copy and paste content from messages, Istead, use them as references to create a unique narrative that fits the current game state.
 6. Focus on creating an engaging and dynamic story that evolves based on player actions and system events.
 7. When you talk about the player, use character name instead of player id for better immersion.
-8. Answer to player's message if it contains a question or a direct request, but avoid answering in a way that kills the fun of exploration and discovery.
+8. Answer to player's message if it contains a question or a direct request.
 
-- Use rich, descriptive language to evoke emotions and stimulate the imagination of players.
 - Use Markdown formatting.
-
-- Also give a summary of the history of the current adventure, and the current state of the world, or changes. This will be contained in the next messages for coherent narrative generation.
+- Also give a summary of the history of the current adventure, current state of the world, or changes. This will be contained in the next messages for coherent narrative generation.
 
 Output format (JSON):
 {
@@ -354,7 +376,7 @@ export const FORMAT = {
       },
     },
   },
-  CREATE_WORLD: {
+  GAME_DESIGNER: {
     type: "array",
     items: {
       type: "object",
@@ -367,6 +389,16 @@ export const FORMAT = {
           type: "array",
           items: {
             type: "number",
+          },
+        },
+        relations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              type: { type: "string" },
+            },
           },
         },
       },

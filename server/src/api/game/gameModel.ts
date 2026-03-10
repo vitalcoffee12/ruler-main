@@ -24,6 +24,7 @@ export const EntitySchema = z.object({
   terms: z
     .array(z.object({ id: z.number(), term: z.string().optional() }))
     .optional(),
+  relations : z.array(z.object({ id : z.string(), type : z.string()})),
   score: z.number().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
