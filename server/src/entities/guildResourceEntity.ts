@@ -26,8 +26,8 @@ export class GuildResourceEntity extends BaseEntity implements GuildResource {
   @Column({ type: "varchar", length: 255, nullable: true })
   resourceCode: string;
 
-  @Column({ type: "enum", enum: ["ruleSet", "termSet"], nullable: false })
-  type: "ruleSet" | "termSet";
+  @Column({ type: "varchar", length: 50, nullable: false })
+  type: string;
 
   @Column({ type: "int", default: 1 })
   version: number;

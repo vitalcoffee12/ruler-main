@@ -1,4 +1,16 @@
+import { useEffect, useState } from "react";
+
 export default function Loading() {
+  const maxIndex = tips.length;
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const tipsout = setTimeout(() => {
+      setIndex((prev) => (prev + 1 >= maxIndex ? 0 : prev + 1));
+    }, 3000);
+    return () => clearTimeout(tipsout);
+  }, []);
+
   return (
     <div className="h-full w-full bg-white flex flex-col justify-center items-center min-h-screen">
       <div className="loader mb-2"></div>

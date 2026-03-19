@@ -41,7 +41,7 @@ export const GuildResourceSchema = z.object({
   guildCode: z.string(),
   resourceId: z.number(),
   resourceCode: z.string(),
-  type: z.enum(["ruleSet", "termSet"]),
+  type: z.string(),
   version: z.number().default(1),
   createdAt: z.date(),
   updatedAt: z.date(),

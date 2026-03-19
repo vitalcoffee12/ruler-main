@@ -55,9 +55,9 @@ export interface Entity {
   id: string;
   name: string;
   description: string;
-  info?: string; // Optional field for GM's reference, not used in gameplay
-  rules: { id: number; version: number }[];
-  scoreDiff?: number;
+  secrets?: string; // Optional field for GM's reference, not used in gameplay
+  score?: number;
+  relations: { id: string; type: string }[];
   favorite?: boolean;
   createdAt: Date;
   updatedAt: Date;

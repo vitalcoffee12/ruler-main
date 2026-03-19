@@ -49,8 +49,7 @@ export class GameService {
         state: element.state || "unlisted",
         description: element.description,
         score: element.score || 0,
-        documents: [],
-        terms: [],
+        relations: [],
         updatedAt: new Date(),
         createdAt: new Date(),
       };
@@ -95,8 +94,8 @@ export class GameService {
           StatusCodes.NOT_FOUND,
         );
       }
-      const terms = await gameLib.searchContextualTerms(guildCode, description);
-      const world = (await gameLib.getWorld(guildCode)).world;
+      // const terms = await gameLib.searchContextualTerms(guildCode, description);
+      const world = (await gameLib.getHistory(guildCode)).world;
       const existingIds = world.map((e) => e.id);
 
       const newIds: string[] = [];
@@ -108,29 +107,23 @@ export class GameService {
         newIds.push(newId);
       }
 
-      const refs = world
+      const entities = world
         .slice(0, 5)
         .map(
-          (entity) => `[${entity.id}] ${entity.name}: ${entity.description}`,
+          (entity) =>
+            `[${entity.id}] ${entity.name}: ${entity.description} (${entity.secrets ?? "No secrets of this entity exist"})`,
         );
 
-      if (refs.length === 0) {
-        refs.push("No existing entities found in the world.");
-      } else {
-        refs.unshift("\nHere are some existing entities in the world:");
+      if (entities.length === 0) {
+        entities.push("No existing entities found in the world.");
       }
 
-      const { data: elements, prompt } = await agentLib.generateEntities(
-        description,
-        {
-          ids: newIds.join(", "),
-          terms: terms
-            .map((t) => `[${t.id}] ${t.term}: ${t.description}`)
-            .join("\n"),
-          refs: refs.join("\n"),
-          maxCounts: 3,
-        },
-      );
+      const { data: elements, prompt } = await agentLib.generateEntities({
+        theme: "",
+        request: description,
+        entities: entities.join("\n"),
+        ids: newIds.join(", "),
+      });
 
       const responseUser = PREDEFINED_USER.SYSTEM;
 
@@ -143,10 +136,6 @@ export class GameService {
             .join(", ")}`,
         },
         entities: elements,
-        terms: terms.map((t) => ({
-          id: t.id!,
-        })),
-
         tasks: [
           {
             type: "generate_entities",
@@ -189,7 +178,7 @@ export class GameService {
         );
       }
 
-      const world = (await gameLib.getWorld(guildCode)).world;
+      const world = (await gameLib.getHistory(guildCode)).world;
       const elementIndex = world.findIndex((e) => e.id === elementId);
       if (elementIndex === -1) {
         return ServiceResponse.failure(
@@ -202,6 +191,7 @@ export class GameService {
       const updatedElement = {
         ...existingElement,
         ...updatedFields,
+        score: (existingElement.score ?? 0) + 1,
         updatedAt: new Date(),
       };
 
@@ -250,7 +240,7 @@ export class GameService {
           StatusCodes.NOT_FOUND,
         );
       }
-      const world = (await gameLib.getWorld(guildCode)).world;
+      const world = (await gameLib.getHistory(guildCode)).world;
       const element = world.find((e) => e.id === elementId);
       if (!element) {
         return ServiceResponse.failure(

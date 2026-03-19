@@ -4,10 +4,12 @@ export const MODELS = {
 };
 
 export const COLLECTION_SUFFIX = {
-  GAME_HISTORY: "g",
-  SCENE_HISTORY: "s",
-  RULE_SET: "r",
-  TERM_SET: "t",
+  GAME_HISTORY: ".g",
+  SCENE_HISTORY: ".s",
+  RULE_SET: ".r",
+  TERM_SET: ".t",
+  DOCUMENTS: ".d",
+  QUESTS: ".q",
 };
 
 export const DEFAULT_PAGINATION = {

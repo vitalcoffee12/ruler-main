@@ -68,7 +68,7 @@ resourceRouter.get(
 
 resourceRegistry.registerPath({
   method: "post",
-  path: "/resource/upload",
+  path: "/resource/upload-document",
   tags: ["Resource"],
   request: {
     body: {
@@ -90,33 +90,9 @@ resourceRegistry.registerPath({
 });
 
 resourceRouter.post(
-  "/upload",
+  "/upload-document",
   validateToken(),
-  resourceController.uploadResource,
-);
-
-resourceRegistry.registerPath({
-  method: "post",
-  path: "/resource/format",
-  tags: ["Resource"],
-  request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            id: z.number(),
-          }),
-        },
-      },
-    },
-  },
-  responses: createApiResponse(ResourceSchema, "Resource Formatted"),
-});
-
-resourceRouter.post(
-  "/format",
-  validateToken(),
-  resourceController.formatResource,
+  resourceController.uploadDocument,
 );
 
 resourceRegistry.registerPath({

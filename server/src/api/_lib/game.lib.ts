@@ -1,11 +1,5 @@
 import mongoose from "mongoose";
-import {
-  Entity,
-  GameHistory,
-  Rule,
-  SceneHistory,
-  Term,
-} from "../game/gameModel";
+import { Entity, GameHistory, Quest, SceneHistory } from "../game/gameModel";
 
 import { COLLECTION_SUFFIX, PREDEFINED_USER } from "../constants";
 import { Repository } from "typeorm";
@@ -15,6 +9,7 @@ import { mongoLib } from "./mongo.lib";
 import { agentLib } from "./agent.lib";
 import { GuildMemberEntity } from "@/entities/guilldMemberEntity";
 
+// manage game data
 export class GameLib {
   constructor(
     private guildRepository: Repository<GuildEntity> = AppDataSource.getRepository(
@@ -25,8 +20,16 @@ export class GameLib {
     ),
   ) {}
 
+  // quest operations
+  async getQuests(guildCode: string): Promise<Quest[]> {
+    return await mongoose.connection
+      .collection(`${guildCode}${COLLECTION_SUFFIX.QUESTS}`)
+      .find<Quest>({})
+      .toArray();
+  }
+
   // game world operations
-  async getWorld(
+  async getHistory(
     guildCode: string,
     sceneId: number = 0,
   ): Promise<{
@@ -39,7 +42,7 @@ export class GameLib {
       sceneId - 1,
     );
     const gameHistories = await mongoose.connection
-      .collection(`${guildCode}.${COLLECTION_SUFFIX.GAME_HISTORY}`)
+      .collection(`${guildCode}${COLLECTION_SUFFIX.GAME_HISTORY}`)
       .find<GameHistory>({})
       .toArray();
     return {
@@ -52,6 +55,7 @@ export class GameLib {
   restoreWorld(
     latestScene: SceneHistory | null,
     gameHistories: GameHistory[],
+    inlcudeDeleted: boolean = false,
   ): Entity[] {
     const entities = new Map<string, Entity>();
 
@@ -75,24 +79,22 @@ export class GameLib {
           existing.description = entity.description;
           existing.state = entity.state;
           existing.score = (existing.score ?? 0) + (entity.score ?? 0);
-          existing.documents = entity.documents ?? existing.documents;
-          existing.terms = entity.terms ?? existing.terms;
+          existing.relations = entity.relations;
+          // existing.documents = entity.documents ?? existing.documents;
+          // existing.terms = entity.terms ?? existing.terms;
           existing.updatedAt = entity.updatedAt;
         }
       }
     }
     return Array.from(entities.values())
       .sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
-      .filter((e) => e.state !== "removed");
+      .filter((e) => (inlcudeDeleted ? e.state !== "removed" : true));
   }
 
   // insert single game history document into the guild-specific collection
   async insertGameHistory(
     guildCode: string,
-    data: Pick<
-      GameHistory,
-      "chat" | "entities" | "tasks" | "documents" | "terms"
-    >,
+    data: Pick<GameHistory, "chat" | "entities" | "tasks">,
   ) {
     const guild = await this.guildRepository.findOne({
       where: { code: guildCode },
@@ -140,7 +142,7 @@ export class GameLib {
     sceneId: number,
   ): Promise<GameHistory[]> {
     const collection = mongoose.connection.collection(
-      `${guildCode}.${COLLECTION_SUFFIX.GAME_HISTORY}`,
+      `${guildCode}${COLLECTION_SUFFIX.GAME_HISTORY}`,
     );
     const docs = await collection
       .find<GameHistory>({ sceneId })
@@ -154,7 +156,7 @@ export class GameLib {
     count: number = -1,
   ): Promise<SceneHistory[]> {
     const collection = mongoose.connection.collection(
-      `${guildCode}.${COLLECTION_SUFFIX.SCENE_HISTORY}`,
+      `${guildCode}${COLLECTION_SUFFIX.SCENE_HISTORY}`,
     );
     if (count === -1) {
       const allDocs = await collection
@@ -177,144 +179,144 @@ export class GameLib {
     sceneId: number,
   ): Promise<SceneHistory | null> {
     const collection = mongoose.connection.collection(
-      `${guildCode}.${COLLECTION_SUFFIX.SCENE_HISTORY}`,
+      `${guildCode}${COLLECTION_SUFFIX.SCENE_HISTORY}`,
     );
     const doc = await collection.findOne<SceneHistory>({ sceneId });
     return doc as SceneHistory | null;
   }
 
-  async importRuleSetToGuildRuleSet(
-    guildCode: string,
-    code: string,
-  ): Promise<number> {
-    const ruleSet = await mongoose.connection
-      .collection(`${code}.${COLLECTION_SUFFIX.RULE_SET}`)
-      .find<Rule>({})
-      .toArray();
-    await mongoose.connection
-      .collection(`${guildCode}.${COLLECTION_SUFFIX.RULE_SET}`)
-      .insertMany(ruleSet);
+  // async importRuleSetToGuildRuleSet(
+  //   guildCode: string,
+  //   code: string,
+  // ): Promise<number> {
+  //   const ruleSet = await mongoose.connection
+  //     .collection(`${code}.${COLLECTION_SUFFIX.RULE_SET}`)
+  //     .find<Rule>({})
+  //     .toArray();
+  //   await mongoose.connection
+  //     .collection(`${guildCode}${COLLECTION_SUFFIX.RULE_SET}`)
+  //     .insertMany(ruleSet);
 
-    return await mongoose.connection
-      .collection(`${guildCode}.${COLLECTION_SUFFIX.RULE_SET}`)
-      .countDocuments();
-  }
+  //   return await mongoose.connection
+  //     .collection(`${guildCode}${COLLECTION_SUFFIX.RULE_SET}`)
+  //     .countDocuments();
+  // }
 
-  async findRulesFromRuleSet(
-    code: string,
-    searchKeywords: string[],
-    limit: number = 10,
-  ) {
-    const exactMatch = await mongoose.connection
-      .collection(`${code}.${COLLECTION_SUFFIX.RULE_SET}`)
-      .find<Rule>({
-        title: { $in: searchKeywords },
-      })
-      .toArray();
+  // async findRulesFromRuleSet(
+  //   code: string,
+  //   searchKeywords: string[],
+  //   limit: number = 10,
+  // ) {
+  //   const exactMatch = await mongoose.connection
+  //     .collection(`${code}${COLLECTION_SUFFIX.RULE_SET}`)
+  //     .find<Rule>({
+  //       title: { $in: searchKeywords },
+  //     })
+  //     .toArray();
 
-    const keywordMatch = await mongoose.connection
-      .collection(`${code}.${COLLECTION_SUFFIX.RULE_SET}`)
-      .find<Rule>({ keywords: { $in: searchKeywords } })
-      .toArray();
+  //   const keywordMatch = await mongoose.connection
+  //     .collection(`${code}${COLLECTION_SUFFIX.RULE_SET}`)
+  //     .find<Rule>({ keywords: { $in: searchKeywords } })
+  //     .toArray();
 
-    if (exactMatch.length + keywordMatch.length >= limit) {
-      return [...exactMatch, ...keywordMatch];
-    }
+  //   if (exactMatch.length + keywordMatch.length >= limit) {
+  //     return [...exactMatch, ...keywordMatch];
+  //   }
 
-    return [...exactMatch, ...keywordMatch];
-    // fill the rest with context matches
-    // TODO: improve relevance scoring
-    const contextMatch = await mongoose.connection
-      .collection(`${code}.${COLLECTION_SUFFIX.RULE_SET}`)
-      .find<Rule>({ content: { $in: searchKeywords } })
-      .toArray();
-    if (exactMatch.length > 0) {
-      return exactMatch;
-    }
-  }
+  //   return [...exactMatch, ...keywordMatch];
+  //   // fill the rest with context matches
+  //   // TODO: improve relevance scoring
+  //   const contextMatch = await mongoose.connection
+  //     .collection(`${code}${COLLECTION_SUFFIX.RULE_SET}`)
+  //     .find<Rule>({ content: { $in: searchKeywords } })
+  //     .toArray();
+  //   if (exactMatch.length > 0) {
+  //     return exactMatch;
+  //   }
+  // }
 
-  // term set operations
-  async insertTermToTermSet(code: string, terms: Term[]) {
-    const termSet = await mongoose.connection
-      .collection(`${code}.${COLLECTION_SUFFIX.TERM_SET}`)
-      .insertMany(terms);
-    return termSet;
-  }
+  // // term set operations
+  // async insertTermToTermSet(code: string, terms: Term[]) {
+  //   const termSet = await mongoose.connection
+  //     .collection(`${code}${COLLECTION_SUFFIX.TERM_SET}`)
+  //     .insertMany(terms);
+  //   return termSet;
+  // }
 
-  async importTermSetToGuildTermSet(
-    guildCode: string,
-    code: string,
-  ): Promise<number> {
-    const termSet = await mongoose.connection
-      .collection(`${code}.${COLLECTION_SUFFIX.TERM_SET}`)
-      .find<Term>({})
-      .toArray();
-    await mongoose.connection
-      .collection(`${guildCode}.${COLLECTION_SUFFIX.TERM_SET}`)
-      .insertMany(termSet);
-    return await mongoose.connection
-      .collection(`${guildCode}.${COLLECTION_SUFFIX.TERM_SET}`)
-      .countDocuments();
-  }
+  // async importTermSetToGuildTermSet(
+  //   guildCode: string,
+  //   code: string,
+  // ): Promise<number> {
+  //   const termSet = await mongoose.connection
+  //     .collection(`${code}.${COLLECTION_SUFFIX.TERM_SET}`)
+  //     .find<Term>({})
+  //     .toArray();
+  //   await mongoose.connection
+  //     .collection(`${guildCode}${COLLECTION_SUFFIX.TERM_SET}`)
+  //     .insertMany(termSet);
+  //   return await mongoose.connection
+  //     .collection(`${guildCode}${COLLECTION_SUFFIX.TERM_SET}`)
+  //     .countDocuments();
+  // }
 
-  async findTermsFromTermSet(
-    guildCode: string,
-    searchKeywords: string[],
-    limit: number = 10,
-  ) {
-    const exactMatch = await mongoose.connection
-      .collection(`${guildCode}.${COLLECTION_SUFFIX.TERM_SET}`)
-      .find<Term>({
-        term: { $in: searchKeywords },
-      })
-      .toArray();
+  // async findTermsFromTermSet(
+  //   guildCode: string,
+  //   searchKeywords: string[],
+  //   limit: number = 10,
+  // ) {
+  //   const exactMatch = await mongoose.connection
+  //     .collection(`${guildCode}${COLLECTION_SUFFIX.TERM_SET}`)
+  //     .find<Term>({
+  //       term: { $in: searchKeywords },
+  //     })
+  //     .toArray();
 
-    return [...exactMatch];
-    // fill the rest with context matches
-    // TODO: improve relevance scoring
-    const contextMatch = await mongoose.connection
-      .collection(`${guildCode}.${COLLECTION_SUFFIX.TERM_SET}`)
-      .find<Term>({ definition: { $in: searchKeywords } })
-      .toArray();
-    if (exactMatch.length > 0) {
-      return exactMatch;
-    }
-  }
+  //   return [...exactMatch];
+  //   // fill the rest with context matches
+  //   // TODO: improve relevance scoring
+  //   const contextMatch = await mongoose.connection
+  //     .collection(`${guildCode}${COLLECTION_SUFFIX.TERM_SET}`)
+  //     .find<Term>({ definition: { $in: searchKeywords } })
+  //     .toArray();
+  //   if (exactMatch.length > 0) {
+  //     return exactMatch;
+  //   }
+  // }
 
-  async searchRankedTerms(guildCode: string): Promise<Term[]> {
-    const termSet = await mongoose.connection
-      .collection(`${guildCode}.${COLLECTION_SUFFIX.TERM_SET}`)
-      .find<Term>({})
-      .sort({ score: 1 })
-      .limit(10)
-      .toArray();
+  // async searchRankedTerms(guildCode: string): Promise<Term[]> {
+  //   const termSet = await mongoose.connection
+  //     .collection(`${guildCode}${COLLECTION_SUFFIX.TERM_SET}`)
+  //     .find<Term>({})
+  //     .sort({ score: 1 })
+  //     .limit(10)
+  //     .toArray();
 
-    return termSet;
-  }
+  //   return termSet;
+  // }
 
-  async searchContextualTerms(
-    guildCode: string,
-    queryString: string,
-  ): Promise<Term[]> {
-    const embedding = await agentLib.embedText(queryString);
-    if (!embedding) {
-      return [];
-    }
+  // async searchContextualTerms(
+  //   guildCode: string,
+  //   queryString: string,
+  // ): Promise<Term[]> {
+  //   const embedding = await agentLib.embedText(queryString);
+  //   if (!embedding) {
+  //     return [];
+  //   }
 
-    const termSet = await mongoLib.searchByEmbedding(
-      `${guildCode}.${COLLECTION_SUFFIX.TERM_SET}`,
-      embedding,
-    );
+  //   const termSet = await mongoLib.searchByEmbedding(
+  //     `${guildCode}${COLLECTION_SUFFIX.TERM_SET}`,
+  //     embedding,
+  //   );
 
-    return termSet.sort((a, b) => (b.version ?? 0) - (a.version ?? 0));
-  }
+  //   return termSet.sort((a, b) => (b.version ?? 0) - (a.version ?? 0));
+  // }
 
   async requestNarrative(guildCode: string): Promise<{
     memberCodes: string;
     narrative: string;
     sceneDescription: string;
-    documents: string;
-    terms: string;
+    // documents: string;
+    // terms: string;
     entities: string;
   } | null> {
     try {
@@ -334,8 +336,8 @@ export class GameLib {
 
       const systemUser = PREDEFINED_USER.SYSTEM;
       const responseUser = PREDEFINED_USER.GUILD(guildCode, guild.name);
-      const terms = await this.searchRankedTerms(guildCode);
-      const history = await this.getWorld(guildCode, guild.sceneId - 1);
+      //const terms = await this.searchRankedTerms(guildCode);
+      const history = await this.getHistory(guildCode, guild.sceneId - 1);
       const world = history.world;
       const chatHistories = history.gameHistories
         .filter(
@@ -359,7 +361,7 @@ export class GameLib {
         .slice(0, 5)
         .map(
           (entity) =>
-            `[${entity.id}] ${entity.name}: ${entity.description} (${entity.info})`,
+            `[${entity.id}] ${entity.name}: ${entity.description} (${entity.secrets})`,
         );
 
       entities.unshift(
@@ -373,10 +375,10 @@ export class GameLib {
         {
           chatHistories: chatHistories.join("\n") || "No chat history",
           prevScene: prevScene || "No previous scene",
-          documents: "",
-          terms: terms
-            .map((t) => `[${t.id}] ${t.term}: ${t.description}`)
-            .join("\n"),
+          // documents: "",
+          // terms: terms
+          //   .map((t) => `[${t.id}] ${t.term}: ${t.description}`)
+          //   .join("\n"),
           entities: entities.join("\n"),
         },
       );
@@ -395,14 +397,14 @@ export class GameLib {
             output: data.content,
           },
         ],
-        documents: data.documents?.map((d) => ({
-          id: d.id,
-          comment: d.comment,
-        })),
-        terms: data.terms?.map((t) => ({
-          id: t.id,
-          comment: t.comment,
-        })),
+        // documents: data.documents?.map((d) => ({
+        //   id: d.id,
+        //   comment: d.comment,
+        // })),
+        // terms: data.terms?.map((t) => ({
+        //   id: t.id,
+        //   comment: t.comment,
+        // })),
       });
 
       await this.insertSceneHistory(guildCode, guild.sceneId, {
@@ -416,14 +418,14 @@ export class GameLib {
             output: data.content,
           },
         ],
-        documents: data.documents?.map((d) => ({
-          id: d.id,
-          comment: d.comment,
-        })),
-        terms: data.terms?.map((t) => ({
-          id: t.id,
-          comment: t.comment,
-        })),
+        // documents: data.documents?.map((d) => ({
+        //   id: d.id,
+        //   comment: d.comment,
+        // })),
+        // terms: data.terms?.map((t) => ({
+        //   id: t.id,
+        //   comment: t.comment,
+        // })),
         entities: world,
         createdAt: new Date(),
       });
@@ -434,10 +436,10 @@ export class GameLib {
         memberCodes: memberCodes.join(", "),
         narrative: data.content,
         sceneDescription: data.summary,
-        documents: "",
-        terms: terms
-          .map((t) => `[${t.id}] ${t.term}: ${t.description}`)
-          .join("\n"),
+        //  documents: "",
+        //  terms: terms
+        //     .map((t) => `[${t.id}] ${t.term}: ${t.description}`)
+        //     .join("\n"),
         entities: entities.join("\n"),
       };
     } catch (ex) {
@@ -451,8 +453,6 @@ export class GameLib {
       memberCodes: string;
       narrative: string;
       sceneDescription: string;
-      documents: string;
-      terms: string;
       entities: string;
     },
     guildCode: string,
@@ -482,8 +482,8 @@ export class GameLib {
         players: previousData.memberCodes || "No players",
         narrative: previousData.narrative || "No previous narrative",
         sceneDescription: previousData.sceneDescription || "No previous scene",
-        documents: previousData.documents || "No previous documents",
-        terms: previousData.terms || "No previous terms",
+        // documents: previousData.documents || "No previous documents",
+        // terms: previousData.terms || "No previous terms",
         entities: previousData.entities || "No previous entities",
       });
 
@@ -520,8 +520,8 @@ export class GameLib {
             }),
           },
         ],
-        documents: [],
-        terms: [],
+        // documents: [],
+        // terms: [],
       });
 
       return true;
@@ -537,8 +537,9 @@ const defaultEntity: Entity = {
   name: "Unknown Entity",
   description: "No description available",
   score: 0,
-  documents: [],
-  terms: [],
+  relations: [],
+  // documents: [],
+  // terms: [],
   state: "active",
   createdAt: new Date(),
   updatedAt: new Date(),

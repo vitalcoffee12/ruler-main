@@ -3,16 +3,19 @@ import { useContext, useEffect, useState } from "react";
 import logoLight from "../welcome/logo-light.png";
 import { useNavigate } from "react-router";
 
-import { postRequest } from "~/request";
 import { AuthContext } from "~/contexts/authContext";
 import type { Auth } from "~/components/common.interface";
+import useRequest from "~/hooks/use-request.hook";
+import useToast from "~/hooks/use-toast.hook";
 
 export default function Signin() {
   const nav = useNavigate();
-  const { auth, login } = useContext(AuthContext);
+  const { auth, isLoading, login } = useContext(AuthContext);
+  const reqLogin = useRequest("/user/signin", "post");
+  const [toast, addToast] = useToast();
 
   useEffect(() => {
-    if (auth && auth.id > 0) {
+    if (!isLoading && auth.id != 0) {
       nav("/game");
     }
   }, [auth]);
@@ -23,18 +26,23 @@ export default function Signin() {
     remember: false,
   });
 
-  const loginHandler = async () => {
+  useEffect(() => {
+    if (reqLogin.res?.status == 200) {
+      console.log(reqLogin.res.data.responseObject);
+      login(reqLogin.res.data.responseObject);
+      nav("/game");
+    }
+    if (reqLogin.errorCode) {
+      addToast("error", "Login failed. Please check your email or password.");
+    }
+  }, [reqLogin.errorCode, reqLogin.res]);
+  const handleLogin = async () => {
     try {
       if (data.email.trim() === "" || data.password.trim() === "") {
         return;
       }
-      const res = await postRequest("/user/signin", data);
-      const authData = res.data.responseObject as Auth;
-      login(authData);
-      nav("/game");
-    } catch (ex) {
-      alert("Login failed. Please check your credentials and try again.");
-    }
+      await reqLogin.sendRequest({ body: data });
+    } catch (ex) {}
   };
 
   return (
@@ -86,9 +94,9 @@ export default function Signin() {
               className="block px-3 py-2 border border-stone-300 focus:outline-2 rounded-md mt-2 w-full"
               value={data.password}
               onChange={(e) => setData({ ...data, password: e.target.value })}
-              onKeyDown={(e) => {
+              onKeyDown={async (e) => {
                 if (e.key === "Enter") {
-                  loginHandler();
+                  await handleLogin();
                 }
               }}
             />
@@ -116,7 +124,7 @@ export default function Signin() {
             <div className="flex justify-end">
               <button
                 className="mt-10 rounded-xl w-full bg-[#a4b9bd] hover:shadow-md px-6 py-3 text-white font-medium transition duration-150 cursor-pointer active:scale-95"
-                onClick={loginHandler}
+                onClick={handleLogin}
               >
                 Sign In
               </button>
@@ -152,6 +160,7 @@ export default function Signin() {
           </div>
         </div>
       </div>
+      {toast}
     </>
   );
 }

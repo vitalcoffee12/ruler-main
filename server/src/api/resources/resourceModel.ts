@@ -11,7 +11,7 @@ export const ResourceSchema = z.object({
   ownerId: z.number(),
   ownerCode: z.string(),
   distributors: z.array(z.string()),
-  type: z.enum(["ruleSet", "termSet"]),
+  type: z.string(),
   name: z.string(),
   description: z.string().optional(),
   tags: z.array(z.string()),
@@ -22,6 +22,21 @@ export const ResourceSchema = z.object({
   reviews: z.number().optional(),
   version: z.number().optional(),
   verifiedAt: z.date().optional(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export type Document = z.infer<typeof DocumentSchema>;
+export const DocumentSchema = z.object({
+  id: z.number(),
+  docCode: z.string(),
+  docVersion: z.number(),
+  title: z.string(),
+  categories: z.array(z.string()),
+  content: z.array(z.string()),
+  children: z.array(z.number()),
+  embedding: z.array(z.number()).optional(),
+  summary: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

@@ -2,6 +2,7 @@ import type { Request, RequestHandler, Response } from "express";
 
 import { userService } from "@/api/user/userService";
 import { OAUTH_PROVIDERS } from "@/common/constants";
+import { ServiceResponse } from "@/common/models/serviceResponse";
 
 class UserController {
   public getUsers: RequestHandler = async (_req: Request, res: Response) => {
@@ -141,11 +142,15 @@ class UserController {
     req: Request,
     res: Response,
   ) => {
-    const accessToken = req.headers["Authorization"] as string;
-    const serviceResponse = await userService.validateToken(
-      accessToken,
-    
-    );
+    const userId = req.headers["userId"];
+    const serviceResponse = await userService.validateToken(Number(userId));
+    res.cookie("__session", serviceResponse.responseObject?.refreshToken, {
+      path: "/",
+      maxAge: 14 * 60 * 60 * 24, // 14days
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      httpOnly: true,
+    });
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 }

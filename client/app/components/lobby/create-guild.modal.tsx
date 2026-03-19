@@ -3,7 +3,7 @@ import { useContext, useState } from "react";
 import { AuthContext } from "~/contexts/authContext";
 
 import useLoading from "~/hooks/use-loading.hook";
-import { postRequest } from "~/request";
+import useRequest from "~/hooks/use-request.hook";
 
 export default function CreateGuildModal(props: {
   onClose: () => void;
@@ -18,21 +18,18 @@ export default function CreateGuildModal(props: {
     guildIcon: null,
   });
 
+  const reqCreateGuild = useRequest("/guild/create", "post");
+
   const handleCreateGuild = async () => {
     try {
-      setIsLoading(true);
-      await postRequest(
-        "/guild/create",
-        {
+      await reqCreateGuild.sendRequest({
+        authorization: auth.accessToken,
+        body: {
           iconPath: `https://picsum.photos/${Math.floor(Math.random() * 100 + 300)}`,
           name: data.guildName,
           ownerId: auth.id,
         },
-        {
-          Authorization: `Bearer ${auth.accessToken}`,
-        },
-      );
-      setIsLoading(false);
+      });
       props.onClose();
       props.onRefresh();
     } catch (ex) {

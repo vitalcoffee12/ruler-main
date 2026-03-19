@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { sign, verify } from "jsonwebtoken";
-import type { User, ValidateTokenResponse } from "@/api/user/userModel";
+import type { User, ValidUserResponse } from "@/api/user/userModel";
 import { ServiceResponse } from "@/common/models/serviceResponse";
 import { logger } from "@/server";
 import { env } from "@/common/utils/envConfig";
@@ -390,18 +390,7 @@ export class UserService {
   async signIn(
     email: string,
     password: string,
-  ): Promise<
-    ServiceResponse<{
-      id: number;
-      code: string;
-      displayName?: string;
-      state: string;
-      role: string;
-      accessToken: string;
-      refreshToken: string;
-      iconPath?: string;
-    } | null>
-  > {
+  ): Promise<ServiceResponse<ValidUserResponse | null>> {
     try {
       const user = await this.userRepository.findOne({ where: { email } });
       if (!user) {
@@ -428,16 +417,7 @@ export class UserService {
         refreshTokenHash: refreshToken,
       });
 
-      return ServiceResponse.success<{
-        id: number;
-        code: string;
-        displayName?: string;
-        state: string;
-        role: string;
-        accessToken: string;
-        refreshToken: string;
-        iconPath?: string;
-      }>("Sign-in successful", {
+      return ServiceResponse.success<ValidUserResponse>("Sign-in successful", {
         id: user.id ?? 0,
         code: user.code,
         displayName: user.displayName,
@@ -539,53 +519,36 @@ export class UserService {
   }
 
   async validateToken(
-    accessToken: string,
-    
-  ): Promise<ServiceResponse<ValidateTokenResponse | null>> {
+    userId: number,
+  ): Promise<ServiceResponse<ValidUserResponse | null>> {
     try {
-      if (accessToken && accessToken.length > 0) {
-        const verified = verify(accessToken, env.ACCESSTOKEN_SECRET) as any;
-        if (!verified || !verified.userId || verified.userId <= 0) {
-          return ServiceResponse.failure(
-            "Invalid or expired access token",
-            null,
-            StatusCodes.UNAUTHORIZED,
-          );
-        }
-
-        const userId = verified.userId;
-        const user = await this.userRepository.findOne({
-          where: { id: userId },
-        });
-        if (!user) {
-          return ServiceResponse.failure(
-            "User not found",
-            null,
-            StatusCodes.NOT_FOUND,
-          );
-        }
-        const refreshToken = issueRefreshToken(user.id ?? 0, user.role);
-        user.refreshTokenHash = await hashToken(refreshToken);
-        await this.userRepository.save(user);
-
-        return ServiceResponse.success<ValidateTokenResponse>(
-          "Access token is valid",
-          {
-            id: user.id ?? 0,
-            code: user.code,
-            displayName: user.displayName ?? undefined,
-            state: user.state,
-            role: user.role,
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-          },
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if (!user) {
+        return ServiceResponse.failure(
+          "User not found",
+          null,
+          StatusCodes.NOT_FOUND,
         );
       }
-     
-      return ServiceResponse.failure(
-        "Invalid Tokens",
-        null,
-        StatusCodes.UNAUTHORIZED,
+      const refreshToken = issueRefreshToken(user.id ?? 0, user.role);
+      const accessToken = issueAccessToken(user.id ?? 0, user.role);
+      user.refreshTokenHash = await hashToken(refreshToken);
+      await this.userRepository.save(user);
+
+      return ServiceResponse.success<ValidUserResponse>(
+        "Access token is valid",
+        {
+          id: user.id ?? 0,
+          code: user.code,
+          displayName: user.displayName ?? undefined,
+          state: user.state,
+          role: user.role,
+          iconPath: user.iconPath,
+          accessToken: accessToken,
+          refreshToken: refreshToken,
+        },
       );
     } catch (ex) {
       const errorMessage = `Error validating access token: ${(ex as Error).message}`;

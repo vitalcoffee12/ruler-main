@@ -96,7 +96,7 @@ export class GuildService {
     } | null>
   > {
     try {
-      const historyData = await gameLib.getWorld(guildCode, sceneId);
+      const historyData = await gameLib.getHistory(guildCode, sceneId);
       if (!historyData) {
         return ServiceResponse.failure(
           "No history found for guild",
@@ -155,16 +155,16 @@ export class GuildService {
     );
 
     await mongoose.connection.createCollection(
-      `${newGuild.code}.${COLLECTION_SUFFIX.GAME_HISTORY}`,
+      `${newGuild.code}${COLLECTION_SUFFIX.GAME_HISTORY}`,
     );
     await mongoose.connection.createCollection(
-      `${newGuild.code}.${COLLECTION_SUFFIX.SCENE_HISTORY}`,
+      `${newGuild.code}${COLLECTION_SUFFIX.SCENE_HISTORY}`,
     );
     await mongoose.connection.createCollection(
-      `${newGuild.code}.${COLLECTION_SUFFIX.RULE_SET}`,
+      `${newGuild.code}${COLLECTION_SUFFIX.RULE_SET}`,
     );
     mongoLib.createEmbeddingIndex(
-      `${newGuild.code}.${COLLECTION_SUFFIX.RULE_SET}`,
+      `${newGuild.code}${COLLECTION_SUFFIX.RULE_SET}`,
       {
         embeddingSize: 4096,
         fieldName: "embedding",
@@ -172,10 +172,10 @@ export class GuildService {
     );
 
     await mongoose.connection.createCollection(
-      `${newGuild.code}.${COLLECTION_SUFFIX.TERM_SET}`,
+      `${newGuild.code}${COLLECTION_SUFFIX.TERM_SET}`,
     );
     mongoLib.createEmbeddingIndex(
-      `${newGuild.code}.${COLLECTION_SUFFIX.TERM_SET}`,
+      `${newGuild.code}${COLLECTION_SUFFIX.TERM_SET}`,
       {
         embeddingSize: 4096,
         fieldName: "embedding",
@@ -185,11 +185,10 @@ export class GuildService {
     const newCharacter: Entity = {
       id: `${user.code}`,
       name: user.displayName,
-      description: `A player who joined the guild as ${user.displayName}`,
+      description: `A player who joined the game as ${user.displayName}`,
       state: "active",
       score: 100,
-      documents: [],
-      terms: [],
+      relations: [],
       updatedAt: new Date(),
       createdAt: new Date(),
     };
@@ -549,8 +548,11 @@ export class GuildService {
               id: `${user.code}`,
               name: user.displayName,
               description: ``,
-              info: "No Description Provided, guide player to fill in their own character description.",
+              secrets:
+                "No Description Provided, guide player to fill in their own character description.",
               state: "active",
+              score: 10,
+              relations: [],
               updatedAt: new Date(),
               createdAt: new Date(),
             },

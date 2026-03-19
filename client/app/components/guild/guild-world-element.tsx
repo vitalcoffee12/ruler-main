@@ -1,7 +1,7 @@
 import { forwardRef, memo, useEffect, useRef, useState } from "react";
-import type { Entity } from "./guild-world";
 import { useModal } from "~/hooks/use-modal.hook";
 import ModifyElementManualModal from "./modify-element-manual.modal";
+import type { Entity } from "../common.interface";
 
 function GuildWorldElement(
   props: {
@@ -180,7 +180,7 @@ function GuildWorldElement(
             ))}
           </ul>
         </div>
-        {props.node.info && (
+        {props.node.secrets && (
           <div
             className="p-2 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 text-sm m-3 rounded-r overflow-hidden transition-height duration-300"
             style={{
@@ -189,7 +189,7 @@ function GuildWorldElement(
             }}
           >
             <div className="font-semibold">GM's Note:</div>
-            <div>{props.node.info}</div>
+            <div>{props.node.secrets}</div>
           </div>
         )}
 

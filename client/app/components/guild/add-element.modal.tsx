@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { postRequest } from "~/request";
 
 export default function AddElementModal(props: {
   guildCode: string;

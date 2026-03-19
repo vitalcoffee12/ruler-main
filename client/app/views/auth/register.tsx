@@ -6,7 +6,6 @@ import {
 import { useNavigate } from "react-router";
 import logoLight from "../welcome/logo-light.png";
 import { useState } from "react";
-import { postRequest } from "~/request";
 
 export default function Register() {
   const [isValidEmail, setIsValidEmail] = useState<boolean | null>(null);

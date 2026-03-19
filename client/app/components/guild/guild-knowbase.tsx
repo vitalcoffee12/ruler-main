@@ -1,4 +1,3 @@
-import { getRequest } from "~/request";
 import type { Guild } from "../common.interface";
 import { use, useContext, useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";

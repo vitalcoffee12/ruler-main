@@ -1,10 +1,9 @@
 import type { l } from "node_modules/@react-router/dev/dist/routes-CZR-bKRt";
 import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { axiosInstance } from "~/axios-instance";
 import type { Auth } from "~/components/common.interface";
 import useLoading from "~/hooks/use-loading.hook";
-import { postRequest } from "~/request";
-
 const defaultAuth: Auth = {
   id: 0,
   code: "",
@@ -15,10 +14,12 @@ const defaultAuth: Auth = {
 
 export const AuthContext = createContext<{
   auth: Auth;
+  isLoading: boolean;
   login: any;
   logout: any;
 }>({
   auth: defaultAuth,
+  isLoading: true,
   login: (auth: Auth) => {},
   logout: () => {},
 });
@@ -26,7 +27,7 @@ export const AuthContext = createContext<{
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const nav = useNavigate();
   const [auth, setAuth] = useState<Auth | null>(defaultAuth);
-  const [loading, setIsLoading] = useLoading();
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const login = (auth: Auth) => {
     window.localStorage.setItem("auth", JSON.stringify(auth));
@@ -35,41 +36,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     window.localStorage.removeItem("auth");
     setAuth(null);
-    nav("/auth/login");
+    nav("/auth/signin");
   };
 
   useEffect(() => {
     const fetchAuth = async () => {
-      try {
-        setIsLoading(true);
-        const storedAuth = window.localStorage.getItem("auth");
-        if (storedAuth) {
-          const parsedAuth = JSON.parse(storedAuth) as Auth;
-          setAuth(parsedAuth);
-        }
-
-        if (auth?.accessToken) {
-          const response = await postRequest(
+      setIsLoading(true);
+      setAuth(null);
+      const storedAuth = window.localStorage.getItem("auth");
+      if (storedAuth) {
+        console.log("stored auth found");
+        const parsedAuth = JSON.parse(storedAuth) as Auth;
+        console.log("check stored auth");
+        try {
+          const response = await axiosInstance.post(
             `/user/validate-token`,
             {},
             {
-              Authorization: `Baerer ${auth?.accessToken}`,
+              headers: {
+                Authorization: `Bearer ${parsedAuth?.accessToken}`,
+              },
             },
           );
 
           if (response.status === 200) {
+            console.log("stored auth is valid");
             const authData = await response.data.responseObject;
             login(authData);
-          } else {
-            logout();
           }
+        } catch (error) {
+          logout();
         }
-      } catch (error) {
-        logout();
+      } else {
+        console.log("No stored auth found / refresh token auth");
+        try {
+          const response = await axiosInstance.post(`/user/validate-token`, {});
+
+          if (response.status === 200) {
+            console.log("stored auth is valid");
+            const authData = await response.data.responseObject;
+            login(authData);
+          }
+        } catch (error) {
+          logout();
+        }
       }
       setIsLoading(false);
     };
-
     fetchAuth();
   }, []);
 
@@ -77,12 +90,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext
       value={{
         auth: auth || defaultAuth,
+        isLoading: isLoading,
         login,
         logout,
       }}
     >
       {children}
-      {loading}
     </AuthContext>
   );
 }

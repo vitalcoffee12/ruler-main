@@ -1,14 +1,14 @@
 import { useState } from "react";
 
-export default function useToast(
-  
-  duration = 3000,
-) {
+export default function useToast(duration = 3000) {
   const [messages, setMessages] = useState<
     { id: number; type: string; message: string }[]
   >([]);
 
-  const addToast = (type: string, message: string) => {
+  const addToast = (
+    type: "success" | "error" | "info" | "warning" | "default",
+    message: string,
+  ) => {
     const id = Date.now();
     setMessages((prev) => [...prev, { id, type, message }]);
     setTimeout(() => {
@@ -16,7 +16,7 @@ export default function useToast(
     }, duration);
   };
 
-  return [ToastContainer({messages}), addToast] as const;
+  return [ToastContainer({ messages }), addToast] as const;
 }
 
 function ToastContainer({

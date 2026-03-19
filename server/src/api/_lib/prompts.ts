@@ -1,26 +1,21 @@
 import { sum } from "drizzle-orm";
 
 export const PROMPTS = {
-  RULE_EDITOR: (documents: string) =>
-    `This document describes rules for a text-based role-playing system. 
+  DOC_PROCESSOR_SYSTEM: () => ``,
+  DOC_PROCESSOR: (documents: string) =>
+    `You have to generate document summary This document describes rules for a text-based role-playing system. 
+Input document may contain:
+- Core theme of the game world
+- Concepts of the game world.
+- etcs.
 
-Your tasks:
-
-1. Identify keywords.
-  - Keywords must represent important concepts, mechanics, or elements relevant to the game
-  - Avoid generic language terms unless they have a specific rule meaning
-  - Prefer multi-word phrases when they represent a distinct concept
-
-2. For each keyword, provide a description that:
-  - Is strictly grounded in the document
-  - Explains the rule's purpose and application within the game
-
-3. Produce a high-recall summary of the document that:
+Guildlines:
+  Produce a high-recall summary of the document that:
   - Preserves rule logic and constraints
   - Avoids flavor text unless mechanically relevant
   - Is written for retrieval
 
-Output format:
+Output should be a summary of the document. 
 {
   "keywords": [
     {
@@ -34,15 +29,29 @@ Output format:
 Document:
 ${documents}
   `,
+  WORLD_GENERATOR_SYSTEM: () => `You are a game world designer.
+Based on given document, generate rich game world entities.
+
+Each entity consists of:
+  - id : unique meaningless random string identifier
+  - name : name of the entity
+  - description : description of the entity. may contain appearance, features, traits, personality, lores or any other.
+  - secrests : secrests of the entity. it will not be revealed to players. but make the entity richer and interesting
+  - relations : a list of realtion the entity has. it contains target entity's id, and type of relation, describing their relation.
+  
+Guildlines:
+
+  `,
+  WORLD_GENERATOR: (doc: string) => ``,
 
   ENTITY_EDITOR: (
-    topic: string,
+    request: string,
     entities: string,
     refs: string,
   ) => `Edit the following entities based on the topic and reference entities.
 
-Topic:
-${topic}
+Player Request:
+${request}
   
 Entities to edit:
 ${entities}
@@ -71,8 +80,8 @@ Output format (STRICT JSON):
 The game is a text-based adventure game where players interact with the world through text commands and receive narrative descriptions in response. 
 
 Input may contain:
-- Core terms and definitions
-- Players' instruction or theme
+- Core theme
+- Players' request
 - Existing entities
 - Ids for new entities
 
@@ -150,17 +159,17 @@ Before generating entities, internally verify that:
 Do not output this verification step.
 `,
   GAME_DESIGNER: (
-    terms: string,
-    topic: string,
+    theme: string,
+    request: string,
     entities: string,
     ids: string,
   ) =>
     `
-Core terms and definitions (optional):
-${terms}
+Core theme (optional):
+${theme}
 
-Player instructions / theme (optional):
-${topic}
+Player's request (optional):
+${request}
 
 Existing entities for continuity (optional):
 ${entities}
@@ -177,8 +186,7 @@ Input may contain:
 - Player List: The List of Player Ids separated by commas
 - Previous Narrative: The last narrative generated for the game world by assistant which can be used for continuity and reference. 
 - Chat History: A chronological list of player actions, messages, and system messages that have occurred in the game world.
-- Documents: A collection of documents that provide rules about the game world. These documents can be referred to for accurate narrative generation.
-- Terms: A list of important keywords and their descriptions that are relevant to the current game world.
+- Quests: A collection of quests that provided. 
 - Entities: A list of existing entities in the game world, including their names and descriptions.
 
 Player chat message look like:
@@ -190,9 +198,13 @@ Player chat message look like:
 System message look like:
 [System] system message
 
-Document look like:
-[Document Id] document content
-- Document Id is a unique identifier for each document. Do not modify.
+Quest look like:
+\`[Quest Id] quest description From [quest Giver Id]
+- (quest state) quest objective
+- History : quest progress history
+- Reward : quest reward list
+\`
+- Quest Id is a unique identifier for each quest. Do not modify.
 
 Term look like:
 [Term Id] term: term description
@@ -240,8 +252,9 @@ Output format (JSON):
   NARRATOR: (
     players: string,
     chatHistory: string,
-    documents: string,
-    terms: string,
+    quests: string,
+    // documents: string,
+    // terms: string,
     entities: string,
   ) =>
     `
@@ -251,11 +264,8 @@ ${players}
 Chat History:
 ${chatHistory}
 
-Documents:
-${documents}
-
-Terms:
-${terms}
+Quests:
+${quests}
 
 Entities:
 ${entities}
@@ -328,8 +338,9 @@ Output format (JSON):
     players: string,
     narrative: string,
     sceneDescription: string,
-    documents: string,
-    terms: string,
+    quests: string,
+    // documents: string,
+    // terms: string,
     entities: string,
   ) => `
 Player List:
@@ -341,11 +352,9 @@ ${narrative}
 Scene Description:
 ${sceneDescription}
     
-Documents:
-${documents}
+Quests:
+${quests}
 
-Terms:
-${terms}
 
 Entities:
 ${entities}
@@ -354,27 +363,8 @@ ${entities}
 };
 
 export const FORMAT = {
-  RULE_EDITOR: {
-    type: "object",
-    properties: {
-      keywords: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            term: {
-              type: "string",
-            },
-            description: {
-              type: "string",
-            },
-          },
-        },
-      },
-      summary: {
-        type: "string",
-      },
-    },
+  DOC_PROCESSOR: {
+    type: "string",
   },
   GAME_DESIGNER: {
     type: "array",
@@ -384,13 +374,13 @@ export const FORMAT = {
         id: { type: "string" },
         name: { type: "string" },
         description: { type: "string" },
-        info: { type: "string" },
-        terms: {
-          type: "array",
-          items: {
-            type: "number",
-          },
-        },
+        secrets: { type: "string" },
+        // terms: {
+        //   type: "array",
+        //   items: {
+        //     type: "number",
+        //   },
+        // },
         relations: {
           type: "array",
           items: {
@@ -408,26 +398,26 @@ export const FORMAT = {
     type: "object",
     properties: {
       content: { type: "string" },
-      documents: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            id: { type: "number" },
-            comment: { type: "string" },
-          },
-        },
-      },
-      terms: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            id: { type: "number" },
-            comment: { type: "string" },
-          },
-        },
-      },
+      // documents: {
+      //   type: "array",
+      //   items: {
+      //     type: "object",
+      //     properties: {
+      //       id: { type: "number" },
+      //       comment: { type: "string" },
+      //     },
+      //   },
+      // },
+      // terms: {
+      //   type: "array",
+      //   items: {
+      //     type: "object",
+      //     properties: {
+      //       id: { type: "number" },
+      //       comment: { type: "string" },
+      //     },
+      //   },
+      // },
       summary: { type: "string" },
     },
   },
@@ -442,17 +432,15 @@ export const FORMAT = {
             id: { type: "string" },
             name: { type: "string" },
             description: { type: "string" },
-            info: { type: "string" },
-            terms: {
+            secrets: { type: "string" },
+            relations: {
               type: "array",
               items: {
-                type: "number",
-              },
-            },
-            documents: {
-              type: "array",
-              items: {
-                type: "number",
+                type: "object",
+                properties: {
+                  id: { type: "string" },
+                  type: { type: "string" },
+                },
               },
             },
           },
@@ -466,17 +454,15 @@ export const FORMAT = {
             id: { type: "string" },
             name: { type: "string" },
             description: { type: "string" },
-            info: { type: "string" },
-            terms: {
+            secrets: { type: "string" },
+            relations: {
               type: "array",
               items: {
-                type: "number",
-              },
-            },
-            documents: {
-              type: "array",
-              items: {
-                type: "number",
+                type: "object",
+                properties: {
+                  id: { type: "string" },
+                  type: { type: "string" },
+                },
               },
             },
           },

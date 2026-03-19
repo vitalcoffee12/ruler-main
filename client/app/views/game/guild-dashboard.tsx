@@ -10,7 +10,6 @@ import GuildWorld from "~/components/guild/guild-world";
 import { AuthContext } from "~/contexts/authContext";
 import useLoading from "~/hooks/use-loading.hook";
 import useSocket from "~/hooks/use-socket.hook";
-import { getRequest } from "~/request";
 
 export default function Dashboard() {
   const location = useLocation();

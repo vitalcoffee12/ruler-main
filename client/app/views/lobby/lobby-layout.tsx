@@ -1,14 +1,14 @@
-import { Outlet, useNavigate } from "react-router";
 import "./lobby.css";
+import { Outlet, useNavigate } from "react-router";
 import GuildList from "~/components/lobby/guild-list";
+import useSocket from "~/hooks/use-socket.hook";
 import { useModal } from "~/hooks/use-modal.hook";
 import CreateGuildModal from "~/components/lobby/create-guild.modal";
 import { useContext, useEffect, useState } from "react";
-import useSocket from "~/hooks/use-socket.hook";
-import { postRequest } from "~/request";
+import defaultIcon from "./default-profile.jpg";
 import { AuthContext } from "~/contexts/authContext";
 import useToast from "~/hooks/use-toast.hook";
-import useFetch from "~/hooks/use-fetch.hook";
+import useRequest from "~/hooks/use-request.hook";
 
 export default function Layout() {
   const nav = useNavigate();
@@ -21,33 +21,28 @@ export default function Layout() {
   const [refreshGuildList, setRefreshGuildList] = useState(false);
   const [showProfileOver, setShowProfileOver] = useState<boolean>(false);
 
+  const reqLogout = useRequest("/user/logout", "post");
+
   useEffect(() => {
     if (isConnected) {
       sendMessage("USER_ONLINE");
+    } else {
+      console.log("USER_OFFLINE");
     }
   }, [isConnected]);
 
   useEffect(() => {
-    if (!auth) {
-      nav("/auth/signin");
+    if (reqLogout.res?.status == 200) {
+      logout();
     }
-  }, [auth]);
+  }, [reqLogout.res, reqLogout.errorCode]);
 
   const handleLogout = async () => {
     try {
-      // Perform any necessary cleanup, such as clearing tokens or session data
-      const {data, error, loading} = useFetch(
-        "/user/signout",
-       {authorization : auth.accessToken}
-      ); // Optional: Notify the server about the logout action
-      // Redirect to the login page or home page
-      console.log(data, error);
-      logout();
-      nav("/auth/signin");
-    } catch (error) {
-      console.error("Logout failed:", error);
-      alert("Logout failed. Please try again.");
-    }
+      await reqLogout.sendRequest({
+        authorization: auth.accessToken,
+      });
+    } catch (error) {}
   };
 
   const profileOverMenu = [
@@ -85,11 +80,6 @@ export default function Layout() {
                 style={{
                   fontSize: "2rem",
                 }}
-                onClick={()=>{
-                  const rand = Math.floor(Math.random() * 4);
-                  const types = ["warning", "success", "info", "error", "default"];
-                  addToast(types[rand], `this message is for ${types[rand]}.` );
-                }}
               >
                 notifications
                 <div className="absolute block bg-[#a4b9bd] w-2 h-2 rounded-full top-2 right-2" />
@@ -99,7 +89,7 @@ export default function Layout() {
           <div className="cursor-pointer hover:bg-stone-100 rounded-lg m-4 row-start-4 row-end-5 no-select active:scale-95 transition duration-150">
             <div onClick={() => setShowProfileOver(!showProfileOver)}>
               <img
-                src={auth.iconPath || ""}
+                src={auth.iconPath || defaultIcon}
                 alt="profile picture"
                 className="overflow-hidden w-12 h-12 rounded-xl"
               />

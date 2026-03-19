@@ -25,10 +25,9 @@ class ResourceController {
     req: Request,
     res: Response,
   ) => {
-    const { type, code, page } = req.query;
+    const { guildCode, page } = req.query;
     const serviceResponse = await resourceService.findByGuildCode(
-      type as "ruleSet" | "termSet",
-      code as string,
+      guildCode as string,
       Number(page),
     );
     res.status(serviceResponse.statusCode).send(serviceResponse);
@@ -46,7 +45,7 @@ class ResourceController {
   //   res.status(serviceResponse.statusCode).send(serviceResponse);
   // };
 
-  public uploadResource: RequestHandler = async (
+  public uploadDocument: RequestHandler = async (
     req: Request,
     res: Response,
   ) => {
@@ -58,23 +57,26 @@ class ResourceController {
       resourceData,
     );
 
-    const serviceResponse = await resourceService.upload(writer, resourceData);
-    res.status(serviceResponse.statusCode).send(serviceResponse);
-  };
-
-  public formatResource: RequestHandler = async (
-    req: Request,
-    res: Response,
-  ) => {
-    const { id } = req.body;
-    resourceService.format(id);
-    const serviceResponse = ServiceResponse.success<boolean>(
-      "Request to format resource successfully received",
-      true,
-      StatusCodes.OK,
+    const serviceResponse = await resourceService.uploadDocument(
+      writer,
+      resourceData,
     );
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
+
+  // public formatResource: RequestHandler = async (
+  //   req: Request,
+  //   res: Response,
+  // ) => {
+  //   const { id } = req.body;
+  //   resourceService.format(id);
+  //   const serviceResponse = ServiceResponse.success<boolean>(
+  //     "Request to format resource successfully received",
+  //     true,
+  //     StatusCodes.OK,
+  //   );
+  //   res.status(serviceResponse.statusCode).send(serviceResponse);
+  // };
 
   public importResource: RequestHandler = async (
     req: Request,

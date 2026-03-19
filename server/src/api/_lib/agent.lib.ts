@@ -1,8 +1,10 @@
 import { ollama } from "../llms/llama/ollama";
-import { Entity, Rule } from "../game/gameModel";
+import { Entity } from "../game/gameModel";
 import { MODELS } from "../constants";
 import { FORMAT, PROMPTS } from "./prompts";
+import { Document } from "../resources/resourceModel";
 
+// only llm function imported
 export class AgentLib {
   // 기본 챗, 이후 여러 모델 또는, 상용 LLM의 API로 확장을 고려할 필요 있음.
   // TODO : 다중 모델 선택 지원, 상용 LLM 지원
@@ -32,94 +34,78 @@ export class AgentLib {
     return (res?.embeddings ?? [])[0] ?? null;
   }
 
-  // async embedObject<T>(
-  //   target: T,
-  //   key: keyof T,
-  //   field: string = "embedding",
-  // ): Promise<any> {
-  //   const targetString = target[key];
-  //   const embedding = await this.embedText(targetString as string);
-  //   (target as any)[field] = embedding;
-
-  //   return target;
-  // }
-
-  // MD 파일로부터 규칙 세트를 포맷팅
-  async formatRuleSet(resource: Rule[]): Promise<Rule[] | null> {
+  // MD 파일로부터 문서 처리
+  async processDoc(docs: Document[]): Promise<Document[] | null> {
     // format md file to rule
     try {
       const split = 5;
       const overlap = 2;
       let idx = 0;
-      for (const item of resource) {
+      for (const item of docs) {
         idx += 1;
-        console.log(`${idx}/${resource.length} : ${item.title}`);
+        console.log(`${idx}/${docs.length} : ${item.title}`);
         if (!item.content || item.content.length === 0) {
           console.log("  - No content, skip");
           continue;
         }
-        item.keywords = [];
 
         for (let i = 0; i < item.content.length; i += split - overlap) {
           console.log(
             `  - Chunk ${i + 1}/${Math.ceil(item.content.length / (split - overlap))} (${item.content.length})`,
           );
           const chunk = item.content.slice(i, i + split).join("\n");
-
-          const prompt = PROMPTS.RULE_EDITOR(chunk);
-
           const res = await this.chat(
             MODELS.llama3,
             [
               {
+                role: "system",
+                content: PROMPTS.DOC_PROCESSOR_SYSTEM(),
+              },
+              {
                 role: "user",
-                content: prompt,
+                content: PROMPTS.DOC_PROCESSOR(chunk),
               },
             ],
-            FORMAT.RULE_EDITOR,
+            FORMAT.DOC_PROCESSOR,
           );
           const parsed = JSON.parse(res);
-
-          item.keywords.push(...parsed.keywords);
           item.summary = parsed.summary;
           item.updatedAt = new Date();
         }
       }
-
-      return resource;
+      return docs;
     } catch (error) {
       console.error("Error formatting rule set:", error);
       return null;
     }
   }
 
-  async generateEntities(
-    topic: string,
-    options?: {
-      model?: string;
-      maxCounts?: number;
-      terms?: string;
-      refs?: string;
-      ids?: string;
-    },
-  ): Promise<{ data: Entity[]; prompt: string }> {
-    const mc = options?.maxCounts || 5;
+  async generateEntities(options?: {
+    model?: string;
+    theme?: string;
+    request?: string;
+    entities?: string;
+    ids?: string;
+  }): Promise<{ data: Entity[]; prompt: string }> {
     const prompt = PROMPTS.GAME_DESIGNER(
-      options?.terms || "",
-      topic,
-      mc,
-      options?.refs || "",
+      options?.theme || "",
+      options?.request || "",
+      options?.entities || "",
       options?.ids || "",
     );
     const res = await this.chat(
       MODELS.llama3,
       [
         {
+          role: "system",
+          content: PROMPTS.GAME_DESIGNER_SYSTEM(),
+        },
+        {
           role: "user",
           content: prompt,
         },
       ],
-      FORMAT.CREATE_WORLD,
+      FORMAT.GAME_DESIGNER,
     );
     const parsed = JSON.parse(res);
 
@@ -133,15 +119,16 @@ export class AgentLib {
       topic?: string;
       prevScene?: string;
       chatHistories?: string;
-      documents?: string;
-      terms?: string;
+      quests?: string;
+      // documents?: string;
+      // terms?: string;
       entities?: string;
     },
   ): Promise<{
     data: {
       content: string;
-      documents?: { id: number; comment: string }[];
-      terms?: { id: number; comment: string }[];
+      // documents?: { id: number; comment: string }[];
+      // terms?: { id: number; comment: string }[];
       summary: string;
     };
     prompt: string;
@@ -149,8 +136,9 @@ export class AgentLib {
     const prompt = PROMPTS.NARRATOR(
       players || "No players",
       options?.chatHistories || "No chat history",
-      options?.documents || "No documents",
-      options?.terms || "No terms",
+      options?.quests || "No quest provided",
+      // options?.documents || "No documents",
+      // options?.terms || "No terms",
       options?.entities || "No entities",
     );
     const res = await this.chat(
@@ -179,20 +167,12 @@ export class AgentLib {
     };
   }
 
-  async generateRuleDescription(
-    rules: Rule[],
-    options?: {
-      model?: string;
-    },
-  ) {}
-
   async generateEdits(options?: {
     model?: string;
     players?: string;
     narrative?: string;
     sceneDescription?: string;
-    documents?: string;
-    terms?: string;
+    quests?: string;
     entities?: string;
   }): Promise<{
     data: {
@@ -206,8 +186,7 @@ export class AgentLib {
       options?.players || "No players",
       options?.narrative || "No narrative",
       options?.sceneDescription || "No scene description",
-      options?.documents || "No documents",
-      options?.terms || "No terms",
+      options?.quests || "No quets provided",
       options?.entities || "No entities",
     );
 
@@ -231,36 +210,6 @@ export class AgentLib {
       data: parsed,
       prompt,
     };
-  }
-
-  async searchEntities(
-    query: string,
-    options?: {
-      model?: string;
-      maxResults?: number;
-    },
-  ) {
-    return [];
-  }
-
-  async searchRules(
-    query: string,
-    options?: {
-      model?: string;
-      maxResults?: number;
-    },
-  ) {
-    return [];
-  }
-
-  async searchTerms(
-    query: string,
-    options?: {
-      model?: string;
-      maxResults?: number;
-    },
-  ) {
-    return [];
   }
 }
 

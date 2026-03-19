@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import type { Guild } from "../common.interface";
-import { getRequest, postRequest } from "~/request";
+
 import { AuthContext } from "~/contexts/authContext";
 
 export default function ImportResourceModal(props: {

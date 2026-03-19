@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { getRequest, postRequest } from "~/request";
+import { useContext, useEffect, useState } from "react";
+import { AuthContext } from "~/contexts/authContext";
+import useRequest from "~/hooks/use-request.hook";
 
 export default function AddMemberModal(props: {
   guildCode: string;
@@ -14,22 +15,21 @@ export default function AddMemberModal(props: {
     }[]
   >([]);
 
-  useEffect(() => {
-    const fetchFriends = async () => {
-      try {
-        const res = await getRequest("/user");
-        if (res.status === 200) {
-          console.log(res.data.responseObject);
-          setUsers(res.data.responseObject);
-        } else {
-          console.error("Failed to fetch friends:", res.data);
-        }
-      } catch (error) {
-        console.error("Error fetching friends:", error);
-      }
-    };
-    fetchFriends();
-  }, []);
+  // const fetchFriends = async () => {
+  //   try {
+  //     const res = await getRequest("/user");
+  //     if (res.status === 200) {
+  //       console.log(res.data.responseObject);
+  //       setUsers(res.data.responseObject);
+  //     } else {
+  //       console.error("Failed to fetch friends:", res.data);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching friends:", error);
+  //   }
+  // };
+
+  useEffect(() => {}, []);
 
   return (
     <div className="">
@@ -83,10 +83,16 @@ function FriendItem(props: {
   displayName: string;
   icon: string;
 }) {
+  const { auth } = useContext(AuthContext);
+  const reqInvite = useRequest("/guild/invite", "post");
+
   const handleInvite = async () => {
-    await postRequest("/guild/invite", {
-      guildCode: props.guildCode,
-      userId: props.userId,
+    await reqInvite.sendRequest({
+      authorization: auth.accessToken,
+      body: {
+        guildCode: props.guildCode,
+        userId: props.userId,
+      },
     });
   };
 
@@ -110,48 +116,3 @@ function FriendItem(props: {
     </div>
   );
 }
-
-const friends = [
-  {
-    userId: "user1",
-    userName: "asldkfjlas",
-    displayName: "Alice",
-    icon: "https://picsum.photos/210",
-  },
-  {
-    userId: "user2",
-    userName: "bob123",
-    displayName: "Bob",
-    icon: "https://picsum.photos/211",
-  },
-  {
-    userId: "user3",
-    userName: "charlie456",
-    displayName: "Charlie",
-    icon: "https://picsum.photos/212",
-  },
-  {
-    userId: "user4",
-    userName: "diana789",
-    displayName: "Diana",
-    icon: "https://picsum.photos/213",
-  },
-  {
-    userId: "user5",
-    userName: "eve101",
-    displayName: "Eve",
-    icon: "https://picsum.photos/214",
-  },
-  {
-    userId: "user6",
-    userName: "frank202",
-    displayName: "Frank",
-    icon: "https://picsum.photos/215",
-  },
-  {
-    userId: "user7",
-    userName: "grace303",
-    displayName: "Grace",
-    icon: "https://picsum.photos/216",
-  },
-];

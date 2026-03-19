@@ -12,7 +12,7 @@ export interface Payload {
 }
 
 export default function useSocket() {
-  const { auth, setAuth } = useContext(AuthContext);
+  const { auth } = useContext(AuthContext);
   const socketInstance = useContext(SocketContext);
 
   const sendMessage = (type: string, content?: any) => {

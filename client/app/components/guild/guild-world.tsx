@@ -1,4 +1,4 @@
-import { forwardRef, memo, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useModal } from "~/hooks/use-modal.hook";
 import AddElementModal from "./add-element.modal";
 import AddElementManualModal from "./add-element-manual.modal";

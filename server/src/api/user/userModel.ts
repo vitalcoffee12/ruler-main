@@ -80,8 +80,8 @@ export const SignInSchema = z.object({
   }),
 });
 
-export type ValidateTokenResponse = z.infer<typeof ValidateTokenResponseSchema>;
-export const ValidateTokenResponseSchema = z.object({
+export type ValidUserResponse = z.infer<typeof ValidUserResponseSchema>;
+export const ValidUserResponseSchema = z.object({
   id: z.number(),
   code: z.string(),
   displayName: z.string().optional(),
@@ -89,4 +89,5 @@ export const ValidateTokenResponseSchema = z.object({
   role: z.string(),
   accessToken: z.string(),
   refreshToken: z.string(),
+  iconPath: z.string().optional(),
 });

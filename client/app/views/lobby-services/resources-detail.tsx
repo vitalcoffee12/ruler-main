@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useParams } from "react-router";
 import ImportResourceModal from "~/components/lobby-services/import-resource.modal";
 import { useModal } from "~/hooks/use-modal.hook";
-import { getRequest, postRequest } from "~/request";
 
 export default function ResourceDetail() {
   const { id } = useParams<{ id: string }>();

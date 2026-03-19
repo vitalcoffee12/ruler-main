@@ -2,9 +2,14 @@ import { href, Link, useNavigate } from "react-router";
 import logoDark from "./logo-dark.svg";
 import logoLight from "./logo-light.png";
 import welcomImage from "./welcome-image.png";
+import useRequest from "~/hooks/use-request.hook";
+import { useContext, useEffect } from "react";
+import { AuthContext } from "~/contexts/authContext";
 
 export default function Welcome() {
+  const { auth, isLoading: authIsLoding } = useContext(AuthContext);
   const nav = useNavigate();
+
   return (
     <main className="w-full">
       {/** Header */}
@@ -21,19 +26,31 @@ export default function Welcome() {
         />
       </Link>
       <div className="w-44 h-24 fixed flex items-center justify-end px-6 right-0">
-        <div
-          className="cursor-pointer mr-4 border border-stone-300  px-4 py-2 rounded-2xl transition duration-200 hover:shadow-md active:scale-95"
-          onClick={() => {
-            nav("/auth/signin");
-          }}
-        >
-          Sign In
-        </div>
+        {!authIsLoding && auth.code && (
+          <div
+            className="cursor-pointer mr-4 border border-stone-300  px-4 py-2 rounded-2xl transition duration-200 hover:shadow-md active:scale-95"
+            onClick={async () => {
+              nav("/game");
+            }}
+          >
+            {auth.displayName ?? "Unknown"}
+          </div>
+        )}
+        {!authIsLoding && auth.id == 0 && (
+          <div
+            className="cursor-pointer mr-4 border border-stone-300  px-4 py-2 rounded-2xl transition duration-200 hover:shadow-md active:scale-95"
+            onClick={async () => {
+              nav("/auth/signin");
+            }}
+          >
+            Sign In
+          </div>
+        )}
       </div>
       {/** GNB */}
       <nav className="flex justify-center border-b border-stone-200 dark:border-stone-700 h-24">
         <ul className="flex h-full items-center gap-6 px-4">
-          {resources.map(({ href, text, icon }) => (
+          {gnbs.map(({ href, text, icon }) => (
             <Link key={href} to={href}>
               <div className="group flex items-center gap-3 self-stretch py-2 px-4 leading-normal text-stone-900 hover:bg-stone-100 rounded-lg">
                 <span className="material-symbols-outlined">{icon}</span>
@@ -137,7 +154,7 @@ export default function Welcome() {
 
 const message = "AI Game Master.\nLeave it to Me, and Just Play.";
 
-const resources = [
+const gnbs = [
   {
     href: "guides",
     text: "Guides",

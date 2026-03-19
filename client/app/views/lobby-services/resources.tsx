@@ -2,7 +2,6 @@ import { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import ServiceHeader from "~/components/lobby-services/service-header";
 import { AuthContext } from "~/contexts/authContext";
-import { getRequest, postRequest } from "~/request";
 
 interface ResourceItemProps {
   id: number;

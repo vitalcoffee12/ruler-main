@@ -1,45 +1,38 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { AuthContext } from "~/contexts/authContext";
-
-import { getRequest } from "~/request";
+import useRequest from "~/hooks/use-request.hook";
 
 export default function GuildList(props: {
   refreshGuildList?: boolean;
   onClickCreateGuild?: () => void;
 }) {
-  const { auth, logout } = useContext(AuthContext);
+  const { auth } = useContext(AuthContext);
   const badgeRef = useRef<HTMLDivElement>(null);
   const refs = useRef<
     { code: string; name: string; element: HTMLDivElement }[]
   >([]);
   const [hoveredGuildCode, setHoveredGuildCode] = useState<string | null>(null);
   const [guilds, setGuilds] = useState<GuildListItemProps[]>([]);
-  const nav = useNavigate();
 
+  const reqFetchGuilds = useRequest("/guild/user", "get");
   const fetchGuilds = async () => {
-    if (!auth || !auth?.accessToken) return;
+    if (!auth.accessToken) return;
     try {
-      const res = await getRequest(
-        "/guild/user",
-        {},
-        {
-          Authorization: `Bearer ${auth?.accessToken}`,
-        },
-      );
-
-      if (res.status === 200 && res.data) {
-        setGuilds(res.data.responseObject);
-      }
-    } catch (ex) {
-      logout();
-      nav("/auth/signin");
-    }
+      await reqFetchGuilds.sendRequest({
+        authorization: auth.accessToken,
+      });
+    } catch (ex) {}
   };
+  useEffect(() => {
+    if (reqFetchGuilds.res?.status === 200) {
+      setGuilds(reqFetchGuilds.res?.data.responseObject);
+    }
+  }, [reqFetchGuilds.res, reqFetchGuilds.errorCode]);
 
   useEffect(() => {
     fetchGuilds();
-  }, [auth?.code, props.refreshGuildList]);
+  }, [auth?.accessToken, props.refreshGuildList]);
 
   useEffect(() => {
     if (hoveredGuildCode) {

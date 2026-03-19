@@ -70,7 +70,6 @@ userRouter.post(
   userController.createUser,
 );
 
-
 // sigin in user - no authentication
 userRegistry.registerPath({
   method: "post",
@@ -139,7 +138,18 @@ userRegistry.registerPath({
 
 userRouter.post("/verify-email/:token", userController.verifyUserEmail);
 
-userRouter.post("/validate-token", userController.validateToken);
+userRegistry.registerPath({
+  method: "post",
+  path: "/user/validate-token",
+  tags: ["User"],
+  responses: createApiResponse(z.string(), "Token verified successfully"),
+});
+
+userRouter.post(
+  "/validate-token",
+  validateToken(),
+  userController.validateToken,
+);
 //
 
 userRegistry.registerPath({

@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import type { ZodError, ZodSchema } from "zod";
+import { z, type ZodError, type ZodSchema } from "zod";
 import { ServiceResponse } from "@/common/models/serviceResponse";
 import AppDataSource from "@/dataSource";
 import { UserEntity } from "@/entities/userEntity";
@@ -22,16 +22,19 @@ export const validateRequest =
       });
       next();
     } catch (err) {
-      // const errors = (err as any)?.errors.map((e: any) => {
-      //   const fieldPath = e?.path.length > 0 ? e?.path.join(".") : "root";
-      //   return `${fieldPath}: ${e.message}`;
-      // });
+      if (err instanceof z.ZodError) {
+        console.log(err?.issues);
+      }
+      // // const errors = (err as any)?.errors.map((e: any) => {
+      // //   const fieldPath = e?.path.length > 0 ? e?.path.join(".") : "root";
+      // //   return `${fieldPath}: ${e.message}`;
+      // // });
 
-      // const errorMessage =
-      //   errors.length === 1
-      //     ? `Invalid input: ${errors[0]}`
-      //     : `Invalid input (${errors.length} errors): ${errors.join("; ")}`;
-      
+      // // const errorMessage =
+      // //   errors.length === 1
+      // //     ? `Invalid input: ${errors[0]}`
+      // //     : `Invalid input (${errors.length} errors): ${errors.join("; ")}`;
+      // console.log(err);
       const statusCode = StatusCodes.BAD_REQUEST;
       const serviceResponse = ServiceResponse.failure(
         `${err}`,
@@ -66,13 +69,15 @@ export const validateToken =
           };
           if (decodedToken.userId && decodedToken.userId > 0) {
             req.headers["userId"] = decodedToken.userId.toString();
-            isValid =true;
+            isValid = true;
           }
         } catch (err) {
           console.log("Invalid Access Token");
         }
       }
+      console.log(refreshToken, isValid);
       if (refreshToken && !isValid) {
+        console.log("Try refresh token validation");
         try {
           const decodedRefresh = verifyRefreshToken(refreshToken);
           const hashed = await hashToken(refreshToken);
@@ -88,28 +93,27 @@ export const validateToken =
             if (user?.refreshTokenHash == hashed) {
               const newAccessToken = issueAccessToken(userId, user.role);
 
-              
               req.headers["Authorization"] = `Bearer ${newAccessToken}`;
               req.headers["userId"] = userId.toString();
               isValid = true;
             }
           }
         } catch (err) {
-          console.log("Invalid refresh token")
+          console.log("Invalid refresh token");
         }
       }
-      if (isValid){
-        next()
-      }else {
+      if (isValid) {
+        next();
+      } else {
         return res
-        .status(StatusCodes.UNAUTHORIZED)
-        .send(
-          ServiceResponse.failure(
-            "Invalid token",
-            null,
-            StatusCodes.UNAUTHORIZED,
-          ),
-        );
+          .status(StatusCodes.UNAUTHORIZED)
+          .send(
+            ServiceResponse.failure(
+              "Invalid token",
+              null,
+              StatusCodes.UNAUTHORIZED,
+            ),
+          );
       }
     } catch (err) {
       return res
