@@ -6,6 +6,8 @@ import {
 import { useNavigate } from "react-router";
 import logoLight from "../welcome/logo-light.png";
 import { useState } from "react";
+import useRequest from "~/hooks/use-request.hook";
+import useToast from "~/hooks/use-toast.hook";
 
 export default function Register() {
   const [isValidEmail, setIsValidEmail] = useState<boolean | null>(null);
@@ -25,10 +27,15 @@ export default function Register() {
     passwordCheck: "",
   });
 
+  const [toast, addToast] = useToast();
+
+  const reqCreateUser = useRequest("/user/create", "post");
+  const reqCheckEmail = useRequest("/user/check-email", "post");
+
   const registerHandler = async () => {
     try {
       if (emailRegex.test(data.email) === false) {
-        return;
+        addToast("error", "Invalid Email");
       }
       if (
         data.email.trim() === "" ||
@@ -37,15 +44,17 @@ export default function Register() {
       ) {
         return;
       }
-      await postRequest("/user/create", {
-        name: data.username,
-        email: data.email,
-        password: data.password,
+      await reqCreateUser.sendRequest({
+        body: {
+          name: data.username,
+          email: data.email,
+          password: data.password,
+        },
       });
 
       nav("/auth/signin");
     } catch (ex) {
-      alert("Registration failed. Please try again.");
+      addToast("error", "Registration failed. Try Again.");
     }
   };
 
@@ -54,8 +63,10 @@ export default function Register() {
       if (emailRegex.test(data.email) === false) {
         return false;
       }
-      const res = await postRequest("/user/check-email", { email: data.email });
-      return !res.data.exists;
+      const res = await reqCheckEmail.sendRequest({
+        body: { email: data.email },
+      });
+      return !res?.data.responseObject;
     } catch (ex) {
       return false;
     }

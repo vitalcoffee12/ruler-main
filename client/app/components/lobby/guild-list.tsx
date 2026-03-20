@@ -20,6 +20,7 @@ export default function GuildList(props: {
     if (!auth.accessToken) return;
     try {
       await reqFetchGuilds.sendRequest({
+        authorized: true,
         authorization: auth.accessToken,
       });
     } catch (ex) {}

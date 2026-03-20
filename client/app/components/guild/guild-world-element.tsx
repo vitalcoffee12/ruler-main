@@ -7,6 +7,7 @@ function GuildWorldElement(
   props: {
     guildCode: string;
     node: Entity;
+    onClick: (id: string) => void;
   },
   ref: React.Ref<{ [key: string]: HTMLDivElement | null }>,
 ) {
@@ -123,7 +124,9 @@ function GuildWorldElement(
             ref.current![props.node.id] = el;
           }
         }}
-        onClick={(e) => {}}
+        onClick={(e) => {
+          props.onClick(props.node.id);
+        }}
       >
         <div className="flex items-center justify-between mt-1 px-1">
           <div className="text-sm text-stone-700 font-bold px-3">
@@ -242,7 +245,7 @@ const ForwardedGuildWorldElement = forwardRef(GuildWorldElement);
 export const GuildWorldElements = memo(function GuildWorldElements(props: {
   guildCode: string;
   world: Entity[];
-  setHoveredNodeId: (nodeId: string | null) => void;
+  onClick: (id: string) => void;
   refs: React.Ref<{ [key: string]: HTMLDivElement | null }>;
 }) {
   if (!props.world || props.world.length === 0) {
@@ -260,6 +263,7 @@ export const GuildWorldElements = memo(function GuildWorldElements(props: {
           guildCode={props.guildCode}
           node={w}
           ref={props.refs}
+          onClick={props.onClick}
         />
       ))}
     </div>

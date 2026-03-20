@@ -5,6 +5,7 @@ import { ServiceResponse } from "@/common/models/serviceResponse";
 import AppDataSource from "@/dataSource";
 import { UserEntity } from "@/entities/userEntity";
 import {
+  compareToken,
   hashToken,
   issueAccessToken,
   verifyAccessToken,
@@ -80,17 +81,29 @@ export const validateToken =
         console.log("Try refresh token validation");
         try {
           const decodedRefresh = verifyRefreshToken(refreshToken);
-          const hashed = await hashToken(refreshToken);
+          // const hashed = await hashToken(refreshToken);
 
           const userId = (decodedRefresh as { userId: number; role: string })
             .userId;
+          console.log(userId);
           // refresh token validation and issuing new access token
           if (userId && userId > 0) {
             const user = await AppDataSource.manager.findOneBy(UserEntity, {
               id: userId,
             });
-
-            if (user?.refreshTokenHash == hashed) {
+            if (!user) {
+              return res
+                .status(StatusCodes.UNAUTHORIZED)
+                .send(
+                  ServiceResponse.failure(
+                    "Invalid token",
+                    null,
+                    StatusCodes.UNAUTHORIZED,
+                  ),
+                );
+            }
+            console.log(user.refreshTokenHash);
+            if (await compareToken(refreshToken, user?.refreshTokenHash!)) {
               const newAccessToken = issueAccessToken(userId, user.role);
 
               req.headers["Authorization"] = `Bearer ${newAccessToken}`;

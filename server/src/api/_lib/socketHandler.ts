@@ -168,8 +168,6 @@ export class SocketHandler {
       memberCodes: string;
       narrative: string;
       sceneDescription: string;
-      documents: string;
-      terms: string;
       entities: string;
     },
     guildCode: string,

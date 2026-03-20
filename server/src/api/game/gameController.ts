@@ -2,6 +2,7 @@ import { Request, RequestHandler, Response } from "express";
 import { GameService } from "./gameService";
 import { ServiceResponse } from "@/common/models/serviceResponse";
 import { StatusCodes } from "http-status-codes";
+import { socketHandler } from "../_lib/socketHandler";
 
 class GameController {
   constructor(private readonly gameService: GameService = new GameService()) {}
@@ -26,7 +27,6 @@ class GameController {
       true,
       StatusCodes.OK,
     );
-
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 

@@ -1,11 +1,14 @@
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "~/contexts/authContext";
 import useRequest from "~/hooks/use-request.hook";
+import useToast from "~/hooks/use-toast.hook";
+import defaultIcon from "../../views/lobby/default-profile.jpg";
 
 export default function AddMemberModal(props: {
   guildCode: string;
   guildName: string;
 }) {
+  const { auth } = useContext(AuthContext);
   const [users, setUsers] = useState<
     {
       id: number;
@@ -15,64 +18,73 @@ export default function AddMemberModal(props: {
     }[]
   >([]);
 
-  // const fetchFriends = async () => {
-  //   try {
-  //     const res = await getRequest("/user");
-  //     if (res.status === 200) {
-  //       console.log(res.data.responseObject);
-  //       setUsers(res.data.responseObject);
-  //     } else {
-  //       console.error("Failed to fetch friends:", res.data);
-  //     }
-  //   } catch (error) {
-  //     console.error("Error fetching friends:", error);
-  //   }
-  // };
+  const reqFetchFriends = useRequest("/user", "get");
+  const [toast, addToast] = useToast();
 
-  useEffect(() => {}, []);
+  const fetchFriends = async () => {
+    try {
+      const res = await reqFetchFriends.sendRequest({
+        authorized: true,
+        authorization: auth.accessToken,
+      });
+
+      setUsers(res?.data.responseObject);
+    } catch (error) {
+      addToast("error", "Failed to fetch friend list");
+    }
+  };
+
+  useEffect(() => {
+    fetchFriends();
+  }, []);
 
   return (
-    <div className="">
-      <div className="flex flex-col min-w-lg">
-        <h2 className="text-lg mb-4">
-          Invite friends to
-          <span className="font-semibold ml-1"> {props.guildName}</span>
-        </h2>
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search for friend"
-            className="
+    <>
+      <div className="">
+        <div className="flex flex-col min-w-lg">
+          <h2 className="text-lg mb-4">
+            Invite friends to
+            <span className="font-semibold ml-1"> {props.guildName}</span>
+          </h2>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search for friend"
+              className="
           text-sm border border-stone-300 rounded px-2 py-2 mb-4 w-full"
-          />
-          <span className="material-symbols-outlined absolute right-2 top-2 cursor-pointer">
-            search
-          </span>
-        </div>
-        <div className="w-full border rounded-lg border-stone-300 max-h-[300px] overflow-y-auto mb-4 no-scrollbar">
-          {users.map((friend) => (
-            <FriendItem
-              guildCode={props.guildCode}
-              key={friend.id}
-              userId={friend.id}
-              userName={friend.code}
-              displayName={friend.displayName}
-              icon={friend.iconPath}
             />
-          ))}
-        </div>
+            <span className="material-symbols-outlined absolute right-2 top-2 cursor-pointer">
+              search
+            </span>
+          </div>
+          <div className="w-full border rounded-lg border-stone-300 max-h-[300px] overflow-y-auto mb-4 no-scrollbar">
+            {users.map((friend) => (
+              <FriendItem
+                guildCode={props.guildCode}
+                key={friend.id}
+                userId={friend.id}
+                userName={friend.code}
+                displayName={friend.displayName}
+                icon={friend.iconPath}
+              />
+            ))}
+          </div>
 
-        <h2 className="mb-2 mt-2">Send Invites link to your friends to join</h2>
-        <div>
-          <input
-            type="text"
-            readOnly
-            value={`https://ruler.gg/invite/${props.guildCode}`}
-            className="text-sm border border-stone-300 rounded px-2 py-2 w-full"
-          />
+          <h2 className="mb-2 mt-2">
+            Send Invites link to your friends to join
+          </h2>
+          <div>
+            <input
+              type="text"
+              readOnly
+              value={`https://ruler.gg/invite/${props.guildCode}`}
+              className="text-sm border border-stone-300 rounded px-2 py-2 w-full"
+            />
+          </div>
         </div>
       </div>
-    </div>
+      {toast}
+    </>
   );
 }
 
@@ -88,6 +100,7 @@ function FriendItem(props: {
 
   const handleInvite = async () => {
     await reqInvite.sendRequest({
+      authorized: true,
       authorization: auth.accessToken,
       body: {
         guildCode: props.guildCode,
@@ -99,7 +112,7 @@ function FriendItem(props: {
   return (
     <div className="flex items-center mb-2 hover:bg-stone-100 p-2 transition duration-200 ">
       <img
-        src={props.icon}
+        src={props.icon ?? defaultIcon}
         alt={props.userName}
         className="w-10 h-10 rounded-full mr-2"
       />

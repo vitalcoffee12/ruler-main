@@ -43,7 +43,7 @@ export interface GuildChatMessage {
   type: string;
   userId: number;
   userCode: string;
-  iconPath: string;
+  iconPath?: string;
   displayName: string;
   content: string;
   timestamp: Date;

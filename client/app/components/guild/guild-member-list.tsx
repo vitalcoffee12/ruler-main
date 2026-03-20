@@ -1,11 +1,15 @@
 import { useModal } from "~/hooks/use-modal.hook";
 import AddMemberModal from "./add-member.modal";
 import useSocket from "~/hooks/use-socket.hook";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import SettingsModal from "./settings.modal";
 import type { Guild, GuildMember } from "../common.interface";
+import defaultIcon from "../../views/lobby/default-profile.jpg";
+import useRequest from "~/hooks/use-request.hook";
+import { AuthContext } from "~/contexts/authContext";
 
 export default function GuildMemberList(props: { guild: Guild }) {
+  const { auth } = useContext(AuthContext);
   const [modalType, setModalType] = useState<"invite" | "settings" | null>(
     null,
   );
@@ -13,6 +17,10 @@ export default function GuildMemberList(props: { guild: Guild }) {
   const [members, setMembers] = useState<GuildMember[]>([]);
 
   const { isConnected, payloads, sendMessage } = useSocket();
+  const reqFetchUserList = useRequest(
+    `/guild/members/${props.guild.code}`,
+    "get",
+  );
   useEffect(() => {
     if (!isConnected) return;
     for (const payload of payloads) {
@@ -24,6 +32,23 @@ export default function GuildMemberList(props: { guild: Guild }) {
       }
     }
   }, [isConnected, payloads, props.guild.code]);
+
+  useEffect(() => {
+    if (props.guild.code) {
+      const fetchMember = async () => {
+        try {
+          const res = await reqFetchUserList.sendRequest({
+            authorized: true,
+            authorization: auth.accessToken,
+          });
+          setMembers(res?.data.responseObject);
+        } catch (ex) {
+          console.log(ex);
+        }
+      };
+      fetchMember();
+    }
+  }, [props.guild.code]);
 
   return (
     <>
@@ -55,7 +80,7 @@ export default function GuildMemberList(props: { guild: Guild }) {
               className="flex items-center mb-2 cursor-pointer hover:bg-stone-100 rounded-lg p-2"
             >
               <img
-                src={member.iconPath}
+                src={member.iconPath ?? defaultIcon}
                 alt={member.displayName}
                 className="w-8 h-8 rounded-full mr-2 object-cover"
               />

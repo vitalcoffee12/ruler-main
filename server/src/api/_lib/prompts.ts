@@ -33,16 +33,33 @@ ${documents}
 Based on given document, generate rich game world entities.
 
 Each entity consists of:
-  - id : unique meaningless random string identifier
   - name : name of the entity
   - description : description of the entity. may contain appearance, features, traits, personality, lores or any other.
   - secrests : secrests of the entity. it will not be revealed to players. but make the entity richer and interesting
   - relations : a list of realtion the entity has. it contains target entity's id, and type of relation, describing their relation.
   
 Guildlines:
+   - New entities should be thematically consistent with existing ones
+   - Avoid creating entities that are too similar to existing ones
 
+Output format (STRICT JSON):
+[
+  {
+    "name": "string", // Edited name, should be concise and unique
+    "description": "string", // Edited description, should be useful for gameplay and retrieval
+    "secrets": "string", // interesting lore, background or anything
+    "relations" : [
+      {
+          "name": "string", // target entities name
+          "type": "string", // relation type (UPPER CASE + Underscore only) 
+      }
+    ]
+  }
+]
   `,
-  WORLD_GENERATOR: (doc: string) => ``,
+  WORLD_GENERATOR: (doc: string) => `
+Document:
+${doc}`,
 
   ENTITY_EDITOR: (
     request: string,
@@ -147,8 +164,7 @@ Output format (STRICT JSON):
     "id": "string",
     "name": "string",
     "description": "string",
-    "info": "string" // Optional field for GM's reference, not used in gameplay
-    "terms": ["number"] // Optional field for referencing term ids that inspired this entity
+    "secrets": "string" // Optional field for GM's reference, not used in gameplay
     "relations" : [{"id" : "string", "type": "string"}] // optional field for relation between entities
   }
 ]
@@ -219,8 +235,8 @@ Entity look like:
 
 Guidelines:
 - Include
-1. Provide narrative that reflects the current state of the game world, player actions, and system messages.
-2. Ensure the narrative is consistent with the provided documents, terms, and existing entities.
+1. Provide interaction result that reflects the current state of the game world, player actions, and system messages.
+2. Ensure the narrative is consistent with existing entities.
 3. if needed, role as NPC characters to interact with players and drive the story forward.
 4. Provide new quets, challenges, discoveries, or developments in the world that encourage player interaction and exploration.
 5. Do not copy and paste content from messages, Istead, use them as references to create a unique narrative that fits the current game state.
@@ -234,18 +250,6 @@ Guidelines:
 Output format (JSON):
 {
     "content": "string", // The narrative of current scene with Markdown format.
-    "documents" : [ // Optional field for citing documents that influenced the narrative
-        {
-            "id": "string", // Document Id  
-            "comment": "string" // A brief explanation of how this document influenced the narrative
-        }
-    ],
-    "terms": [ // Optional field for citing terms that influenced the narrative
-        {
-            "id": "string", // Term Id
-            "comment": "string" // A brief explanation of how this term influenced the narrative
-        }
-    ],
     "summary": "string" // A summary of the current adventure history and world state for coherent narrative generation
 }
   `,
@@ -279,59 +283,25 @@ Player Input may contain:
 - Player List: The List of Player Ids separated by commas
 - Narrative: The last narrative generated for the game world, which can be used for continuity and reference.
 - Scene Description: A brief description of the current scene, which can provide context for the changes.
-- Documents: A collection of documents that provide rules about the game world. These documents can be referred to for accurate narrative generation.
-- Terms: A list of important keywords and their descriptions that are relevant to the current game world.
-- Entities: A list of existing entities in the game world, including their names and descriptions.
-
-
-System message look like:
-[System] system message
-
-Document look like:
-[Document Id] document content
-- Document Id is a unique identifier for each document. Do not modify.
-
-Term look like:
-[Term Id] term: term description
-- Term Id is a unique identifier for each term. Do not modify.
+- Entities: A list of existing entities in the game world.
 
 Entity look like:
-[Entity Id] entity name: entity description (entity info, not visible to players, secrests, behind-the-scenes mechanics, or design intentions can be included here)
+[Entity Id] entity name: entity description (entity secrets, not visible to players, secrests, behind-the-scenes mechanics, or design intentions can be included here)
 - Entity Id is a unique identifier for each entity. Do not modify.
 
 Guidelines:
-- If the narrative describes any changes to the world state, reflect those changes in the output entities. For example, if the narrative describes a player discovering a hidden door, you might add a new entity for the hidden door or update an existing entity to reflect that it has been discovered.
-- Describe changes or reactions in the world based on player actions and system messages.
-- Generate a list of entities that should be created, updated, or deleted based on the narrative and chat history.
-- Use the provided documents, terms, and existing entities as references to ensure consistency in the game world.
+- The narrative may implictly contain any changes to the world state, reflect those changes in the output entities. For example, if the narrative describes a player discovering a hidden door, you might add a new entity for the hidden door or update an existing entity to reflect that it has been discovered.
+- Use the provided existing entities as references to ensure consistency in the game world.
+- If you modify existing entity, use its ID as identifier.
 
 Output format (JSON):
-{
-    "created": [
-    {
-        "id": "string",
-        "name": "string",
-        "description": "string",
-        "info": "string" // Optional field for GM's reference, not used in gameplay
-        "terms": ["number"] // Optional field for referencing term ids that inspired this entity
-        "documents": ["number"] // Optional field for referencing document ids that influenced this entity
-    }
-    ],
-    "updated": [
-    {
-        "id": "string",
-        "name": "string",
-        "description": "string",
-        "info": "string" // Optional field for GM's reference, not used in gameplay 
-        "terms": ["number"] // Optional field for referencing term ids that inspired this entity
-        "documents": ["number"] // Optional field for referencing document ids that influenced this entity
-    },
-    "deleted": [
-    {
-        "id": "string"
-    }
-    ]
-}
+[
+  "id": "string", // unique Identifier
+  "name": "string",
+  "description": "string",
+  "secrets": "string", // Optional field for GM's reference, not used in gameplay
+  "relations" : [{"id" : "string", "type": "string"}] // optional field for relation between entities maximum 3
+]
   `,
 
   EDITOR: (
@@ -366,6 +336,27 @@ export const FORMAT = {
   DOC_PROCESSOR: {
     type: "string",
   },
+  WORLD_GENERATOR: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        description: { type: "string" },
+        secrets: { type: "string" },
+        relations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              type: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+  },
   GAME_DESIGNER: {
     type: "array",
     items: {
@@ -375,12 +366,6 @@ export const FORMAT = {
         name: { type: "string" },
         description: { type: "string" },
         secrets: { type: "string" },
-        // terms: {
-        //   type: "array",
-        //   items: {
-        //     type: "number",
-        //   },
-        // },
         relations: {
           type: "array",
           items: {
@@ -398,80 +383,27 @@ export const FORMAT = {
     type: "object",
     properties: {
       content: { type: "string" },
-      // documents: {
-      //   type: "array",
-      //   items: {
-      //     type: "object",
-      //     properties: {
-      //       id: { type: "number" },
-      //       comment: { type: "string" },
-      //     },
-      //   },
-      // },
-      // terms: {
-      //   type: "array",
-      //   items: {
-      //     type: "object",
-      //     properties: {
-      //       id: { type: "number" },
-      //       comment: { type: "string" },
-      //     },
-      //   },
-      // },
       summary: { type: "string" },
     },
   },
   EDITOR: {
-    type: "object",
-    properties: {
-      created: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            id: { type: "string" },
-            name: { type: "string" },
-            description: { type: "string" },
-            secrets: { type: "string" },
-            relations: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  id: { type: "string" },
-                  type: { type: "string" },
-                },
-              },
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        name: { type: "string" },
+        description: { type: "string" },
+        secrets: { type: "string" },
+        relations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              type: { type: "string" },
             },
           },
-        },
-      },
-      updated: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            id: { type: "string" },
-            name: { type: "string" },
-            description: { type: "string" },
-            secrets: { type: "string" },
-            relations: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  id: { type: "string" },
-                  type: { type: "string" },
-                },
-              },
-            },
-          },
-        },
-      },
-      deleted: {
-        type: "array",
-        items: {
-          type: "string",
         },
       },
     },

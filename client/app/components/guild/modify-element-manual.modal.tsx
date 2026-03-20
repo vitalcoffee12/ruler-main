@@ -30,6 +30,7 @@ export default function ModifyElementManualModal(props: {
   const fetchElementDetails = async () => {
     try {
       const res = await reqFetchElementDetails.sendRequest({
+        authorized: true,
         authorization: auth.accessToken,
       });
       setElement(res?.data.responseObject);
@@ -45,6 +46,7 @@ export default function ModifyElementManualModal(props: {
   const handleSubmit = async () => {
     try {
       await reqModifyElement.sendRequest({
+        authorized: true,
         authorization: auth.accessToken,
         body: {
           guildCode: props.guildCode,

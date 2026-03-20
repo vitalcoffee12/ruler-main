@@ -67,17 +67,16 @@ export default function AddElementManualModal(props: {
   //   }
   // };
   const handleSubmit = async () => {
-    // try {
-    //   await postRequest("/game/add-element", {
-    //     guildCode: props.guildCode,
-    //     element,
-    //   });
-    // } catch (ex) {
-    //   console.error("Failed to add element:", ex);
-    // }
-    const res = await reqAddElement.sendRequest({
-      authorization: auth.accessToken,
-    });
+    try {
+      const res = await reqAddElement.sendRequest({
+        authorized: true,
+        authorization: auth.accessToken,
+        body: {
+          guildCode: props.guildCode,
+          element,
+        },
+      });
+    } catch (ex) {}
   };
 
   // useEffect(() => {

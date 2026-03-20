@@ -23,6 +23,7 @@ export default function CreateGuildModal(props: {
   const handleCreateGuild = async () => {
     try {
       await reqCreateGuild.sendRequest({
+        authorized: true,
         authorization: auth.accessToken,
         body: {
           iconPath: `https://picsum.photos/${Math.floor(Math.random() * 100 + 300)}`,

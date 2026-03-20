@@ -16,12 +16,16 @@ export default function useRequest(url: string, method: "post" | "get") {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const sendRequest = async (options: {
+    authorized: boolean;
     authorization?: string;
     method?: string;
     queries?: Record<string, any>;
     body?: any;
     headers?: Record<string, string>;
   }): Promise<ResponseDataType | null> => {
+    if (options.authorized && !options.authorization) {
+      return null;
+    }
     setIsLoading(true);
     setErrorCode(null);
     const queryString = options.queries
@@ -53,6 +57,7 @@ export default function useRequest(url: string, method: "post" | "get") {
           console.log("Wrong Data Submitted");
         } else if (errorCode === 401) {
           console.log("Unauthorized");
+          logout();
         } else if (errorCode === 403) {
           console.log("Bad URL");
         } else if (errorCode === 404) {

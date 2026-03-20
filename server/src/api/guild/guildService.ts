@@ -160,27 +160,6 @@ export class GuildService {
     await mongoose.connection.createCollection(
       `${newGuild.code}${COLLECTION_SUFFIX.SCENE_HISTORY}`,
     );
-    await mongoose.connection.createCollection(
-      `${newGuild.code}${COLLECTION_SUFFIX.RULE_SET}`,
-    );
-    mongoLib.createEmbeddingIndex(
-      `${newGuild.code}${COLLECTION_SUFFIX.RULE_SET}`,
-      {
-        embeddingSize: 4096,
-        fieldName: "embedding",
-      },
-    );
-
-    await mongoose.connection.createCollection(
-      `${newGuild.code}${COLLECTION_SUFFIX.TERM_SET}`,
-    );
-    mongoLib.createEmbeddingIndex(
-      `${newGuild.code}${COLLECTION_SUFFIX.TERM_SET}`,
-      {
-        embeddingSize: 4096,
-        fieldName: "embedding",
-      },
-    );
 
     const newCharacter: Entity = {
       id: `${user.code}`,
@@ -201,6 +180,16 @@ export class GuildService {
         message: `Player ${user.displayName} has created the guild.`,
       },
       entities: [newCharacter],
+    });
+    const predGuild = PREDEFINED_USER.GUILD(newGuild.code, newGuild.name);
+    await gameLib.insertGameHistory(newGuild.code, {
+      chat: {
+        userId: predGuild.id,
+        userCode: predGuild.code,
+        message: `## Congratulations, \`${newGuild.name}\` has been created!
+This is the beginning of your guild chat. Guild members can communicate here, adventure the world, and \`Loggic\` will take a job in guiding your journey!`,
+      },
+      entities: [],
     });
 
     return newGuild;

@@ -36,7 +36,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     window.localStorage.removeItem("auth");
     setAuth(null);
-    nav("/auth/signin");
   };
 
   useEffect(() => {
@@ -65,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             login(authData);
           }
         } catch (error) {
-          logout();
+          //logout();
         }
       } else {
         console.log("No stored auth found / refresh token auth");
@@ -73,12 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const response = await axiosInstance.post(`/user/validate-token`, {});
 
           if (response.status === 200) {
-            console.log("stored auth is valid");
+            console.log("refresh Token is valid");
             const authData = await response.data.responseObject;
             login(authData);
           }
         } catch (error) {
-          logout();
+          //logout();
         }
       }
       setIsLoading(false);

@@ -106,7 +106,7 @@ export class GameLib {
     }
 
     const collection = mongoose.connection.collection(
-      `${guildCode}.${COLLECTION_SUFFIX.GAME_HISTORY}`,
+      `${guildCode}${COLLECTION_SUFFIX.GAME_HISTORY}`,
     );
     await collection.insertOne({
       ...data,
@@ -123,7 +123,7 @@ export class GameLib {
   ) {
     try {
       const collection = mongoose.connection.collection(
-        `${guildCode}.${COLLECTION_SUFFIX.SCENE_HISTORY}`,
+        `${guildCode}${COLLECTION_SUFFIX.SCENE_HISTORY}`,
       );
       await collection.insertOne({
         ...data,
@@ -352,7 +352,7 @@ export class GameLib {
       let prevScene = "";
       if (sceneHistories.length > 0) {
         const latestScene = sceneHistories[sceneHistories.length - 1];
-        prevScene = latestScene.sceneDescription;
+        prevScene = latestScene.message;
       }
 
       const playerCharacters = world.filter((e) => memberCodes.includes(e.id));
@@ -491,37 +491,29 @@ export class GameLib {
         chat: {
           userId: responseUser.id,
           userCode: responseUser.code,
-          message: `The game world has been edited. updates: ${data.created.length} created, ${data.updated.length} updated, ${data.deleted.length} deleted. Check the latest scene for details.`,
+          message: `The game world has been edited. ${data.length} updated. Check the latest scene for details.`,
         },
         entities: [
-          ...data.created.map((e) => ({
+          ...data.map((e) => ({
             ...e,
+            id: e.name.replace(/[\[\]]/g, ""),
             score: 1,
-          })),
-          ...data.updated.map((e) => ({
-            ...e,
-            score: 1,
-          })),
-          ...data.deleted.map((id) => ({
-            ...defaultEntity,
-            id,
-            score: -1,
-            state: "removed",
+            relations: [
+              ...e.relations.map((r) => ({
+                id: r.id.replace(/[\[\]]/g, ""),
+                type: r.type,
+                score: 1,
+              })),
+            ],
           })),
         ],
         tasks: [
           {
             type: "generate_narrative",
             input: prompt,
-            output: JSON.stringify({
-              created: data.created,
-              updated: data.updated,
-              deleted: data.deleted,
-            }),
+            output: JSON.stringify(data),
           },
         ],
-        // documents: [],
-        // terms: [],
       });
 
       return true;

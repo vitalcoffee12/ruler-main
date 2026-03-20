@@ -73,10 +73,21 @@ export class UserService {
     }
   }
 
-  async checkEmailExists(email: string): Promise<boolean> {
+  async checkEmailExists(email: string): Promise<ServiceResponse<boolean>> {
     const user = await this.userRepository.findOne({ where: { email } });
-    console.log(!!user);
-    return !!user;
+    if (user) {
+      return ServiceResponse.success<boolean>(
+        "Occupied Email Address",
+        true,
+        StatusCodes.OK,
+      );
+    } else {
+      return ServiceResponse.success<boolean>(
+        "Abscent Eamil Address",
+        false,
+        StatusCodes.OK,
+      );
+    }
   }
 
   async create(userData: {
@@ -412,9 +423,10 @@ export class UserService {
 
       const accessToken = issueAccessToken(user.id ?? 0, user.role);
       const refreshToken = issueRefreshToken(user.id ?? 0, user.role);
+
       await this.userRepository.save({
         ...user,
-        refreshTokenHash: refreshToken,
+        refreshTokenHash: await hashToken(refreshToken),
       });
 
       return ServiceResponse.success<ValidUserResponse>("Sign-in successful", {

@@ -81,10 +81,6 @@ export default function GuildChat(props: {
         className="guild-chat-messages no-scrollbar box-sizing-border"
         ref={chatRef}
       >
-        <div>
-          <IntroMessage guild={props.guild} />
-        </div>
-        <div className="w-full border-b border-stone-200 mb-2 mt-2" />
         <MessageList
           messages={mapHistoriesToMessages(histories, props.memberDic)}
         />
@@ -229,9 +225,7 @@ function mapHistoriesToMessages(
       type: type,
       userId: history.chat.userId,
       userCode: history.chat.userCode,
-      iconPath: memberInfo
-        ? memberInfo.iconPath || "https://picsum.photos/400"
-        : "https://picsum.photos/400",
+      iconPath: memberInfo?.iconPath,
       displayName: memberInfo
         ? memberInfo.displayName || "Unknown User"
         : "Unknown User",

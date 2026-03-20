@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import type { Guild } from "~/components/common.interface";
+import type { Entity, Guild } from "~/components/common.interface";
 import GuildChat from "~/components/guild/guild-chat";
 
 import GuildHeader from "~/components/guild/guild-header";
@@ -9,13 +9,14 @@ import GuildRefs from "~/components/guild/guild-refs";
 import GuildWorld from "~/components/guild/guild-world";
 import { AuthContext } from "~/contexts/authContext";
 import useLoading from "~/hooks/use-loading.hook";
+import useRequest from "~/hooks/use-request.hook";
 import useSocket from "~/hooks/use-socket.hook";
+import useToast from "~/hooks/use-toast.hook";
 
 export default function Dashboard() {
-  const location = useLocation();
+  const location = useLocation().pathname.split("/")[4];
   const nav = useNavigate();
-  const { auth } = useContext(AuthContext);
-
+  const { auth, login } = useContext(AuthContext);
   const [guild, setGuild] = useState<Guild | null>(null);
   const [memberDic, setMemberDic] = useState<
     Record<
@@ -30,8 +31,38 @@ export default function Dashboard() {
     >
   >({});
   const [loading, setLoading] = useLoading();
+  const [refType, setRefType] = useState<string | null>(null);
+  const [refData, setRefData] = useState<any>(null);
+  const [world, setWorld] = useState<Entity[]>([]);
+  const [isWaiting, setIsWaiting] = useState(false);
+  const { isConnected, payloads, sendMessage } = useSocket();
 
-  const { isConnected, sendMessage } = useSocket();
+  const [toast, addToast] = useToast();
+  const reqFetchGuildData = useRequest(`/guild/code/${location}`, "get");
+
+  useEffect(() => {
+    if (!isConnected || !guild) return;
+    for (const payload of payloads) {
+      if (
+        payload.type === "GUILD_HISTORY_UPDATE" &&
+        payload.guildCode === guild.code
+      ) {
+        setWorld(payload.content.world);
+      }
+      if (
+        payload.type === "GUILD_FLAG_WAITING" &&
+        payload.guildCode === guild.code
+      ) {
+        setIsWaiting(true);
+      }
+      if (
+        payload.type === "GUILD_FLAG_DOWN" &&
+        payload.guildCode === guild.code
+      ) {
+        setIsWaiting(false);
+      }
+    }
+  }, [isConnected, payloads, guild?.code]);
 
   const setInitialData = (data: any) => {
     setGuild(data.guild);
@@ -60,29 +91,32 @@ export default function Dashboard() {
     // Fetch guild data here if needed
     setLoading(true);
     try {
-      if (auth.guildCode) {
-        const res = await getRequest(
-          `/guild/code/${auth.guildCode}`,
-          {},
-          {
-            Authorization: `Bearer ${auth.accessToken}`,
-          },
-        );
-        console.log("Guild data response:", res.data.responseObject);
-        setInitialData(res.data.responseObject);
+      if (auth.accessToken) {
+        const res = await reqFetchGuildData.sendRequest({
+          authorized: true,
+          authorization: auth.accessToken,
+        });
+        setInitialData(res?.data.responseObject);
       }
+      addToast("success", "Hello");
     } catch (error) {
-      // nav("/game");
+      addToast("error", "Failed fetch guild data");
     }
-    //setLoading(false);
-    setTimeout(() => {
-      setLoading(false);
-    }, 2000);
+    setLoading(false);
+  };
+
+  const onClickEntity = (id: string) => {
+    setRefType("entity");
+    setRefData(id);
+    console.log(id);
   };
 
   useEffect(() => {
+    login({ ...auth, guildCode: guild?.code });
+  }, [guild]);
+  useEffect(() => {
     fetchGuildData();
-  }, [auth.guildCode]);
+  }, [auth.guildCode, auth?.accessToken]);
 
   useEffect(() => {
     if (!isConnected) return;
@@ -102,13 +136,24 @@ export default function Dashboard() {
           <GuildChat guild={guild ?? defaultGuild} memberDic={memberDic} />
         </div>
         <div className="guild-dashboard-subside no-scrollbar whitespace-pre-wrap">
-          <GuildRefs />
+          <GuildRefs
+            guild={guild ?? defaultGuild}
+            world={world}
+            refType={refType}
+            data={refData}
+          />
         </div>
         <div className="guild-dashboard-rightside no-scrollbar">
-          <GuildWorld guild={guild ?? defaultGuild} />
+          <GuildWorld
+            guild={guild ?? defaultGuild}
+            world={world}
+            isWaiting={isWaiting}
+            onClickEntity={onClickEntity}
+          />
         </div>
       </div>
       {loading}
+      {toast}
     </>
   );
 }

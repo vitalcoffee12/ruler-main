@@ -84,6 +84,7 @@ export class GameService {
     description: string,
   ): Promise<ServiceResponse<boolean | null>> {
     try {
+      socketHandler.sendMessageToGuild("GUILD_FLAG_WAITING", guildCode, {});
       const guild = await this.guildRepository.findOne({
         where: { code: guildCode },
       });
@@ -146,6 +147,7 @@ export class GameService {
       });
 
       socketHandler.sendHistoryUpdate(guildCode);
+      socketHandler.sendMessageToGuild("GUILD_FLAG_DOWN", guildCode, {});
 
       return ServiceResponse.success<boolean>(
         "Element requested successfully",

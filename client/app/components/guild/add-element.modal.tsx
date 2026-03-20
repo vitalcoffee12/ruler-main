@@ -1,16 +1,24 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { AuthContext } from "~/contexts/authContext";
+import useRequest from "~/hooks/use-request.hook";
 
 export default function AddElementModal(props: {
   guildCode: string;
   closeModal: () => void;
 }) {
+  const { auth } = useContext(AuthContext);
   const [description, setDescription] = useState<string>("");
 
+  const reqAddElement = useRequest("/game/request-element", "post");
   const handleSubmit = async () => {
     try {
-      await postRequest("/game/request-element", {
-        guildCode: props.guildCode,
-        description,
+      await reqAddElement.sendRequest({
+        authorized: true,
+        authorization: auth.accessToken,
+        body: {
+          guildCode: props.guildCode,
+          description,
+        },
       });
     } catch (ex) {}
   };

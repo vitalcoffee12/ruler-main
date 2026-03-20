@@ -98,3 +98,21 @@ guildRouter.post(
 
   guildController.sendInvitation,
 );
+
+guildRegistry.registerPath({
+  method: "get",
+  path: "/guild/members/:code",
+  tags: ["Guild"],
+  request: {
+    params: z.object({
+      code: z.string(),
+    }),
+  },
+  responses: createApiResponse(z.any(), "Guild Members"),
+});
+
+guildRouter.get(
+  "/members/:code",
+  validateToken(),
+  guildController.getGuildMembers,
+);

@@ -7,15 +7,18 @@ import type { Entity, Guild } from "../common.interface";
 
 import { GuildWorldElements } from "./guild-world-element";
 
-export default function GuildWorld(props: { guild: Guild }) {
+export default function GuildWorld(props: {
+  guild: Guild;
+  world: Entity[];
+  isWaiting: boolean;
+  onClickEntity: (id: string) => void;
+}) {
   const [modalType, setModalType] = useState<"generate" | "add" | null>(null);
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  const [world, setWorld] = useState<Entity[]>([]);
+
   const [relations, setRelations] = useState<
     { fromNodeId: string; toNodeId: string; type: string }[]
   >([]);
   const refs = useRef<{ [key: string]: HTMLDivElement | null }>({});
-  const [isWaiting, setIsWaiting] = useState(false);
   const { Modal, openModal, closeModal } = useModal();
 
   // useEffect(() => {
@@ -44,31 +47,6 @@ export default function GuildWorld(props: { guild: Guild }) {
   //   }
   // }, [hoveredNodeId]);
 
-  const { isConnected, payloads, sendMessage } = useSocket();
-  useEffect(() => {
-    if (!isConnected) return;
-    for (const payload of payloads) {
-      if (
-        payload.type === "GUILD_HISTORY_UPDATE" &&
-        payload.guildCode === props.guild.code
-      ) {
-        setWorld(payload.content.world);
-      }
-      if (
-        payload.type === "GUILD_FLAG_WAITING" &&
-        payload.guildCode === props.guild.code
-      ) {
-        setIsWaiting(true);
-      }
-      if (
-        payload.type === "GUILD_FLAG_DOWN" &&
-        payload.guildCode === props.guild.code
-      ) {
-        setIsWaiting(false);
-      }
-    }
-  }, [isConnected, payloads, props.guild.code]);
-
   return (
     <div className="guild-world">
       <div className="row-start-1 row-end-2 p-4">
@@ -87,7 +65,7 @@ export default function GuildWorld(props: { guild: Guild }) {
         <div>
           <div className="border-b border-stone-300 my-4 flex items-center justify-between ">
             <span className="text-stone-600 text-sm">Worlds</span>
-            {isWaiting && (
+            {props.isWaiting && (
               <div className="inline-flex items-center text-sm text-yellow-600">
                 <span
                   className="material-symbols-outlined animate-pulse"
@@ -98,7 +76,7 @@ export default function GuildWorld(props: { guild: Guild }) {
                 <span className="ml-1">Waiting for GM's response...</span>
               </div>
             )}
-            {!isWaiting && (
+            {!props.isWaiting && (
               <div>
                 <div
                   className="inline-flex items-center cursor-pointer text-stone-600 hover:text-stone-800 mr-1"
@@ -137,8 +115,8 @@ export default function GuildWorld(props: { guild: Guild }) {
       </div>
       <GuildWorldElements
         guildCode={props.guild.code}
-        world={world}
-        setHoveredNodeId={setHoveredNodeId}
+        world={props.world}
+        onClick={props.onClickEntity}
         refs={refs}
       />
       <Modal>

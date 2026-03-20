@@ -1,6 +1,7 @@
 import { memo } from "react";
 import type { Guild, GuildChatMessage } from "../common.interface";
 import Markdown from "react-markdown";
+import defaultIcon from "../../views/lobby/default-profile.jpg";
 
 export const MessageList = memo(function MessageList(props: {
   messages: GuildChatMessage[];
@@ -26,7 +27,7 @@ function MessageTypeGuild(props: { message: GuildChatMessage }) {
       <div className="grid grid-cols-[calc(var(--spacing)*13)_1fr] gap-1">
         <div className="w-10 h-10 rounded-full overflow-hidden inline-block align-top mt-1">
           <img
-            src={props.message.iconPath}
+            src={props.message.iconPath ?? defaultIcon}
             alt={"Guild Icon"}
             className="w-10 h-10 object-cover"
           />
@@ -99,7 +100,7 @@ function MessageTypePlayer(props: { message: GuildChatMessage }) {
       <div className="grid grid-cols-[calc(var(--spacing)*13)_1fr] gap-1">
         <div className="w-10 h-10 rounded-full overflow-hidden inline-block align-top mt-1">
           <img
-            src={props.message.iconPath}
+            src={props.message.iconPath ?? defaultIcon}
             alt={props.message.displayName}
             className="w-10 h-10 object-cover"
           />
@@ -163,7 +164,7 @@ function MessageTypePlayer(props: { message: GuildChatMessage }) {
 
 function MessageTypeSystem(props: { message: GuildChatMessage }) {
   return (
-    <div className="chat-message mx-20 py-3 text-stone-500 italic border-b border-stone-200 text-center">
+    <div className="chat-message mx-20 py-4 text-stone-500 italic text-center">
       <div className="pr-3">
         <div className="w-full text-sm">
           {props.message.content}

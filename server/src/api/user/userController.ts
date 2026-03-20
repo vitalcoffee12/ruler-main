@@ -21,8 +21,8 @@ class UserController {
     res: Response,
   ) => {
     const { email } = req.body;
-    const exists = await userService.checkEmailExists(email);
-    res.status(200).send({ exists });
+    const serviceResponse = await userService.checkEmailExists(email);
+    res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 
   public createUser: RequestHandler = async (req: Request, res: Response) => {
@@ -109,7 +109,7 @@ class UserController {
     const serviceResponse = await userService.signIn(email, password);
     res.cookie("__session", serviceResponse.responseObject?.refreshToken, {
       path: "/",
-      maxAge: remember ? 2 * 60 * 1000 : undefined, // 2 min  if remember is true
+      maxAge: 14 * 60 * 60 * 24 * 1000, // 14days
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       httpOnly: true,
@@ -146,7 +146,7 @@ class UserController {
     const serviceResponse = await userService.validateToken(Number(userId));
     res.cookie("__session", serviceResponse.responseObject?.refreshToken, {
       path: "/",
-      maxAge: 14 * 60 * 60 * 24, // 14days
+      maxAge: 14 * 60 * 60 * 24 * 1000, // 14days
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       httpOnly: true,

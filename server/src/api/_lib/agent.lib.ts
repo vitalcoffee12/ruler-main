@@ -14,13 +14,18 @@ export class AgentLib {
     messages: { role: string; content: string }[],
     format: any,
   ): Promise<string> {
-    const res = await ollama.chat({
-      model: model,
-      messages: messages,
-      stream: false,
-      format: format,
-    });
-    return res?.message?.content ?? "";
+    try {
+      const res = await ollama.chat({
+        model: model,
+        messages: messages,
+        stream: false,
+        format: format,
+      });
+      return res?.message?.content ?? "";
+    } catch (ex) {
+      console.log(ex);
+    }
+    return "";
   }
 
   // 텍스트 임베딩 생성
@@ -78,6 +83,29 @@ export class AgentLib {
       console.error("Error formatting rule set:", error);
       return null;
     }
+  }
+
+  async generateWorld(options?: {
+    model?: string;
+    previousChat?: { role: string; content: string }[];
+    doc?: string;
+  }): Promise<any> {
+    const res = await this.chat(
+      MODELS.llama3,
+      [
+        { role: "system", content: PROMPTS.WORLD_GENERATOR_SYSTEM() },
+        ...(options?.previousChat ?? []),
+        {
+          role: "user",
+          content: PROMPTS.WORLD_GENERATOR(
+            options?.doc ?? "No document provided. Generate as you want.",
+          ),
+        },
+      ],
+      FORMAT.WORLD_GENERATOR,
+    );
+
+    return JSON.parse(res);
   }
 
   async generateEntities(options?: {
@@ -141,6 +169,7 @@ export class AgentLib {
       // options?.terms || "No terms",
       options?.entities || "No entities",
     );
+
     const res = await this.chat(
       MODELS.llama3,
       [
@@ -159,7 +188,8 @@ export class AgentLib {
       ],
       FORMAT.NARRATOR,
     );
-    const parsed = JSON.parse(res);
+    console.log("response/:", res);
+    const parsed = res ? JSON.parse(res) : {};
 
     return {
       data: parsed,
@@ -175,11 +205,7 @@ export class AgentLib {
     quests?: string;
     entities?: string;
   }): Promise<{
-    data: {
-      created: Entity[];
-      updated: Entity[];
-      deleted: string[];
-    };
+    data: Entity[];
     prompt: string;
   }> {
     const prompt = PROMPTS.EDITOR(
@@ -204,8 +230,8 @@ export class AgentLib {
       ],
       FORMAT.EDITOR,
     );
-    const parsed = JSON.parse(res);
 
+    const parsed = res ? JSON.parse(res) : [];
     return {
       data: parsed,
       prompt,

@@ -1,6 +1,8 @@
 import { Request, RequestHandler, Response } from "express";
 import { GuildService } from "./guildService";
 import { socketHandler } from "../_lib/socketHandler";
+import { ServiceResponse } from "@/common/models/serviceResponse";
+import { StatusCodes } from "http-status-codes";
 
 class GuildController {
   constructor(
@@ -39,9 +41,16 @@ class GuildController {
     req: Request,
     res: Response,
   ) => {
-    const guildCode = req.params.code;
-    // const serviceResponse = await this.guildService.findByCode(guildCode);
-    // res.status(serviceResponse.statusCode).send(serviceResponse);
+    const guildCode = req.params.code as string;
+    const result = await this.guildService.findMembersByGuild({
+      guildCode,
+    });
+    const sr = ServiceResponse.success(
+      "guildMemberfetch",
+      result,
+      StatusCodes.OK,
+    );
+    res.status(sr.statusCode).send(sr);
   };
 
   public joinWithCode: RequestHandler = async (req: Request, res: Response) => {
