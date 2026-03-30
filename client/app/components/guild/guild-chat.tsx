@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import useSocket from "~/hooks/use-socket.hook";
 import type { GameHistory, Guild, GuildChatMessage } from "../common.interface";
 import { IntroMessage, MessageList } from "./guild-chat-message";
+import useToast from "~/hooks/use-toast.hook";
 
 export default function GuildChat(props: {
   guild: Guild;
@@ -22,13 +23,16 @@ export default function GuildChat(props: {
   const [message, setMessage] = useState<string>("");
   const [histories, setHistories] = useState<GameHistory[]>([]);
   const [taggedNodes, setTaggedNodes] = useState<string[]>([]);
-  const [flagged, setFlagged] = useState<boolean>(false);
-  const [flagCount, setFlagCount] = useState<number>(0);
-  const [isWaiting, setIsWaiting] = useState<boolean>(false);
+  const [isWaiting, setIsWaiting] = useState<boolean>(true);
 
   const [rows, setRows] = useState<number>(1);
+  const [toast, addToast] = useToast();
 
   const onSendMessage = (message: string) => {
+    if (isWaiting) {
+      addToast("warning", "GM's thingking...Please wait...");
+      return;
+    }
     sendMessage("GUILD_CHAT_MESSAGE", { message, entities: taggedNodes });
     setMessage("");
     setRows(1);
@@ -53,9 +57,7 @@ export default function GuildChat(props: {
         payload.type === "GUILD_FLAG_DOWN" &&
         payload.guildCode === props.guild.code
       ) {
-        setFlagged(false);
         setIsWaiting(false);
-        setFlagCount(0);
       }
       if (
         payload.type === "GUILD_FLAG_WAITING" &&
@@ -71,9 +73,9 @@ export default function GuildChat(props: {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
     }
   }, [histories]);
-  const onFalgup = () => {
-    sendMessage("GUILD_FLAG_UP", {});
-  };
+  // const onFalgup = () => {
+  //   sendMessage("GUILD_FLAG_UP", {});
+  // };
 
   return (
     <div className="guild-chat">
@@ -112,36 +114,10 @@ export default function GuildChat(props: {
             </li>
           </ul>
           <div className="flex items-center gap-3">
-            <span className="text-stone-500 text-sm">
-              {flagCount} / {3}
-            </span>
             {isWaiting && (
               <span className="text-lime-600 text-sm">
-                Waiting for Ruler's response...
+                Waiting for GM's response...
               </span>
-            )}
-            {!isWaiting && (
-              <button
-                className={`flex items-center text-stone-700 rounded-md pl-2 pr-3 py-1 text-sm cursor-pointer transition duration-200 ${
-                  flagged
-                    ? "bg-lime-300 hover:bg-lime-400"
-                    : "bg-stone-200 hover:bg-stone-300"
-                }`}
-                onClick={() => {
-                  if (isWaiting) return;
-                  setFlagged(true);
-                  setFlagCount((prev) => prev + 1);
-                  onFalgup();
-                }}
-              >
-                <span
-                  className="material-symbols-outlined mr-2 mb-0.5"
-                  style={{ fontSize: "16px" }}
-                >
-                  {flagged ? "check_box" : "check_box_outline_blank"}
-                </span>
-                Ready
-              </button>
             )}
           </div>
         </div>
@@ -176,18 +152,22 @@ export default function GuildChat(props: {
             }}
           />
           <button
-            className="flex items-center justify-center hover:bg-stone-100 cursor-pointer transition duration-200 focus:bg-lime-200 outline-none"
+            className={`flex items-center justify-center  transition duration-200  outline-none ${isWaiting ? "bg-stone-100" : "focus:bg-lime-200 hover:bg-stone-100 cursor-pointer"}`}
             onClick={() => {
               onSendMessage(message);
             }}
             title="Alt + Enter"
           >
-            <span className="material-symbols-outlined text-stone-700">
+            <span
+              className={`material-symbols-outlined `}
+              style={{ color: isWaiting ? "#aaa" : "#010101" }}
+            >
               send
             </span>
           </button>
         </div>
       </div>
+      {toast}
     </div>
   );
 }

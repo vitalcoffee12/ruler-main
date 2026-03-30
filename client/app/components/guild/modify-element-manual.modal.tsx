@@ -8,7 +8,6 @@ export default function ModifyElementManualModal(props: {
   elementId: string;
   closeModal: () => void;
 }) {
-  const { auth } = useContext(AuthContext);
   const [page, setPage] = useState(0);
   const [element, setElement] = useState<Entity>({
     id: "",
@@ -31,7 +30,6 @@ export default function ModifyElementManualModal(props: {
     try {
       const res = await reqFetchElementDetails.sendRequest({
         authorized: true,
-        authorization: auth.accessToken,
       });
       setElement(res?.data.responseObject);
     } catch (ex) {
@@ -47,7 +45,6 @@ export default function ModifyElementManualModal(props: {
     try {
       await reqModifyElement.sendRequest({
         authorized: true,
-        authorization: auth.accessToken,
         body: {
           guildCode: props.guildCode,
           elementId: props.elementId,

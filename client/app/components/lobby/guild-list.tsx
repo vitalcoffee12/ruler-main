@@ -21,7 +21,6 @@ export default function GuildList(props: {
     try {
       await reqFetchGuilds.sendRequest({
         authorized: true,
-        authorization: auth.accessToken,
       });
     } catch (ex) {}
   };

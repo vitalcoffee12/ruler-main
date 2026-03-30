@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function useToast(duration = 3000) {
   const [messages, setMessages] = useState<
@@ -24,12 +24,22 @@ function ToastContainer({
 }: {
   messages: { id: number; type: string; message: string }[];
 }) {
+  const refs = useRef<{ [key: number]: HTMLDivElement }>({});
+
   return (
     <div className="fixed top-4 right-4 space-y-2 z-999">
       {messages.map((msg) => (
         <div
           key={msg.id}
+          ref={(el) => {
+            if (el) {
+              refs.current[msg.id] = el;
+            }
+          }}
           className={`px-4 py-2 rounded-md shadow bg-white border-l-10 w-md ${getToastClass(msg.type)}`}
+          style={{
+            animation: "3s popup",
+          }}
         >
           {msg.message}
         </div>

@@ -14,7 +14,6 @@ export default function AddElementModal(props: {
     try {
       await reqAddElement.sendRequest({
         authorized: true,
-        authorization: auth.accessToken,
         body: {
           guildCode: props.guildCode,
           description,

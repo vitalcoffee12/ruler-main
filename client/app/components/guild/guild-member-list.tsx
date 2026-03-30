@@ -39,7 +39,6 @@ export default function GuildMemberList(props: { guild: Guild }) {
         try {
           const res = await reqFetchUserList.sendRequest({
             authorized: true,
-            authorization: auth.accessToken,
           });
           setMembers(res?.data.responseObject);
         } catch (ex) {

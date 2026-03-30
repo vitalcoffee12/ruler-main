@@ -1,12 +1,10 @@
-import { useContext, useEffect, useState } from "react";
-import { AuthContext } from "~/contexts/authContext";
+import { useState } from "react";
 import useRequest from "~/hooks/use-request.hook";
 
 export default function AddElementManualModal(props: {
   guildCode: string;
   closeModal: () => void;
 }) {
-  const { auth } = useContext(AuthContext);
   const [element, setElement] = useState<Record<string, any>>({
     name: "",
     description: "",
@@ -15,62 +13,10 @@ export default function AddElementManualModal(props: {
   });
 
   const reqAddElement = useRequest("/game/add-element", "post");
-
-  // const [page, setPage] = useState(1);
-  // const [loadingDocuments, setLoadingDocuments] = useState(false);
-  // const [isLoading, setIsLoading] = useState(false);
-  // const [loadingTerms, setLoadingTerms] = useState(false);
-  // const [documentPage, setDocumentPage] = useState(1);
-  // const [documentMaxPage, setDocumentMaxPage] = useState(1);
-  // const [documentSearch, setDocumentSearch] = useState("");
-  // const [termPage, setTermPage] = useState(1);
-  // const [termMaxPage, setTermMaxPage] = useState(1);
-  // const [termSearch, setTermSearch] = useState("");
-
-  // const [documents, setDocuments] = useState<any[]>([]);
-  // const [terms, setTerms] = useState<any[]>([]);
-
-  // const fetchDocuments = async () => {
-  //   try {
-  //     setIsLoading(true);
-  //     const res = await getRequest("/resource/guild", {
-  //       type: "ruleSet",
-  //       code: props.guildCode,
-  //       page: documentPage,
-  //       search: documentSearch,
-  //     });
-
-  //     setDocuments(res.data.responseObject.data || []);
-  //     setDocumentMaxPage(res.data.responseObject.maxPage || 1);
-  //   } catch (ex) {
-  //     console.error("Failed to fetch documents:", ex);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
-  // const fetchTerms = async () => {
-  //   try {
-  //     setIsLoading(true);
-  //     const res = await getRequest("/resource/guild", {
-  //       type: "termSet",
-  //       code: props.guildCode,
-  //       page: termPage,
-  //       search: termSearch,
-  //     });
-  //     setTerms(res.data.responseObject.data || []);
-  //     setTermMaxPage(res.data.responseObject.maxPage || 1);
-  //   } catch (ex) {
-  //     console.error("Failed to fetch terms:", ex);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
   const handleSubmit = async () => {
     try {
       const res = await reqAddElement.sendRequest({
         authorized: true,
-        authorization: auth.accessToken,
         body: {
           guildCode: props.guildCode,
           element,
@@ -78,18 +24,6 @@ export default function AddElementManualModal(props: {
       });
     } catch (ex) {}
   };
-
-  // useEffect(() => {
-  //   if (loadingDocuments) {
-  //     fetchDocuments();
-  //   }
-  // }, [loadingDocuments, documentPage, documentSearch]);
-
-  // useEffect(() => {
-  //   if (loadingTerms) {
-  //     fetchTerms();
-  //   }
-  // }, [loadingTerms, termPage, termSearch]);
 
   return (
     <>

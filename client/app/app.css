@@ -92,3 +92,23 @@ body {
   font-weight: 400;
   font-style: normal;
 }
+
+@keyframes popup {
+  0% {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+  6%{
+    opacity:  1;
+    transform: translateY(0%);   
+  }
+  94%{
+    opacity:  1;
+    transform: translateY(0%);   
+  }
+
+  100% {
+    opacity:  0;
+    transform: translateY(-100%);
+  }
+}

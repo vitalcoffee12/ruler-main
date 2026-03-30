@@ -1,5 +1,4 @@
-import { useContext, useEffect, useState } from "react";
-import { AuthContext } from "~/contexts/authContext";
+import { useEffect, useState } from "react";
 import useRequest from "~/hooks/use-request.hook";
 import useToast from "~/hooks/use-toast.hook";
 import defaultIcon from "../../views/lobby/default-profile.jpg";
@@ -8,7 +7,6 @@ export default function AddMemberModal(props: {
   guildCode: string;
   guildName: string;
 }) {
-  const { auth } = useContext(AuthContext);
   const [users, setUsers] = useState<
     {
       id: number;
@@ -25,7 +23,6 @@ export default function AddMemberModal(props: {
     try {
       const res = await reqFetchFriends.sendRequest({
         authorized: true,
-        authorization: auth.accessToken,
       });
 
       setUsers(res?.data.responseObject);
@@ -95,13 +92,11 @@ function FriendItem(props: {
   displayName: string;
   icon: string;
 }) {
-  const { auth } = useContext(AuthContext);
   const reqInvite = useRequest("/guild/invite", "post");
 
   const handleInvite = async () => {
     await reqInvite.sendRequest({
       authorized: true,
-      authorization: auth.accessToken,
       body: {
         guildCode: props.guildCode,
         userId: props.userId,

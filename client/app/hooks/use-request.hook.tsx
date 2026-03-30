@@ -1,6 +1,6 @@
 import axios from "axios";
-import { useContext, useEffect, useState } from "react";
-import { useNavigate } from "react-router";
+import { useContext, useState } from "react";
+
 import { axiosInstance } from "~/axios-instance";
 import { AuthContext } from "~/contexts/authContext";
 
@@ -10,20 +10,19 @@ interface ResponseDataType {
 }
 
 export default function useRequest(url: string, method: "post" | "get") {
-  const { logout } = useContext(AuthContext);
+  const { auth, logout } = useContext(AuthContext);
   const [res, setRes] = useState<ResponseDataType | null>(null);
   const [errorCode, setErrorCode] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const sendRequest = async (options: {
     authorized: boolean;
-    authorization?: string;
     method?: string;
     queries?: Record<string, any>;
     body?: any;
     headers?: Record<string, string>;
   }): Promise<ResponseDataType | null> => {
-    if (options.authorized && !options.authorization) {
+    if (options.authorized && !auth.accessToken) {
       return null;
     }
     setIsLoading(true);
@@ -33,8 +32,8 @@ export default function useRequest(url: string, method: "post" | "get") {
       : "";
     const fullUrl = url + queryString;
     const fullHeader = options.headers ? { ...options.headers } : {};
-    if (options.authorization) {
-      fullHeader["Authorization"] = `Bearer ${options.authorization}`;
+    if (options.authorized) {
+      fullHeader["Authorization"] = `Bearer ${auth.accessToken}`;
     }
     try {
       const res = await axiosInstance.request({
