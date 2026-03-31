@@ -1,7 +1,11 @@
 import { ServiceResponse } from "@/common/models/serviceResponse";
 import type { Guild, GuildMember, GuildMemberWithUser } from "./guildModel";
 import { StatusCodes } from "http-status-codes";
-import { GenerateGuildCode, GenerateRandomColorCode } from "../utils";
+import {
+  GenerateEntityCode,
+  GenerateGuildCode,
+  GenerateRandomColorCode,
+} from "../utils";
 import { GuildMemberEntity } from "@/entities/guilldMemberEntity";
 import { GuildEntity } from "@/entities/guildEntity";
 import { UserEntity } from "@/entities/userEntity";
@@ -14,6 +18,9 @@ import AppDataSource from "@/dataSource";
 import { Repository } from "typeorm/repository/Repository";
 import { mongoLib } from "../_lib/mongo.lib";
 import { In } from "typeorm";
+import { agentLib } from "../_lib/agent.lib";
+import { readFileSync } from "fs";
+import path from "path";
 
 export class GuildService {
   constructor(
@@ -161,6 +168,10 @@ export class GuildService {
       `${newGuild.code}${COLLECTION_SUFFIX.SCENE_HISTORY}`,
     );
 
+    await mongoose.connection.createCollection(
+      `${newGuild.code}${COLLECTION_SUFFIX.DOCUMENTS}`,
+    );
+
     const newCharacter: Entity = {
       id: `${user.code}`,
       name: user.displayName,
@@ -200,6 +211,7 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
     name: string;
     description?: string;
     ownerId: number;
+    attachment?: string;
   }) {
     try {
       const guildCode = GenerateGuildCode();
@@ -208,7 +220,40 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
         ownerId: createGuildData.ownerId,
         name: createGuildData.name,
         description: createGuildData.description,
-        iconPath: createGuildData.iconPath,
+        iconPath: `guild/${createGuildData.iconPath}`,
+      });
+
+      let doc;
+      if (createGuildData.attachment) {
+        doc = readFileSync(
+          path.join(
+            process.cwd(),
+            "uploads",
+            `/guild/${createGuildData.attachment}`,
+          ),
+          { encoding: "utf8", flag: "r" },
+        );
+      }
+      const result = await agentLib.generateWorld({
+        previousChat: [
+          {
+            role: "user",
+            content: `game world is like...: ${createGuildData.description}`,
+          },
+        ],
+        doc,
+      });
+      console.log(result);
+      await gameLib.insertGameHistory(guildCode, {
+        chat: {
+          userId: PREDEFINED_USER.SYSTEM.id,
+          userCode: PREDEFINED_USER.SYSTEM.code,
+          message: `Element created: ${result.length}`,
+        },
+        entities: result.map((v: any, idx: number) => ({
+          ...v,
+          id: `${v.name.slice(0, 4)}_${idx}`,
+        })),
       });
 
       return ServiceResponse.success<Guild>(

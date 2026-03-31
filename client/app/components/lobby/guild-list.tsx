@@ -1,5 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { BASE_URL } from "~/axios-instance";
 import { AuthContext } from "~/contexts/authContext";
 import useRequest from "~/hooks/use-request.hook";
 
@@ -134,7 +135,7 @@ function GuildListItem(props: {
         style={{
           backgroundColor: props.guild.colorCode,
           backgroundImage: props.guild.iconPath
-            ? `url(${props.guild.iconPath})`
+            ? `url(${BASE_URL}/${props.guild.iconPath})`
             : undefined,
           backgroundSize: "cover",
           backgroundPosition: "center",

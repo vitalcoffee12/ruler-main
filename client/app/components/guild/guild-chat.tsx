@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import useSocket from "~/hooks/use-socket.hook";
 import type { GameHistory, Guild, GuildChatMessage } from "../common.interface";
-import { IntroMessage, MessageList } from "./guild-chat-message";
+import { MessageList } from "./guild-chat-message";
 import useToast from "~/hooks/use-toast.hook";
+import { BASE_URL } from "~/axios-instance";
 
 export default function GuildChat(props: {
   guild: Guild;
@@ -23,7 +24,7 @@ export default function GuildChat(props: {
   const [message, setMessage] = useState<string>("");
   const [histories, setHistories] = useState<GameHistory[]>([]);
   const [taggedNodes, setTaggedNodes] = useState<string[]>([]);
-  const [isWaiting, setIsWaiting] = useState<boolean>(true);
+  const [isWaiting, setIsWaiting] = useState<boolean>(false);
 
   const [rows, setRows] = useState<number>(1);
   const [toast, addToast] = useToast();
@@ -205,7 +206,9 @@ function mapHistoriesToMessages(
       type: type,
       userId: history.chat.userId,
       userCode: history.chat.userCode,
-      iconPath: memberInfo?.iconPath,
+      iconPath: memberInfo?.iconPath
+        ? `${BASE_URL}/${memberInfo.iconPath}`
+        : undefined,
       displayName: memberInfo
         ? memberInfo.displayName || "Unknown User"
         : "Unknown User",

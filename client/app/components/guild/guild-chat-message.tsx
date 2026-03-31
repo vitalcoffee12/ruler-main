@@ -177,23 +177,3 @@ function MessageTypeSystem(props: { message: GuildChatMessage }) {
     </div>
   );
 }
-
-export function IntroMessage(props: { guild: Guild }) {
-  return (
-    <MessageTypePlayer
-      message={{
-        _id: "intro",
-        content: `## Congratulations, \`${props.guild.name}\` has been created!
-This is the beginning of your guild chat. Guild members can communicate here, adventure the world, and \`Ruler\` will take a job in guiding your journey!`,
-        citations: [],
-        entities: [],
-        displayName: props.guild.name,
-        iconPath: props.guild.iconPath || "https://picsum.photos/400",
-        type: "PLAYER",
-        timestamp: props.guild.createdAt,
-        userCode: "",
-        userId: 0,
-      }}
-    />
-  );
-}

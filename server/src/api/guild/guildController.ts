@@ -21,7 +21,19 @@ class GuildController {
   };
 
   public createGuild: RequestHandler = async (req: Request, res: Response) => {
-    const serviceResponse = await this.guildService.createGuild(req.body);
+    console.log(req.body);
+    const iconPath = (req as any).files["iconPath"]
+      ? (req as any).files["iconPath"][0]
+      : null;
+    const attachment = (req as any).files["attachment"]
+      ? (req as any).files["attachment"][0]
+      : null;
+    console.log(iconPath, attachment);
+    const serviceResponse = await this.guildService.createGuild({
+      ...req.body,
+      iconPath: iconPath?.filename ?? null,
+      attachment: attachment?.filename ?? null,
+    });
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 

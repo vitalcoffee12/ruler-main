@@ -18,6 +18,7 @@ const app: Express = express();
 // Set the application to trust the reverse proxy
 app.set("trust proxy", true);
 app.use(express.static(__dirname + "/../client"));
+app.use(express.static(__dirname + "/../uploads"));
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

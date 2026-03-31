@@ -41,6 +41,7 @@ Each entity consists of:
 Guildlines:
    - New entities should be thematically consistent with existing ones
    - Avoid creating entities that are too similar to existing ones
+   - All entities in relations need to be exist.
 
 Output format (STRICT JSON):
 [
@@ -51,7 +52,7 @@ Output format (STRICT JSON):
     "relations" : [
       {
           "name": "string", // target entities name
-          "type": "string", // relation type (UPPER CASE + Underscore only) 
+          "type": "string", // relation type
       }
     ]
   }

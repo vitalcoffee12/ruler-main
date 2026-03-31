@@ -9,6 +9,7 @@ import {
   validateRole,
   validateToken,
 } from "@/common/utils/httpHandlers";
+import { uploader } from "@/common/middleware/uploader";
 
 export const guildRegistry = new OpenAPIRegistry();
 export const guildRouter: Router = express.Router();
@@ -61,14 +62,20 @@ guildRegistry.registerPath({
   path: "/guild/create",
   tags: ["Guild"],
   request: {
-    body: { content: { "application/json": { schema: CreateGuildSchema } } },
+    body: { content: { "multipart/form-data": { schema: CreateGuildSchema } } },
   },
   responses: createApiResponse(GuildSchema, "Guild Created Successfully"),
 });
 
 guildRouter.post(
   "/create",
-  validateRequest(CreateGuildSchema),
+  uploader("guild", 50).fields([
+    { name: "iconPath", maxCount: 1 },
+    {
+      name: "attachment",
+      maxCount: 1,
+    },
+  ]),
   guildController.createGuild,
 );
 

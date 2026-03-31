@@ -62,6 +62,7 @@ export const CreateGuildSchema = z.object({
     name: z.string(),
     iconPath: z.string().optional(),
     description: z.string().optional(),
+    attachment: z.any().optional(),
   }),
 });
 export const DisableGuildSchema = z.object({

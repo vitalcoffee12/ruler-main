@@ -1,5 +1,5 @@
 import { generateRandomCode } from "@/api/utils";
-import { readFileSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 import multer from "multer";
 import path from "path";
 
@@ -8,16 +8,21 @@ export const uploader = (dir: string, limitMB: number) =>
     storage: multer.diskStorage({
       destination(req, file, done) {
         try {
-          readFileSync(`uploads/${dir}`);
-          done(null, `uploads/${dir}`);
+          readdirSync(`${process.cwd()}/uploads/${dir}`);
+          done(null, `${process.cwd()}/uploads/${dir}`);
         } catch (ex) {
-          console.log("error no available directory");
+          console.log(ex);
         }
       },
       filename(req, file, done) {
-        const userCode = req.headers["userCode"] || `${generateRandomCode(4)}`;
-        const ext = path.extname(file.originalname);
-        done(null, `${userCode}_${Date.now()}${ext}`);
+        try {
+          const userCode =
+            req.headers["userCode"] || `${generateRandomCode(4)}`;
+          const ext = path.extname(file.originalname);
+          done(null, `${userCode}_${Date.now()}${ext}`);
+        } catch (ex) {
+          console.log(ex);
+        }
       },
     }),
     limits: {

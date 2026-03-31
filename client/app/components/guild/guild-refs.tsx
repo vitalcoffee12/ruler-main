@@ -36,8 +36,8 @@ function EntityRef(props: { id: string; world: Entity[] }) {
 
   return (
     <>
-      <div className="grid grid-rows-[auto_1fr] pb-7 bg-stone-100">
-        <div className="p-3 m-2 border-b border-stone-200">
+      <div className="grid grid-rows-[auto_1fr] pb-7">
+        <div className="p-2 m-2">
           <div
             className="flex gap-2 items-center border-b pb-1 border-stone-200"
             title="id"
@@ -55,33 +55,36 @@ function EntityRef(props: { id: string; world: Entity[] }) {
         </div>
         <div className=" ">
           <div
-            className="no-select flex justify-between cursor-pointer p-2 px-4 active:scale-99 transtion duration-200"
+            className="no-select flex justify-between cursor-pointer p-2 px-4 active:scale-99 transtion duration-200 bg-stone-100"
             onClick={() => {
               setInIsOpen(!inIsOpen);
             }}
           >
             <div className="flex items-center">
-              <span className="material-symbols-outlined mr-2">input</span>
+              <span className="material-symbols-outlined mr-2">south_east</span>
               Inbound Relations
             </div>
             <span
               className="material-symbols-outlined"
               style={{
-                transform: inIsOpen ? "rotateX(180deg)" : "",
+                transform: inIsOpen ? "" : "rotateX(180deg)",
               }}
             >
               keyboard_arrow_down
             </span>
           </div>
           <ul
-            className="px-3 border-l-3 ml-7 overflow-hidden transition duration-200"
+            className="px-3 overflow-hidden transition duration-200 border-b border-stone-200 bg-stone-100"
             style={{
               height: inIsOpen ? "" : "0",
             }}
           >
             {relatedEntitiesIn.map((r) => (
               <>
-                <li className="rounded-lg shadow-sm p-2 mt-2" id={r.id}>
+                <li
+                  className="rounded-lg shadow-md p-2 mb-3 bg-white"
+                  id={r.id}
+                >
                   <div
                     className="flex gap-2 items-center border-b pb-1 border-stone-200"
                     title="id"
@@ -104,38 +107,36 @@ function EntityRef(props: { id: string; world: Entity[] }) {
             ))}
           </ul>
           <div
-            className="no-select flex justify-between cursor-pointer p-2 px-4 active:scale-99 transtion duration-200 mt-3"
+            className="no-select flex justify-between cursor-pointer p-2 px-4 active:scale-99 transtion duration-200 mt-3 bg-stone-100"
             onClick={() => {
               setOutIsOpen(!outIsOpen);
             }}
           >
             <div className="flex items-center">
-              <span
-                className="material-symbols-outlined mr-2"
-                style={{ transform: "rotate(180deg)" }}
-              >
-                output
-              </span>
+              <span className="material-symbols-outlined mr-2">north_west</span>
               Outbound Relations
             </div>
             <span
               className="material-symbols-outlined"
               style={{
-                transform: outIsOpen ? "rotateX(180deg)" : "",
+                transform: outIsOpen ? "" : "rotateX(180deg)",
               }}
             >
               keyboard_arrow_down
             </span>
           </div>
           <ul
-            className="px-3 border-l-3 ml-7 overflow-hidden transition duration-200"
+            className="px-3 overflow-hidden transition duration-200 border-b border-stone-200 bg-stone-100"
             style={{
               height: outIsOpen ? "" : "0",
             }}
           >
             {relatedEntitiesOut.map((r) => (
               <>
-                <li className="rounded-lg shadow-sm p-2 mt-2" id={r.id}>
+                <li
+                  className="rounded-lg shadow-md p-2 mb-3 bg-white"
+                  id={r.id}
+                >
                   <div
                     className="flex gap-2 items-center border-b pb-1 border-stone-200"
                     title="id"
