@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import { StatusCodes } from "http-status-codes";
 import { ServiceResponse } from "@/common/models/serviceResponse";
 import { logger } from "@/server";
@@ -9,23 +7,12 @@ import { mongoLib } from "../_lib/mongo.lib";
 import { COLLECTION_SUFFIX } from "../constants";
 import { ResourceEntity } from "@/entities/resourceEntity";
 import mongoose from "mongoose";
-import {
-  generateRandomCode,
-  getCodeWithoutPrefix,
-  removeMarkdownFormatting,
-} from "../utils";
+import { generateRandomCode } from "../utils";
 import { GuildResourceEntity } from "@/entities/guildResourceEntity";
-
 import { In, Repository } from "typeorm";
 import { GuildEntity } from "@/entities/guildEntity";
 import AppDataSource from "@/dataSource";
-
-interface Paragraph {
-  title: string;
-  content: string[];
-  level: number;
-  children: Paragraph[];
-}
+import { gameLib } from "../_lib/game.lib";
 
 export class ResourceService {
   constructor(
@@ -294,7 +281,7 @@ export class ResourceService {
         code = generateRandomCode();
       }
 
-      const docs = await buildDocumentFromMarkdown(
+      const docs = await gameLib.buildDocumentFromMarkdown(
         code,
         1,
         resourceData.name,
@@ -366,7 +353,7 @@ export class ResourceService {
 
       // update
       await mongoLib.bulkWriteDocuments(
-        `${resource.code}.${COLLECTION_SUFFIX.RULE_SET}`,
+        `${resource.code}${COLLECTION_SUFFIX.DOCUMENTS}`,
         documents.map((item) => ({
           updateOne: {
             filter: { id: item.id },
@@ -467,116 +454,6 @@ export class ResourceService {
 export const resourceService = new ResourceService();
 
 // rule operations
-
-function splitDocument(
-  title: string,
-  markdown: string,
-  level: number,
-): Paragraph {
-  const result: Paragraph = {
-    title: removeMarkdownFormatting(title),
-    content: [],
-    level,
-    children: [],
-  };
-
-  if (level > 6) {
-    result.content = [`${title}\n${markdown.trim()}`];
-    return result;
-  }
-
-  const regex = new RegExp(`^#{${level + 1}} `, "gm");
-  const items = markdown.split(regex);
-
-  const children = [];
-  for (let i = 0; i < items.length; i++) {
-    if (items[i].trim() === "") {
-      continue;
-    }
-    if (i === 0 && !items[i].includes("# ")) {
-      const contents = items[i].trim().replaceAll("---", "").split("\n");
-      let paragraphs = "";
-      for (const line of contents) {
-        paragraphs += line.trim() + "\n";
-        if (false && paragraphs.trim().length > 400) {
-          result.content.push(paragraphs.trim());
-          paragraphs = "";
-        }
-      }
-      if (paragraphs.trim().length > 0) result.content.push(paragraphs.trim());
-      if (result.content.length) {
-        result.content[0] = `${title}\n${result.content[0]}`;
-      }
-      continue;
-    }
-
-    const subtitle = items[i].split("\n")[0].trim();
-    const content = items[i].substring(subtitle.length).trim();
-
-    const child = splitDocument(subtitle, content, level + 1);
-    // process each item
-    children.push(child);
-  }
-  result.children = children;
-  return result;
-}
-
-// flat nested rule and give unique id for each item (3)
-function flatDocumentTree(
-  docCode: string,
-  docVersion: number,
-  startId: number,
-  categories: string[],
-  paragraph: Paragraph,
-): { docs: Document[]; endId: number } {
-  const docs: Document[] = [];
-  const subCategories = [...categories, paragraph.title];
-  const doc: Document = {
-    id: startId,
-    docCode,
-    docVersion,
-    title: paragraph.title,
-    content: paragraph.content,
-    categories: subCategories,
-    children: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  const childDocs = [];
-  let currentId = startId + 1;
-  for (let i = 0; i < paragraph.children.length; i++) {
-    doc.children!.push(currentId);
-    const child = paragraph.children[i];
-    const childRules = flatDocumentTree(
-      docCode,
-      docVersion,
-      currentId,
-      subCategories,
-      child,
-    );
-    childDocs.push(...childRules.docs);
-    currentId = childRules.endId;
-  }
-
-  docs.push(doc);
-  docs.push(...childDocs);
-
-  return { docs, endId: currentId };
-}
-
-// given markdown file, build rules (2)
-async function buildDocumentFromMarkdown(
-  docCode: string,
-  docVersion: number,
-  docName: string,
-  filename: string = "Blades-in-the-Dark-SRD.md",
-): Promise<Document[]> {
-  const filePath = path.join(__dirname, "..", "..", "..", "uploads", filename);
-  const buffer = await fs.promises.readFile(filePath, { encoding: "utf-8" });
-  const docTree = splitDocument(docName, buffer, 0);
-  return flatDocumentTree(docCode, docVersion, 1, [], docTree).docs;
-}
 
 const defaultResourceData = {
   distributors: [],

@@ -31,6 +31,7 @@ export default function CreateGuildModal(props: {
   const reqCreateGuild = useRequest("/guild/create", "post");
 
   const handleCreateGuild = async () => {
+    setIsLoading(true);
     try {
       const formdata = new FormData();
       formdata.append("ownerId", auth.id.toString());
@@ -48,13 +49,12 @@ export default function CreateGuildModal(props: {
           "Content-Type": "multipart/form-data",
         },
       });
+    } catch (ex) {
+    } finally {
+      setIsLoading(false);
       props.onClose();
       props.onRefresh();
-    } catch (ex) {
-      //handle error
     }
-    setIsLoading(false);
-    props.onClose();
   };
 
   useEffect(() => {
@@ -81,8 +81,6 @@ export default function CreateGuildModal(props: {
 
   return (
     <div className="flex flex-col min-w-[300px] min-h-[200px]">
-      {loading}
-
       <div>
         <h2 className="text-lg mb-4">Create a New Guild</h2>
         <div className="text-sm text-stone-600 mb-4">
@@ -222,6 +220,7 @@ export default function CreateGuildModal(props: {
           </button>
         </div>
       </div>
+      {loading}
     </div>
   );
 }
