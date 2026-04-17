@@ -6,6 +6,7 @@ export interface Guild {
   ownerId: number;
   ownerCode: string;
   colorCode?: string;
+  state?: string;
   updatedAt: Date;
   createdAt: Date;
 }
@@ -33,6 +34,7 @@ export interface GameHistory {
   _id: string;
   sceneId: number;
   chat: { userId: number; userCode: string; message: string };
+  tasks?: { type: string; input: string; output: string }[];
   entities: any[];
   citations: any[];
   createdAt: Date;
@@ -41,6 +43,7 @@ export interface GameHistory {
 export interface GuildChatMessage {
   _id: string;
   type: string;
+  color: string;
   userId: number;
   userCode: string;
   iconPath?: string;
@@ -49,6 +52,7 @@ export interface GuildChatMessage {
   timestamp: Date;
   citations: { content: string; ruleId: number; description?: string }[];
   entities: any[];
+  tasks?: string;
 }
 
 export interface Entity {
@@ -58,6 +62,7 @@ export interface Entity {
   secrets?: string; // Optional field for GM's reference, not used in gameplay
   score?: number;
   relations: { id: string; type: string }[];
+  features: string[];
   favorite?: boolean;
   createdAt: Date;
   updatedAt: Date;

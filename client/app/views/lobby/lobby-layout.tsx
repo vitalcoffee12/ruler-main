@@ -16,7 +16,7 @@ export default function Layout() {
   const { auth, logout } = useContext(AuthContext);
   const { Modal, openModal, closeModal } = useModal();
   const [Toast, addToast] = useToast();
-  const { isConnected, sendMessage } = useSocket();
+  const { payloads, isConnected, sendMessage } = useSocket();
 
   const [refreshGuildList, setRefreshGuildList] = useState(false);
   const [showProfileOver, setShowProfileOver] = useState<boolean>(false);
@@ -28,8 +28,15 @@ export default function Layout() {
       sendMessage("USER_ONLINE");
     } else {
       console.log("USER_OFFLINE");
+      addToast("error", "Loggic is now offline! Try again...");
     }
-  }, [isConnected]);
+
+    for (const payload of payloads) {
+      if (payload.type === "GUILD_LIST_UPDATE") {
+        setRefreshGuildList(!refreshGuildList);
+      }
+    }
+  }, [payloads, isConnected, auth.code]);
 
   useEffect(() => {
     if (reqLogout.res?.status == 200) {
@@ -40,7 +47,7 @@ export default function Layout() {
   const handleLogout = async () => {
     try {
       await reqLogout.sendRequest({
-        authorization: auth.accessToken,
+        authorized: true,
       });
     } catch (error) {}
   };

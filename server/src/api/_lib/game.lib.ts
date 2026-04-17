@@ -8,8 +8,9 @@ import AppDataSource from "@/dataSource";
 import { agentLib } from "./agent.lib";
 import { GuildMemberEntity } from "@/entities/guilldMemberEntity";
 import path from "node:path";
-import { removeMarkdownFormatting } from "../utils";
+import { GenerateEntityCode, removeMarkdownFormatting } from "../utils";
 import { Document } from "../resources/resourceModel";
+import { mongoLib } from "./mongo.lib";
 
 // manage game data
 export class GameLib {
@@ -30,28 +31,22 @@ export class GameLib {
       .toArray();
   }
 
+  async getWorld(guildCode: string): Promise<Entity[]> {
+    return await mongoose.connection
+      .collection(`${guildCode}${COLLECTION_SUFFIX.WORLD}`)
+      .find<Entity>({}, { projection: { _id: 0 } })
+      .toArray();
+  }
+
   // game world operations
   async getHistory(
     guildCode: string,
     sceneId: number = 0,
-  ): Promise<{
-    sceneHistories: SceneHistory[];
-    gameHistories: GameHistory[];
-    world: Entity[];
-  }> {
-    const sceneHistories = await this.findLatestSceneHistories(
-      guildCode,
-      sceneId - 1,
-    );
-    const gameHistories = await mongoose.connection
+  ): Promise<GameHistory[]> {
+    return await mongoose.connection
       .collection(`${guildCode}${COLLECTION_SUFFIX.GAME_HISTORY}`)
       .find<GameHistory>({})
       .toArray();
-    return {
-      sceneHistories,
-      gameHistories,
-      world: this.restoreWorld(sceneHistories[0] ?? null, gameHistories),
-    };
   }
 
   restoreWorld(
@@ -319,7 +314,7 @@ export class GameLib {
     sceneDescription: string;
     // documents: string;
     // terms: string;
-    entities: string;
+    entities: Entity[];
   } | null> {
     try {
       const guild = await this.guildRepository.findOne({
@@ -338,50 +333,78 @@ export class GameLib {
 
       const systemUser = PREDEFINED_USER.SYSTEM;
       const responseUser = PREDEFINED_USER.GUILD(guildCode, guild.name);
-      //const terms = await this.searchRankedTerms(guildCode);
+
+      const world = await this.getWorld(guildCode);
       const history = await this.getHistory(guildCode, guild.sceneId - 1);
-      const world = history.world;
-      const chatHistories = history.gameHistories
+      let latestSummary = "";
+      const chatHistories = history
         .filter(
           (gh) =>
-            gh.chat &&
-            gh.chat.message &&
-            gh.chat.userId !== responseUser.id &&
-            gh.chat.userId !== systemUser.id,
+            gh.chat && gh.chat.message && gh.chat.userId !== systemUser.id,
         )
-        .map((ch) => `[${ch?.chat?.userCode}] ${ch?.chat?.message}`);
-      const sceneHistories = history.sceneHistories;
-      let prevScene = "";
-      if (sceneHistories.length > 0) {
-        const latestScene = sceneHistories[sceneHistories.length - 1];
-        prevScene = latestScene.message;
+        .map((ch) => {
+          if (ch.chat?.userId === responseUser.id) {
+            //find latest summary from assistant task
+            const t = ch.tasks?.find((t) => t.type === "generate_summary");
+            if (t && t.output && t.output.length > 0) {
+              latestSummary = t.output;
+            }
+
+            return { role: "assistant", content: ch.chat?.message ?? "" };
+          } else return { role: "user", content: ch.chat?.message ?? "" };
+        });
+
+      const player = world.find((w) =>
+        guildMembers.some((s) => s.userCode === w.id),
+      );
+      const related: Entity[] = [];
+      if (player) {
+        related.push(player);
+        const related2Player = world.filter(
+          (w) =>
+            player?.relations?.some((s) => s.id === w.id) ||
+            w.relations?.some((s) => s.id === w.id),
+        );
+        related.push(...related2Player);
       }
 
-      const playerCharacters = world.filter((e) => memberCodes.includes(e.id));
-      const entities = world
-        .filter((e) => !memberCodes.includes(e.id))
-        .slice(0, 5)
-        .map(
-          (entity) =>
-            `[${entity.id}] ${entity.name}: ${entity.description} (${entity.secrets})`,
-        );
-
-      entities.unshift(
-        ...playerCharacters.map(
-          (entity) => `[${entity.id}] ${entity.name}: ${entity.description}`,
-        ),
+      const embedUserMessage = await agentLib.embedText(
+        chatHistories[chatHistories.length - 1].content,
       );
+      let rankedEntities;
+      if (embedUserMessage) {
+        rankedEntities = (await mongoLib.searchByEmbedding(
+          `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
+          embedUserMessage,
+          5,
+        )) as Entity[];
+        for (const e of rankedEntities) {
+          if (!related.find((r) => r?.id === e.id)) {
+            related.push(e);
+          }
+        }
+      }
+
+      for (const r of related) {
+        delete r.embedding;
+        delete r.createdAt;
+        delete r.updatedAt;
+        delete r.documents;
+        delete r.score;
+        delete r.state;
+      }
 
       const { data, prompt } = await agentLib.generateNarrative(
         memberCodes.join(", "),
+        chatHistories[chatHistories.length - 1].content,
         {
-          chatHistories: chatHistories.join("\n") || "No chat history",
-          prevScene: prevScene || "No previous scene",
+          chatHistories: chatHistories.slice(-10, -1),
           // documents: "",
           // terms: terms
           //   .map((t) => `[${t.id}] ${t.term}: ${t.description}`)
           //   .join("\n"),
-          entities: entities.join("\n"),
+          summary: latestSummary,
+          entities: JSON.stringify(related),
         },
       );
 
@@ -391,12 +414,17 @@ export class GameLib {
           userCode: responseUser.code,
           message: data.content,
         },
-        entities: [],
+        entities: related,
         tasks: [
           {
             type: "generate_narrative",
             input: prompt,
             output: data.content,
+          },
+          {
+            type: "generate_summary",
+            input: latestSummary,
+            output: data.summary,
           },
         ],
         // documents: data.documents?.map((d) => ({
@@ -409,28 +437,28 @@ export class GameLib {
         // })),
       });
 
-      await this.insertSceneHistory(guildCode, guild.sceneId, {
-        message: data.content,
-        sceneDescription: data.summary,
-        gameHistories: history.gameHistories,
-        tasks: [
-          {
-            type: "generate_narrative",
-            input: prompt,
-            output: data.content,
-          },
-        ],
-        // documents: data.documents?.map((d) => ({
-        //   id: d.id,
-        //   comment: d.comment,
-        // })),
-        // terms: data.terms?.map((t) => ({
-        //   id: t.id,
-        //   comment: t.comment,
-        // })),
-        entities: world,
-        createdAt: new Date(),
-      });
+      // await this.insertSceneHistory(guildCode, guild.sceneId, {
+      //   message: data.content,
+      //   sceneDescription: data.summary,
+      //   gameHistories: history.gameHistories,
+      //   tasks: [
+      //     {
+      //       type: "generate_narrative",
+      //       input: prompt,
+      //       output: data.content,
+      //     },
+      //   ],
+      //   // documents: data.documents?.map((d) => ({
+      //   //   id: d.id,
+      //   //   comment: d.comment,
+      //   // })),
+      //   // terms: data.terms?.map((t) => ({
+      //   //   id: t.id,
+      //   //   comment: t.comment,
+      //   // })),
+      //   entities: world,
+      //   createdAt: new Date(),
+      // });
       guild.sceneId += 1;
       await this.guildRepository.save(guild);
 
@@ -438,11 +466,8 @@ export class GameLib {
         memberCodes: memberCodes.join(", "),
         narrative: data.content,
         sceneDescription: data.summary,
-        //  documents: "",
-        //  terms: terms
-        //     .map((t) => `[${t.id}] ${t.term}: ${t.description}`)
-        //     .join("\n"),
-        entities: entities.join("\n"),
+
+        entities: related,
       };
     } catch (ex) {
       console.error("Error in requestNarrative:", ex);
@@ -455,7 +480,7 @@ export class GameLib {
       memberCodes: string;
       narrative: string;
       sceneDescription: string;
-      entities: string;
+      entities: Entity[];
     },
     guildCode: string,
   ): Promise<boolean | null> {
@@ -468,17 +493,50 @@ export class GameLib {
       }
 
       const responseUser = PREDEFINED_USER.SYSTEM;
-      // const terms = await this.searchRankedTerms(guildCode);
-      // const history = await this.getWorld(guildCode, guild.sceneId - 1);
-      // const world = history.world;
-      // const sceneHistories = history.sceneHistories;
 
-      // const entities = world
-      //   .slice(0, 5)
-      //   .map(
-      //     (entity) =>
-      //       `[${entity.id}] ${entity.name}: ${entity.description} (${entity.info})`,
-      //   );
+      const { data: cdata, prompt: cprompt } = await agentLib.generateCreates({
+        players: previousData.memberCodes || "No players",
+        narrative: previousData.narrative || "No previous narrative",
+        sceneDescription: previousData.sceneDescription || "No previous scene",
+        // documents: previousData.documents || "No previous documents",
+        // terms: previousData.terms || "No previous terms",
+        entities:
+          JSON.stringify(previousData.entities) || "No previous entities",
+      });
+
+      const connection = mongoose.connection.collection(
+        `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
+      );
+
+      const afterProcess = cdata
+        .reduce((prev: any[], curr: any) => {
+          const exist = prev.find((p) => p.name === curr.name);
+          if (!exist) {
+            prev.push(curr);
+          }
+          return prev;
+        }, [] as any[])
+        .map((v) => ({ ...v, id: GenerateEntityCode() }));
+
+      const generated = afterProcess.map((e) => {
+        e.relations = e.relations
+          .map((v: any) => {
+            let target;
+            target = afterProcess.find((s) => s.name === v.name);
+            if (!target) {
+              target = previousData.entities.find((s) => s.name === v.name);
+            }
+            if (!target) {
+              return null;
+            }
+            return {
+              ...v,
+              id: target.id,
+            };
+          })
+          .filter((v: any) => v);
+        return e;
+      });
 
       const { data, prompt } = await agentLib.generateEdits({
         players: previousData.memberCodes || "No players",
@@ -486,37 +544,76 @@ export class GameLib {
         sceneDescription: previousData.sceneDescription || "No previous scene",
         // documents: previousData.documents || "No previous documents",
         // terms: previousData.terms || "No previous terms",
-        entities: previousData.entities || "No previous entities",
+        entities:
+          JSON.stringify([...previousData.entities, generated]) ||
+          "No previous entities",
       });
 
       await this.insertGameHistory(guildCode, {
         chat: {
           userId: responseUser.id,
           userCode: responseUser.code,
-          message: `The game world has been edited. ${data.length} updated. Check the latest scene for details.`,
+          message: `The game world has been edited. ${generated.length} created, ${data.length} updated. Check the latest scene for details.`,
         },
-        entities: [
-          ...data.map((e) => ({
-            ...e,
-            id: e.name.replace(/[\[\]]/g, ""),
-            score: 1,
-            relations: [
-              ...e.relations.map((r) => ({
-                id: r.id.replace(/[\[\]]/g, ""),
-                type: r.type,
-                score: 1,
-              })),
-            ],
-          })),
-        ],
+        entities: [],
         tasks: [
           {
-            type: "generate_narrative",
+            type: "creates",
+            input: cprompt,
+            output: JSON.stringify(generated),
+          },
+          {
+            type: "edits",
             input: prompt,
             output: JSON.stringify(data),
           },
         ],
       });
+
+      for (const g of generated) {
+        await connection.insertOne({
+          ...g,
+          embedding: await agentLib.embedText(
+            [g.name, g.description].join("\n"),
+          ),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+
+      const entityUpdates = await connection.find({}).toArray();
+
+      for (const e of entityUpdates) {
+        const d = data.find((v) => v.id === e.id);
+        if (d?.name) {
+          e.name = d.name;
+        }
+        const updateRelations = [...(e.relations ?? [])];
+        for (const de of d?.relations ?? []) {
+          const common = updateRelations?.find((er) => er.id === de.id);
+          if (!common) {
+            updateRelations.push(de);
+          } else {
+            common.type = de.type;
+            common.description = common.description += de.description;
+          }
+        }
+        const new_des = d?.description ?? e?.description;
+
+        await connection.updateOne(
+          { _id: e._id },
+          {
+            $set: {
+              name: e.name,
+              description: new_des,
+              relations: updateRelations,
+              embedding: await agentLib.embedText([e.name, new_des].join("\n")),
+              score: (e?.score ?? 0) + 1,
+              updatedAt: new Date(),
+            },
+          },
+        );
+      }
 
       return true;
     } catch (ex) {
@@ -560,7 +657,10 @@ export class GameLib {
         // if (result.content.length) {
         //   result.content[0] = `${title}\n${result.content[0]}`;
         // }
-        const content = items[i].trim().replaceAll("---", "");
+        const content = items[i]
+          .trim()
+          .replaceAll("---", "")
+          .replaceAll("(\n)+", "\n");
         result.content[0] = `${title}\n${content}`;
         continue;
       }
@@ -635,7 +735,9 @@ export class GameLib {
       "uploads",
       filename,
     );
-    const buffer = await fs.promises.readFile(filePath, { encoding: "utf-8" });
+    const buffer = (
+      await fs.promises.readFile(filePath, { encoding: "utf-8" })
+    ).replaceAll("\\", "");
     const docTree = this.splitDocument(docName, buffer, 0);
     return this.flatDocumentTree(docCode, docVersion, 1, [], docTree).docs;
   }
@@ -655,6 +757,7 @@ const defaultEntity: Entity = {
   score: 0,
   relations: [],
   documents: [],
+  embedding: [],
   state: "active",
   createdAt: new Date(),
   updatedAt: new Date(),

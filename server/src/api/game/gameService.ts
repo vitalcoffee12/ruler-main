@@ -13,7 +13,7 @@ import { GuildEntity } from "@/entities/guildEntity";
 import { UserEntity } from "@/entities/userEntity";
 import { gameLib } from "../_lib/game.lib";
 import { agentLib } from "../_lib/agent.lib";
-import { PREDEFINED_USER } from "../constants";
+import { COLLECTION_SUFFIX, PREDEFINED_USER } from "../constants";
 import { socketHandler } from "../_lib/socketHandler";
 import { Entity } from "./gameModel";
 
@@ -44,12 +44,14 @@ export class GameService {
       }
 
       const newEntity: Entity = {
-        id: `${generateRandomCode(6)}_${Date.now().toString().slice(-5)}`,
+        id: GenerateEntityCode(),
         name: element.name,
         state: element.state || "unlisted",
         description: element.description,
         score: element.score || 0,
         relations: [],
+        features: [],
+        embedding: [],
         updatedAt: new Date(),
         createdAt: new Date(),
       };
@@ -60,10 +62,18 @@ export class GameService {
           userCode: PREDEFINED_USER.SYSTEM.code,
           message: `Player added new element with name: ${newEntity.name}`,
         },
-        entities: [newEntity],
+        entities: [],
       });
 
-      socketHandler.sendHistoryUpdate(guildCode);
+      const embed_result = await agentLib.embedText(
+        newEntity.description ?? "",
+      );
+      if (embed_result) newEntity.embedding = embed_result;
+      await mongoose.connection
+        .collection(`${guildCode}${COLLECTION_SUFFIX.WORLD}`)
+        .insertOne(newEntity);
+
+      socketHandler.sendWorldUpdate(guildCode);
 
       return ServiceResponse.success<boolean>(
         "Element added successfully",
@@ -96,7 +106,7 @@ export class GameService {
         );
       }
       // const terms = await gameLib.searchContextualTerms(guildCode, description);
-      const world = (await gameLib.getHistory(guildCode)).world;
+      const world = await gameLib.getWorld(guildCode);
       const existingIds = world.map((e) => e.id);
 
       const newIds: string[] = [];
@@ -146,7 +156,7 @@ export class GameService {
         ],
       });
 
-      socketHandler.sendHistoryUpdate(guildCode);
+      socketHandler.sendWorldUpdate(guildCode);
       socketHandler.sendMessageToGuild("GUILD_FLAG_DOWN", guildCode, {});
 
       return ServiceResponse.success<boolean>(
@@ -180,7 +190,7 @@ export class GameService {
         );
       }
 
-      const world = (await gameLib.getHistory(guildCode)).world;
+      const world = await gameLib.getWorld(guildCode);
       const elementIndex = world.findIndex((e) => e.id === elementId);
       if (elementIndex === -1) {
         return ServiceResponse.failure(
@@ -212,7 +222,7 @@ export class GameService {
           },
         ],
       });
-      socketHandler.sendHistoryUpdate(guildCode);
+      socketHandler.sendWorldUpdate(guildCode);
       return ServiceResponse.success<boolean>(
         "Element updated successfully",
         true,
@@ -242,7 +252,7 @@ export class GameService {
           StatusCodes.NOT_FOUND,
         );
       }
-      const world = (await gameLib.getHistory(guildCode)).world;
+      const world = await gameLib.getWorld(guildCode);
       const element = world.find((e) => e.id === elementId);
       if (!element) {
         return ServiceResponse.failure(

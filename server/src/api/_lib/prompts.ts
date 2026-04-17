@@ -1,4 +1,5 @@
 import { sum } from "drizzle-orm";
+import { features } from "node:process";
 
 export const PROMPTS = {
   DOC_PROCESSOR_SYSTEM: () => ``,
@@ -29,34 +30,39 @@ Output should be a summary of the document.
 Document:
 ${documents}
   `,
-  WORLD_GENERATOR_SYSTEM: () => `You are a game world designer.
+  WORLD_GENERATOR_SYSTEM: (
+    description: string,
+  ) => `You are a game world designer.
 Based on given document, generate rich game world entities.
 
 Each entity consists of:
   - name : name of the entity
   - description : description of the entity. may contain appearance, features, traits, personality, lores or any other.
-  - secrests : secrests of the entity. it will not be revealed to players. but make the entity richer and interesting
   - relations : a list of realtion the entity has. it contains target entity's id, and type of relation, describing their relation.
   
 Guildlines:
    - New entities should be thematically consistent with existing ones
    - Avoid creating entities that are too similar to existing ones
    - All entities in relations need to be exist.
+   - Location, Characters, Creatures, or any other Objects can be game world entity.
+   - Use Player's language(Korean)
 
 Output format (STRICT JSON):
 [
   {
     "name": "string", // Edited name, should be concise and unique
     "description": "string", // Edited description, should be useful for gameplay and retrieval
-    "secrets": "string", // interesting lore, background or anything
     "relations" : [
       {
           "name": "string", // target entities name
           "type": "string", // relation type
+          "description": "string" // description
       }
     ]
   }
 ]
+
+Player want to game world be like... ${description}
   `,
   WORLD_GENERATOR: (doc: string) => `
 Document:
@@ -165,7 +171,6 @@ Output format (STRICT JSON):
     "id": "string",
     "name": "string",
     "description": "string",
-    "secrets": "string" // Optional field for GM's reference, not used in gameplay
     "relations" : [{"id" : "string", "type": "string"}] // optional field for relation between entities
   }
 ]
@@ -196,112 +201,101 @@ ${ids}
   `,
 
   NARRATOR_SYSTEM:
-    () => `Based on the current game world state and chat history, generate a narrative for a text-based adventure game world.
+    () => `Based on the current game world state and chat history, generate a narrative content for a text-based adventure game world.
 The game is a text-based adventure game where players interact with the world through text commands and receive narrative descriptions in response. The narrative should be engaging, immersive, and consistent with the provided information.
 
 Input may contain:
-- Player List: The List of Player Ids separated by commas
-- Previous Narrative: The last narrative generated for the game world by assistant which can be used for continuity and reference. 
-- Chat History: A chronological list of player actions, messages, and system messages that have occurred in the game world.
-- Quests: A collection of quests that provided. 
-- Entities: A list of existing entities in the game world, including their names and descriptions.
+- Player Id: The Player Id
+- Entities: A list of existing entities in the game world, JSON Type. It contains information of each entities.
+- Current Adventure's summary
 
-Player chat message look like:
-[Player Id] player message 
-- Player Id is a unique identifier for each player.
 - Player message can be an action, a dialogue, or any form of interaction with the game world.
-- If Player Id is same with entity Id, it means the message is an in-character message from a player character, which can be used for narrative generation.
-
-System message look like:
-[System] system message
-
-Quest look like:
-\`[Quest Id] quest description From [quest Giver Id]
-- (quest state) quest objective
-- History : quest progress history
-- Reward : quest reward list
-\`
-- Quest Id is a unique identifier for each quest. Do not modify.
-
-Term look like:
-[Term Id] term: term description
-- Term Id is a unique identifier for each term. Do not modify.
-
-Entity look like:
-[Entity Id] entity name: entity description (entity info, not visible to players, secrests, behind-the-scenes mechanics, or design intentions can be included here)
+- If Entity Id is same with Player Id, it means the Entity is representing an player character.
 - Entity Id is a unique identifier for each entity. Do not modify.
 - If Entity Id is same with player Id, it means the entity is a player. 
-- Generate in players character's view
-
+- Generate narrative in players character's view
+- Use Player's language.
+- Do not just copy and paste previous input or narrative
 
 Guidelines:
-- Include
-1. Provide interaction result that reflects the current state of the game world, player actions, and system messages.
-2. Ensure the narrative is consistent with existing entities.
-3. if needed, role as NPC characters to interact with players and drive the story forward.
-4. Provide new quets, challenges, discoveries, or developments in the world that encourage player interaction and exploration.
-5. Do not copy and paste content from messages, Istead, use them as references to create a unique narrative that fits the current game state.
-6. Focus on creating an engaging and dynamic story that evolves based on player actions and system events.
+- Content may have :
+1. Answer to player's message if it contains a question or a direct request.
+2. Current scene description (background, appearance, mood, etc...) based on current game world state
+3. Result of previous Player actions based on current scene
+4. NPC's Reaction or Conversation If needed.
+5. Provide interesting challenges, discoveries that encourage player interaction and exploration.
+6. Ask player what they want to do next
 7. When you talk about the player, use character name instead of player id for better immersion.
-8. Answer to player's message if it contains a question or a direct request.
 
-- Use Markdown formatting.
-- Also give a summary of the history of the current adventure, current state of the world, or changes. This will be contained in the next messages for coherent narrative generation.
+- Do not make any decision of player by yourself. 
+- Cases where a player's actions/interactions or requests may fail or forced by others:
+  1. Explain the reason if it is impossible logically or due to the state of the game world.
+  2. NPCs may avoid communication with the player if they do not like them.
+  3. Some creatures may act hostilely.
+  4. If Player acts illegally or hostilely to other entities.
+- A player's actions/requests may need condition to achieve. then give some interesting missions/quests for it
+
+- Content: *Markdown* formatted narrative of current scene.
+- Summary contains the whole history of the current adventure, current state of the world, or changes. Keep information as many as you can. This will be contained in the next messages for coherent narrative generation.
 
 Output format (JSON):
 {
     "content": "string", // The narrative of current scene with Markdown format.
-    "summary": "string" // A summary of the current adventure history and world state for coherent narrative generation
+    "summary": "string" // A summary of the current adventure and world state for coherent narrative generation
 }
   `,
   NARRATOR: (
     players: string,
-    chatHistory: string,
-    quests: string,
+    playerInput: string,
+    //chatHistory: string,
+    //quests: string,
     // documents: string,
     // terms: string,
+    summary: string,
     entities: string,
   ) =>
     `
-Player List:
-${players}
+Player Id: ${players}
+Player Input: ${playerInput}
 
-Chat History:
-${chatHistory}
+Summary: ${summary}
 
-Quests:
-${quests}
-
-Entities:
+Game World Entities:
 ${entities}
 
   `,
-
   EDITOR_SYSTEM:
     () => `Based on the current game world state and narrative description, generate changes for the game world.
 
-Player Input may contain:
-- Player List: The List of Player Ids separated by commas
+Input may contain:
+- Player Id: The Player Id
 - Narrative: The last narrative generated for the game world, which can be used for continuity and reference.
-- Scene Description: A brief description of the current scene, which can provide context for the changes.
-- Entities: A list of existing entities in the game world.
+- Entities: A list of existing entities in the game world, JSON Type. It contains information of each entities.
+- Current Adventure's summary
 
-Entity look like:
-[Entity Id] entity name: entity description (entity secrets, not visible to players, secrests, behind-the-scenes mechanics, or design intentions can be included here)
-- Entity Id is a unique identifier for each entity. Do not modify.
+Last Narrative Contain:
+  1. Answer for player's message
+  2. Current scene description (background, appearance, mood, etc...) based on current game world state
+  3. Result of previous Player actions based on current scene
+  4. NPC's Reaction or Conversation.
+  5. Interesting challenges, discoveries that encourage player interaction and exploration.
 
 Guidelines:
-- The narrative may implictly contain any changes to the world state, reflect those changes in the output entities. For example, if the narrative describes a player discovering a hidden door, you might add a new entity for the hidden door or update an existing entity to reflect that it has been discovered.
+- The narrative may implictly contain any changes to the world state, reflect those changes in the output entities. For example, if the narrative describes a player discovering a hidden door in such location, you might change location's description for the hidden door.
+- Retain all existing information, but improve its content.
 - Use the provided existing entities as references to ensure consistency in the game world.
 - If you modify existing entity, use its ID as identifier.
+- Unaffected entities are not modified.
+- Use Player's languages
 
 Output format (JSON):
 [
+  {
   "id": "string", // unique Identifier
   "name": "string",
   "description": "string",
-  "secrets": "string", // Optional field for GM's reference, not used in gameplay
-  "relations" : [{"id" : "string", "type": "string"}] // optional field for relation between entities maximum 3
+   "relations" : [{"id" : "string", "type": "string"}] 
+  }
 ]
   `,
 
@@ -314,20 +308,71 @@ Output format (JSON):
     // terms: string,
     entities: string,
   ) => `
-Player List:
+Player Id:
 ${players}
 
-Narrative:
+Latest Narrative:
 ${narrative}
 
-Scene Description:
+Summary:
 ${sceneDescription}
-    
-Quests:
-${quests}
+
+Game World Entities:
+${entities}
+
+`,
+  CREATOR_SYSTEM:
+    () => `Based on the current game world state and narrative description, generate new entities for the game world.
+
+Input may contain:
+- Player Id: The Player Id
+- Narrative: The last narrative generated for the game world, which can be used for continuity and reference.
+- Entities: A list of existing entities in the game world, JSON Type. It contains information of each entities.
+- Current Adventure's summary
+
+Last Narrative Contain:
+  1. Answer for player's message
+  2. Current scene description (background, appearance, mood, etc...) based on current game world state
+  3. Result of previous Player actions based on current scene
+  4. NPC's Reaction or Conversation.
+  5. Interesting challenges, discoveries that encourage player interaction and exploration.
+
+Guidelines:
+- Stories may implicitly include changes in the world state, and output entities must reflect these changes. For example, if a story involves a player discovering a non-existent NPC or location, the corresponding entity must be added.
+- Maintain consistency in the game world by referencing provided existing entities.
+- Before outputting results, verify that the result needs to be generated.
+- If no entity generated, return empty array.
 
 
-Entities:
+Output format (JSON):
+[
+  {
+  "name": "string",
+  "description": "string",
+  "relations" : [{"id" : "string", "type": "string"}] 
+  }
+]
+  `,
+
+  CREATOR: (
+    players: string,
+    narrative: string,
+    sceneDescription: string,
+    quests: string,
+    // documents: string,
+    // terms: string,
+    entities: string,
+  ) => `
+Player Id:
+${players}
+
+Latest Narrative:
+${narrative}
+
+Summary:
+${sceneDescription}
+
+Game World Entities:
 ${entities}
 
 `,
@@ -344,7 +389,7 @@ export const FORMAT = {
       properties: {
         name: { type: "string" },
         description: { type: "string" },
-        secrets: { type: "string" },
+
         relations: {
           type: "array",
           items: {
@@ -352,6 +397,7 @@ export const FORMAT = {
             properties: {
               name: { type: "string" },
               type: { type: "string" },
+              description: { type: "string" },
             },
           },
         },
@@ -366,7 +412,7 @@ export const FORMAT = {
         id: { type: "string" },
         name: { type: "string" },
         description: { type: "string" },
-        secrets: { type: "string" },
+
         relations: {
           type: "array",
           items: {
@@ -395,7 +441,6 @@ export const FORMAT = {
         id: { type: "string" },
         name: { type: "string" },
         description: { type: "string" },
-        secrets: { type: "string" },
         relations: {
           type: "array",
           items: {
@@ -409,4 +454,22 @@ export const FORMAT = {
       },
     },
   },
+  CREATOR: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        name: { type: "string" },
+        description: { type: "string" },
+      },
+    },
+  },
 };
+
+// Quest look like:
+// \`[Quest Id] quest description From [quest Giver Id]
+// - (quest state) quest objective
+// - History : quest progress history
+// - Reward : quest reward list
+// \`
+// - Quest Id is a unique identifier for each quest. Do not modify.

@@ -12,6 +12,7 @@ export default function GuildChat(props: {
     {
       userId: number;
       userCode: string;
+      color: string;
       displayName?: string;
       role: string;
       iconPath?: string;
@@ -36,6 +37,7 @@ export default function GuildChat(props: {
     }
     sendMessage("GUILD_CHAT_MESSAGE", { message, entities: taggedNodes });
     setMessage("");
+    setIsWaiting(true);
     setRows(1);
   };
 
@@ -48,12 +50,12 @@ export default function GuildChat(props: {
       ) {
         setHistories(payload.content);
       }
-      if (
-        payload.type === "GUILD_HISTORY_UPDATE" &&
-        payload.guildCode === props.guild.code
-      ) {
-        setHistories(payload.content.gameHistories);
-      }
+      // if (
+      //   payload.type === "GUILD_HISTORY_UPDATE" &&
+      //   payload.guildCode === props.guild.code
+      // ) {
+      //   setHistories(payload.content);
+      // }
       if (
         payload.type === "GUILD_FLAG_DOWN" &&
         payload.guildCode === props.guild.code
@@ -180,9 +182,11 @@ function mapHistoriesToMessages(
     {
       userId: number;
       userCode: string;
+      color: string;
       displayName?: string;
       role: string;
       iconPath?: string;
+      tasks?: string;
     }
   >,
 ): GuildChatMessage[] {
@@ -204,10 +208,11 @@ function mapHistoriesToMessages(
     return {
       _id: history._id,
       type: type,
+      color: memberInfo?.color ?? "#cecece",
       userId: history.chat.userId,
       userCode: history.chat.userCode,
       iconPath: memberInfo?.iconPath
-        ? `${BASE_URL}/${memberInfo.iconPath}`
+        ? `url(${BASE_URL}/${memberInfo.iconPath})`
         : undefined,
       displayName: memberInfo
         ? memberInfo.displayName || "Unknown User"
@@ -216,6 +221,8 @@ function mapHistoriesToMessages(
       timestamp: history.createdAt,
       citations: history.citations,
       entities: history.entities,
+      tasks:
+        history.tasks?.find((v) => v.type == "generate_summary")?.output ?? "",
     };
   });
 }

@@ -5,7 +5,7 @@ import { commonValidations } from "@/common/utils/commonValidation";
 
 extendZodWithOpenApi(z);
 
-export const GuildState = z.enum(["active", "disabled"]);
+export const GuildState = z.enum(["active", "disabled", "pending"]);
 export const GuildRole = z.enum(["user", "owner", "manager"]);
 export type Guild = z.infer<typeof GuildSchema>;
 export const GuildSchema = z.object({

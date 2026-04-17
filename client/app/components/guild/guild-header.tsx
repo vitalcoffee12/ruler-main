@@ -10,12 +10,16 @@ export default function GuildHeader(props: { guild: Guild }) {
   return (
     <div className="flex justify-between w-full  h-full items-center p-4 ">
       <div
-        className="cursor-pointer"
+        className="cursor-pointer flex items-center"
         onClick={() => {
           nav(`/game/guild/code/${props.guild.code}`);
         }}
       >
         {props.guild.name}
+
+        {props.guild.state == "pending" && (
+          <div className="loader-bardot ml-1 scale-35"></div>
+        )}
       </div>
       <div
         className={`material-symbols-outlined cursor-pointer hover:bg-stone-100 rounded-lg p-2 text-stone-600 no-select ${

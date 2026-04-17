@@ -21,19 +21,28 @@ class GuildController {
   };
 
   public createGuild: RequestHandler = async (req: Request, res: Response) => {
-    console.log(req.body);
     const iconPath = (req as any).files["iconPath"]
       ? (req as any).files["iconPath"][0]
       : null;
     const attachment = (req as any).files["attachment"]
       ? (req as any).files["attachment"][0]
       : null;
-    console.log(iconPath, attachment);
     const serviceResponse = await this.guildService.createGuild({
       ...req.body,
       iconPath: iconPath?.filename ?? null,
       attachment: attachment?.filename ?? null,
     });
+    if (serviceResponse.responseObject) {
+      this.guildService.createGame(
+        serviceResponse.responseObject?.code,
+        req.body.description ?? "",
+      );
+      socketHandler.sendMessageToUserByUserId(
+        "GUILD_LIST_UPDATE",
+        Number(req.headers["userId"]),
+        {},
+      );
+    }
     res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 
@@ -82,7 +91,8 @@ class GuildController {
       guildCode,
       userId,
     );
-    socketHandler.sendHistoryUpdate(guildCode);
+    socketHandler.sendWorldUpdate(guildCode);
+
     socketHandler.sendMemberList(guildCode);
 
     res.status(servicecResponse.statusCode).send(servicecResponse);

@@ -87,18 +87,25 @@ export class AgentLib {
 
   async generateWorld(options?: {
     model?: string;
+    description?: string;
     previousChat?: { role: string; content: string }[];
     doc?: string;
   }): Promise<any> {
     const res = await this.chat(
       MODELS.llama3,
       [
-        { role: "system", content: PROMPTS.WORLD_GENERATOR_SYSTEM() },
+        {
+          role: "system",
+          content: PROMPTS.WORLD_GENERATOR_SYSTEM(
+            options?.description ??
+              "player did not give any description, focus on given document.",
+          ),
+        },
         ...(options?.previousChat ?? []),
         {
           role: "user",
           content: PROMPTS.WORLD_GENERATOR(
-            options?.doc ?? "No document provided. Generate as you want.",
+            options?.doc ?? "No document provided. Freely generate.",
           ),
         },
       ],
@@ -142,15 +149,17 @@ export class AgentLib {
 
   async generateNarrative(
     players: string,
+    input: string,
     options?: {
       model?: string;
       topic?: string;
       prevScene?: string;
-      chatHistories?: string;
+      chatHistories?: { role: string; content: string }[];
       quests?: string;
       // documents?: string;
       // terms?: string;
       entities?: string;
+      summary?: string;
     },
   ): Promise<{
     data: {
@@ -163,8 +172,8 @@ export class AgentLib {
   }> {
     const prompt = PROMPTS.NARRATOR(
       players || "No players",
-      options?.chatHistories || "No chat history",
-      options?.quests || "No quest provided",
+      input,
+      options?.summary || "No previous adventure",
       // options?.documents || "No documents",
       // options?.terms || "No terms",
       options?.entities || "No entities",
@@ -177,10 +186,7 @@ export class AgentLib {
           role: "system",
           content: PROMPTS.NARRATOR_SYSTEM(),
         },
-        {
-          role: "assistant",
-          content: options?.prevScene || "No previous scene",
-        },
+        ...(options?.chatHistories ?? []),
         {
           role: "user",
           content: prompt,
@@ -229,6 +235,47 @@ export class AgentLib {
         },
       ],
       FORMAT.EDITOR,
+    );
+
+    const parsed = res ? JSON.parse(res) : [];
+    return {
+      data: parsed,
+      prompt,
+    };
+  }
+
+  async generateCreates(options?: {
+    model?: string;
+    players?: string;
+    narrative?: string;
+    sceneDescription?: string;
+    quests?: string;
+    entities?: string;
+  }): Promise<{
+    data: Partial<Entity>[];
+    prompt: string;
+  }> {
+    const prompt = PROMPTS.CREATOR(
+      options?.players || "No players",
+      options?.narrative || "No narrative",
+      options?.sceneDescription || "No scene description",
+      options?.quests || "No quets provided",
+      options?.entities || "No entities",
+    );
+
+    const res = await this.chat(
+      MODELS.llama3,
+      [
+        {
+          role: "system",
+          content: PROMPTS.CREATOR_SYSTEM(),
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      FORMAT.CREATOR,
     );
 
     const parsed = res ? JSON.parse(res) : [];

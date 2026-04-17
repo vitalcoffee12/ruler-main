@@ -2,6 +2,7 @@ import { Data, Server, WebSocket } from "ws";
 
 import { GuildService } from "../guild/guildService";
 import { gameLib } from "./game.lib";
+import { Entity } from "../game/gameModel";
 
 const defaultUser = {
   userId: 1,
@@ -62,28 +63,35 @@ export class SocketHandler {
         socket.guildCode = parsed.guildCode;
 
         this.sendMemberList(parsed.guildCode);
-        this.sendHistoryUpdate(parsed.guildCode);
+        this.sendChatUpdate(parsed.guildCode);
+        this.sendWorldUpdate(parsed.guildCode);
         break;
       case "GUILD_CHAT_MESSAGE":
         // Handle chat message
         await this.receiveGuildChatMessage(parsed);
-        this.sendHistoryUpdate(parsed.guildCode);
-
-        break;
+        this.sendChatUpdate(parsed.guildCode);
+        const flagData = await this.receiveFlagUp(parsed);
+        this.sendChatUpdate(parsed.guildCode);
+        if (flagData) {
+          await this.requestEdit(flagData, parsed.guildCode);
+        }
+        this.sendChatUpdate(parsed.guildCode);
+        await this.sendWorldUpdate(parsed.guildCode);
+        this.sendMessageToGuild("GUILD_FLAG_DOWN", parsed.guildCode, {});
       case "GUILD_FLAG_UP":
         // Handle flag up message
-        await this.sendMessageToGuild(
-          "GUILD_FLAG_WAITING",
-          parsed.guildCode,
-          {},
-        );
-        const previousData = await this.receiveFlagUp(parsed);
-        await this.sendHistoryUpdate(parsed.guildCode);
-        if (previousData) {
-          await this.requestEdit(previousData, parsed.guildCode);
-          await this.sendHistoryUpdate(parsed.guildCode);
-        }
-        this.sendMessageToGuild("GUILD_FLAG_DOWN", parsed.guildCode, {});
+        // await this.sendMessageToGuild(
+        //   "GUILD_FLAG_WAITING",
+        //   parsed.guildCode,
+        //   {},
+        // );
+        // const previousData = await this.receiveFlagUp(parsed);
+        // await this.sendHistoryUpdate(parsed.guildCode);
+        // if (previousData) {
+        //   await this.requestEdit(previousData, parsed.guildCode);
+        //   await this.sendHistoryUpdate(parsed.guildCode);
+        // }
+        // this.sendMessageToGuild("GUILD_FLAG_DOWN", parsed.guildCode, {});
 
         break;
       default:
@@ -92,7 +100,20 @@ export class SocketHandler {
     }
   }
 
-  public sendMessageToUser(type: string, userCode: string, message: any) {
+  public sendMessageToUserByUserId(type: string, userId: number, message: any) {
+    // Implement sending message to specific socket
+    this.ws?.clients.forEach((client) => {
+      const extClient = client as ExtendedWebSocket;
+      if (extClient.userId === userId && client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({ ...message, userId, type }));
+      }
+    });
+  }
+  public sendMessageToUserByUserCode(
+    type: string,
+    userCode: string,
+    message: any,
+  ) {
     // Implement sending message to specific socket
     this.ws?.clients.forEach((client) => {
       const extClient = client as ExtendedWebSocket;
@@ -126,8 +147,8 @@ export class SocketHandler {
     });
   }
 
-  async sendHistoryUpdate(guildCode: string) {
-    const guildData = await this.guildService.getHistoryByCode(guildCode);
+  async sendWorldUpdate(guildCode: string) {
+    const guildData = await this.guildService.getWorldByCode(guildCode);
     this.sendMessageToGuild("GUILD_HISTORY_UPDATE", guildCode, {
       content: guildData.responseObject,
     });
@@ -135,7 +156,7 @@ export class SocketHandler {
   async sendChatUpdate(guildCode: string) {
     const guildData = await this.guildService.getHistoryByCode(guildCode);
     this.sendMessageToGuild("GUILD_CHAT_UPDATE", guildCode, {
-      content: guildData.responseObject?.gameHistories,
+      content: guildData.responseObject,
     });
   }
 
@@ -155,20 +176,29 @@ export class SocketHandler {
     }
   }
 
-  async receiveFlagUp(payload: Payload) {
+  async receiveFlagUp(payload: Payload): Promise<{
+    memberCodes: string;
+    narrative: string;
+    sceneDescription: string;
+    // documents: string;
+    // terms: string;
+    entities: Entity[];
+  } | null> {
     try {
       return await gameLib.requestNarrative(payload.guildCode);
     } catch (ex) {
       const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
       console.error(`Error handling flag up message: ${errorMessage}`);
     }
+    return null;
   }
+
   async requestEdit(
     previousData: {
       memberCodes: string;
       narrative: string;
       sceneDescription: string;
-      entities: string;
+      entities: Entity[];
     },
     guildCode: string,
   ) {

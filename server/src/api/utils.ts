@@ -8,6 +8,12 @@ export function generateRandomCode(length: number = 8): string {
   }
   return result;
 }
+export function getTimeStamp(length: number = 4): string {
+  return new Date()
+    .getTime()
+    .toString()
+    .slice(length * -1);
+}
 
 const PREDEFINED_COLOR_CODES = [
   // light pastel colors
@@ -87,34 +93,28 @@ export function GenerateRandomColorCode(): string {
 }
 
 export function GenerateGuildCode(): string {
-  const prefix = "G-";
-  const randomCode = generateRandomCode(8);
-  return prefix + randomCode;
+  const prefix = "G";
+  return prefix + getTimeStamp(10) + generateRandomCode(2);
 }
-export function GenerateRuleSetCode(): string {
-  const prefix = "R-";
-  const randomCode = generateRandomCode(8);
-  return prefix + randomCode;
+export function GenerateDocumentCode(): string {
+  const prefix = "D";
+  return prefix + getTimeStamp(10) + generateRandomCode(2);
 }
 export function GenerateTermSetCode(): string {
-  const prefix = "T-";
-  const randomCode = generateRandomCode(8);
-  return prefix + randomCode;
+  const prefix = "T";
+  return prefix + getTimeStamp(10) + generateRandomCode(2);
 }
 
 export function GenerateCommunityCode(): string {
-  const prefix = "C-";
-  const randomCode = generateRandomCode(8);
-  return prefix + randomCode;
+  const prefix = "C";
+  return prefix + getTimeStamp(2) + generateRandomCode(6);
 }
 export function GenerateUserCode(): string {
-  const prefix = "U-";
-  const randomCode = generateRandomCode(8);
-  return prefix + randomCode;
+  const prefix = "U";
+  return prefix + getTimeStamp(2) + generateRandomCode(6);
 }
 export function GenerateEntityCode(): string {
-  const randomCode = generateRandomCode(6);
-  return `${randomCode}_${Date.now().toString().slice(-5)}`;
+  return "E" + getTimeStamp(1) + generateRandomCode(8);
 }
 
 export function getCodeWithoutPrefix(code: string): string {

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { BASE_URL } from "~/axios-instance";
 import { AuthContext } from "~/contexts/authContext";
 import useRequest from "~/hooks/use-request.hook";
+import useSocket from "~/hooks/use-socket.hook";
 
 export default function GuildList(props: {
   refreshGuildList?: boolean;
@@ -159,7 +160,11 @@ function GuildListItem(props: {
           ""
         )}
       </div>
-
+      {props.guild.state === "pending" && (
+        <div className="absolute top-0 right-0 w-full h-full bg-white flex items-center justify-center opacity-60">
+          <div className="loader-bardot scale-70"></div>
+        </div>
+      )}
       <div
         className="absolute top-1/2 bg-stone-300 h-5 w-1 rounded transform -translate-y-1/2 -left-4"
         style={{ display: isHovered ? "block" : "none" }}
@@ -168,7 +173,7 @@ function GuildListItem(props: {
         className="absolute top-1/2 rounded bg-stone-800 text-white text-sm px-2 py-1 transform -translate-y-1/2 left-full ml-4 whitespace-nowrap"
         // style={{ display: isHovered ? "block" : "none" }}
       >
-        {props.guild.name}
+        {props.guild.name} {props.guild.state === "pending" && `(pending...)`}
       </div>
     </div>
   );
@@ -179,4 +184,5 @@ interface GuildListItemProps {
   name: string;
   iconPath?: string;
   colorCode?: string;
+  state?: string;
 }

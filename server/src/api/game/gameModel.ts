@@ -14,10 +14,9 @@ export const ChatSchema = z.object({
 export type Entity = z.infer<typeof EntitySchema>;
 export const EntitySchema = z.object({
   id: z.string(),
-  state: z.string(),
+  state: z.string().optional(),
   name: z.string(),
   description: z.string().optional(),
-  secrets: z.string().optional(), // Optional field for GM's reference, not used in gameplay
   documents: z
     .array(z.object({ id: z.number(), title: z.string().optional() }))
     .optional(),
@@ -25,11 +24,12 @@ export const EntitySchema = z.object({
   //   .array(z.object({ id: z.number(), term: z.string().optional() }))
   //   .optional(),
   relations: z.array(
-    z.object({ id: z.string(), type: z.string(), score: z.number() }),
+    z.object({ id: z.string(), type: z.string(), description: z.string() }),
   ),
   score: z.number().optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  embedding: z.array(z.number()).optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
 });
 
 // export type Rule = z.infer<typeof RuleSchema>;

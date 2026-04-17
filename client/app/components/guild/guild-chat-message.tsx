@@ -26,9 +26,13 @@ function MessageTypeGuild(props: { message: GuildChatMessage }) {
     <div className="chat-message hover:bg-stone-100 p-3 rounded-lg transition duration-200">
       <div className="grid grid-cols-[calc(var(--spacing)*13)_1fr] gap-1">
         <div className="w-10 h-10 rounded-full overflow-hidden inline-block align-top mt-1">
-          <img
-            src={props.message.iconPath ?? defaultIcon}
-            alt={"Guild Icon"}
+          <div
+            style={{
+              backgroundColor: props.message.color,
+              backgroundImage: props.message.iconPath ?? defaultIcon,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
             className="w-10 h-10 object-cover"
           />
         </div>
@@ -69,6 +73,9 @@ function MessageTypeGuild(props: { message: GuildChatMessage }) {
               menu
             </div>
             <Markdown>{props.message.content}</Markdown>
+            <div className="text-xs text-stone-500 mt-6">
+              <Markdown>{props.message.tasks}</Markdown>
+            </div>
           </div>
 
           <div>

@@ -27,11 +27,11 @@ function EntityRef(props: { id: string; world: Entity[] }) {
   const [outIsOpen, setOutIsOpen] = useState<boolean>(true);
   const targetEntity = props.world.find((e) => e.id === props.id);
   const relatedEntitiesIn = props.world.filter((e) =>
-    e.relations.some((r) => r.id === targetEntity?.id),
+    e.relations?.some((r) => r.id === targetEntity?.id),
   );
 
   const relatedEntitiesOut = props.world.filter((e) =>
-    targetEntity?.relations.some((r) => r.id === e.id),
+    targetEntity?.relations?.some((r) => r.id === e.id),
   );
 
   return (

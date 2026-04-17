@@ -17,7 +17,7 @@ export default function CreateGuildModal(props: {
     size: number;
   } | null>(null);
   const [imagePreview, setImagePreview] = useState<any>(null);
-  const [loading, setIsLoading] = useLoading();
+  const [loading, setIsLoading] = useState<boolean>(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const imageRef = useRef<HTMLInputElement | null>(null);
 
@@ -213,14 +213,19 @@ export default function CreateGuildModal(props: {
           </div>
           <button
             type="submit"
-            className="bg-lime-600 text-white px-4 py-2 rounded hover:bg-lime-700 transition duration-200 active:scale-95 cursor-pointer"
-            onClick={async () => await handleCreateGuild()}
+            className={`text-white px-4 py-2 rounded transition duration-200 flex items-center gap-2 ${loading ? "bg-stone-600" : "bg-lime-600 hover:bg-lime-700 active:scale-95 cursor-pointer"}`}
+            onClick={async () => {
+              if (loading) return;
+              await handleCreateGuild();
+            }}
           >
+            <span className="material-symbols-outlined">
+              {loading ? "progress_activity" : "more_horiz"}
+            </span>
             Create Guild
           </button>
         </div>
       </div>
-      {loading}
     </div>
   );
 }

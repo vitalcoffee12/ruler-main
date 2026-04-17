@@ -156,6 +156,7 @@ function GuildWorldElement(
         <div className="text-sm text-stone-600 px-4">
           {props.node.description}
         </div>
+
         <div className="mb-1 px-1">
           <ul className="flex items-center justify-between no-select">
             {botMenues.map((menu) => (
@@ -183,16 +184,23 @@ function GuildWorldElement(
             ))}
           </ul>
         </div>
-        {props.node.secrets && (
+        {props.node.features && (
           <div
-            className="p-2 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 text-sm m-3 rounded-r overflow-hidden transition-height duration-300"
+            className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 text-sm m-3 rounded-r overflow-hidden transition-height duration-300 p-2"
             style={{
               display: noteVisible ? "block" : "none",
               height: noteVisible ? "fit-content" : "0",
             }}
           >
-            <div className="font-semibold">GM's Note:</div>
-            <div>{props.node.secrets}</div>
+            <div className="text-sm text-stone-600">
+              <ul className="flex gap-1">
+                {props.node.features?.map((f) => (
+                  <li key={f} className="text-xs border rounded">
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
 

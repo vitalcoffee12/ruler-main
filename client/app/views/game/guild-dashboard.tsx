@@ -24,6 +24,7 @@ export default function Dashboard() {
       {
         userId: number;
         userCode: string;
+        color: string;
         displayName?: string;
         role: string;
         iconPath?: string;
@@ -47,7 +48,7 @@ export default function Dashboard() {
         payload.type === "GUILD_HISTORY_UPDATE" &&
         payload.guildCode === guild.code
       ) {
-        setWorld(payload.content.world);
+        setWorld(payload.content);
       }
       if (
         payload.type === "GUILD_FLAG_WAITING" &&
@@ -84,6 +85,8 @@ export default function Dashboard() {
           },
         ),
       );
+
+      console.log(memberDic);
     }
   };
 
@@ -94,7 +97,6 @@ export default function Dashboard() {
       if (auth.accessToken) {
         const res = await reqFetchGuildData.sendRequest({
           authorized: true,
-          authorization: auth.accessToken,
         });
         setInitialData(res?.data.responseObject);
       }
@@ -116,7 +118,7 @@ export default function Dashboard() {
   }, [guild]);
   useEffect(() => {
     fetchGuildData();
-  }, [auth.guildCode, auth?.accessToken]);
+  }, [auth.guildCode, auth?.accessToken, location]);
 
   useEffect(() => {
     if (!isConnected) return;
