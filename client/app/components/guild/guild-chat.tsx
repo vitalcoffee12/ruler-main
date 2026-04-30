@@ -190,7 +190,7 @@ function mapHistoriesToMessages(
     }
   >,
 ): GuildChatMessage[] {
-  return histories.map((history) => {
+  const historiesMap = histories.map((history) => {
     const memberInfo = memberDic ? memberDic[history.chat.userCode] : undefined;
     let type = "PLAYER";
     switch (history.chat.userId) {
@@ -225,4 +225,8 @@ function mapHistoriesToMessages(
         history.tasks?.find((v) => v.type == "generate_summary")?.output ?? "",
     };
   });
+
+  //console.log("Mapped histories to messages:", historiesMap);
+
+  return historiesMap;
 }

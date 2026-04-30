@@ -251,7 +251,11 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
         ownerId: createGuildData.ownerId,
         name: createGuildData.name,
         description: createGuildData.description,
-        iconPath: `guild/${createGuildData.iconPath}`,
+        iconPath:
+          createGuildData.iconPath ??
+          (createGuildData.iconPath
+            ? `guild/${createGuildData.iconPath}`
+            : undefined),
       });
 
       let docs: Document[] = [];

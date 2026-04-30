@@ -385,7 +385,8 @@ export class GameLib {
         }
       }
 
-      for (const r of related) {
+      for (const r of related as any[]) {
+        delete r._id;
         delete r.embedding;
         delete r.createdAt;
         delete r.updatedAt;
@@ -507,6 +508,7 @@ export class GameLib {
       const connection = mongoose.connection.collection(
         `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
       );
+      console.log("Generated creates:", cdata);
 
       const afterProcess = cdata
         .reduce((prev: any[], curr: any) => {
@@ -518,25 +520,30 @@ export class GameLib {
         }, [] as any[])
         .map((v) => ({ ...v, id: GenerateEntityCode() }));
 
+      console.log("Generated after process:", afterProcess);
+
       const generated = afterProcess.map((e) => {
-        e.relations = e.relations
-          .map((v: any) => {
-            let target;
-            target = afterProcess.find((s) => s.name === v.name);
-            if (!target) {
-              target = previousData.entities.find((s) => s.name === v.name);
-            }
-            if (!target) {
-              return null;
-            }
-            return {
-              ...v,
-              id: target.id,
-            };
-          })
-          .filter((v: any) => v);
+        e.relations =
+          e.relations
+            ?.map((v: any) => {
+              let target;
+              target = afterProcess.find((s) => s.name === v.name);
+              if (!target) {
+                target = previousData.entities.find((s) => s.name === v.name);
+              }
+              if (!target) {
+                return null;
+              }
+              return {
+                ...v,
+                id: target.id,
+              };
+            })
+            .filter((v: any) => v) ?? [];
         return e;
       });
+
+      console.log("Generated:", generated);
 
       const { data, prompt } = await agentLib.generateEdits({
         players: previousData.memberCodes || "No players",
@@ -548,6 +555,8 @@ export class GameLib {
           JSON.stringify([...previousData.entities, generated]) ||
           "No previous entities",
       });
+
+      console.log("Generated edits:", data);
 
       await this.insertGameHistory(guildCode, {
         chat: {

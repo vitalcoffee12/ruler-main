@@ -67,26 +67,25 @@ export default function Dashboard() {
 
   const setInitialData = (data: any) => {
     setGuild(data.guild);
+    console.log("Fetched guild data:", data);
     if (auth.guildCode) {
-      setMemberDic(
-        data.members.reduce(
-          (acc: any, member: any) => {
-            acc[member.userCode] = member;
-            return acc;
+      const newMemberDic = data.members.reduce(
+        (acc: any, member: any) => {
+          acc[member.userCode] = member;
+          return acc;
+        },
+        {
+          [auth.guildCode]: {
+            userId: 0,
+            userCode: data.guild.code,
+            displayName: data.guild.name,
+            role: "guild",
+            iconPath: data.guild.iconPath ?? undefined,
           },
-          {
-            [auth.guildCode]: {
-              userId: 0,
-              userCode: data.guild.code,
-              displayName: data.guild.name,
-              role: "guild",
-              iconPath: data.guild.iconPath,
-            },
-          },
-        ),
+        },
       );
-
-      console.log(memberDic);
+      setMemberDic(newMemberDic);
+      console.log("Constructed member dictionary:", newMemberDic);
     }
   };
 

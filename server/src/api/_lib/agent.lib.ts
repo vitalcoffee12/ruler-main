@@ -23,7 +23,7 @@ export class AgentLib {
       });
       return res?.message?.content ?? "";
     } catch (ex) {
-      console.log(ex);
+      console.log("agentLib chat error:", ex);
     }
     return "";
   }

@@ -10,30 +10,30 @@ export default function ImportResourceModal(props: {
   const { auth } = useContext(AuthContext);
   const [guilds, setGuilds] = useState<(Guild & { selected?: boolean })[]>([]);
 
-  const fetchGuilds = async () => {
-    try {
-      const res = await getRequest("/guild/user", {
-        userId: auth?.id,
-        userCode: auth?.code,
-      });
+  //const fetchGuilds = async () => {
+  //   try {
+  //     const res = await getRequest("/guild/user", {
+  //       userId: auth?.id,
+  //       userCode: auth?.code,
+  //     });
 
-      if (res.status === 200 && res.data) {
-        setGuilds(res.data.responseObject);
-      }
-    } catch (ex) {}
-  };
+  //     if (res.status === 200 && res.data) {
+  //       setGuilds(res.data.responseObject);
+  //     }
+  //   } catch (ex) {}
+  // };
 
-  const onClickImport = async () => {
-    const selectedGuilds = guilds.filter((g) => g.selected);
-    await postRequest("/resource/import", {
-      id: props.resourceId,
-      guildCodes: selectedGuilds.map((g) => g.code),
-    });
-    props.onClose();
-  };
+  // const onClickImport = async () => {
+  //   const selectedGuilds = guilds.filter((g) => g.selected);
+  //   await postRequest("/resource/import", {
+  //     id: props.resourceId,
+  //     guildCodes: selectedGuilds.map((g) => g.code),
+  //   });
+  //   props.onClose();
+  // };
 
   useEffect(() => {
-    fetchGuilds();
+    //fetchGuilds();
   }, [auth?.code]);
 
   return (
@@ -75,7 +75,7 @@ export default function ImportResourceModal(props: {
           <button
             className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded transtition duration-200 active:scale-95"
             onClick={async () => {
-              await onClickImport();
+              //await onClickImport();
             }}
           >
             Import

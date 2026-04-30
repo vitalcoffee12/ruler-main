@@ -62,22 +62,25 @@ export class SocketHandler {
         socket.guildId = parsed.guildId;
         socket.guildCode = parsed.guildCode;
 
-        this.sendMemberList(parsed.guildCode);
-        this.sendChatUpdate(parsed.guildCode);
-        this.sendWorldUpdate(parsed.guildCode);
+        await this.sendMemberList(parsed.guildCode);
+        await this.sendChatUpdate(parsed.guildCode);
+        await this.sendWorldUpdate(parsed.guildCode);
         break;
       case "GUILD_CHAT_MESSAGE":
         // Handle chat message
         await this.receiveGuildChatMessage(parsed);
-        this.sendChatUpdate(parsed.guildCode);
+        await this.sendChatUpdate(parsed.guildCode);
         const flagData = await this.receiveFlagUp(parsed);
-        this.sendChatUpdate(parsed.guildCode);
+        await this.sendChatUpdate(parsed.guildCode);
         if (flagData) {
+          console.log("Received flag up data:", flagData);
           await this.requestEdit(flagData, parsed.guildCode);
+          console.log("requestEdit has well completed");
         }
-        this.sendChatUpdate(parsed.guildCode);
+        await this.sendChatUpdate(parsed.guildCode);
         await this.sendWorldUpdate(parsed.guildCode);
-        this.sendMessageToGuild("GUILD_FLAG_DOWN", parsed.guildCode, {});
+        await this.sendMessageToGuild("GUILD_FLAG_DOWN", parsed.guildCode, {});
+        break;
       case "GUILD_FLAG_UP":
         // Handle flag up message
         // await this.sendMessageToGuild(
@@ -125,7 +128,11 @@ export class SocketHandler {
       }
     });
   }
-  public sendMessageToGuild(type: string, guildCode: string, message: any) {
+  public async sendMessageToGuild(
+    type: string,
+    guildCode: string,
+    message: any,
+  ) {
     this.ws?.clients.forEach((client) => {
       const extClient = client as ExtendedWebSocket;
       if (
