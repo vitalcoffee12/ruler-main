@@ -8,7 +8,11 @@ import AppDataSource from "@/dataSource";
 import { agentLib } from "./agent.lib";
 import { GuildMemberEntity } from "@/entities/guilldMemberEntity";
 import path from "node:path";
-import { GenerateEntityCode, removeMarkdownFormatting } from "../utils";
+import {
+  CommonNeighbors,
+  GenerateEntityCode,
+  removeMarkdownFormatting,
+} from "../utils";
 import { Document } from "../resources/resourceModel";
 import { mongoLib } from "./mongo.lib";
 
@@ -357,13 +361,18 @@ export class GameLib {
       const player = world.find((w) =>
         guildMembers.some((s) => s.userCode === w.id),
       );
+      // related entities pick
       const related: Entity[] = [];
+      const related2Player = [];
+      // player related (1 depth relation)
       if (player) {
         related.push(player);
-        const related2Player = world.filter(
-          (w) =>
-            player?.relations?.some((s) => s.id === w.id) ||
-            w.relations?.some((s) => s.id === w.id),
+        related2Player.push(
+          ...world.filter(
+            (w) =>
+              player?.relations?.some((s) => s.id === w.id) ||
+              w.relations?.some((s) => s.id === w.id),
+          ),
         );
         related.push(...related2Player);
       }
@@ -372,6 +381,7 @@ export class GameLib {
         chatHistories[chatHistories.length - 1].content,
       );
       let rankedEntities;
+      // contextually related entities
       if (embedUserMessage) {
         rankedEntities = (await mongoLib.searchByEmbedding(
           `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
@@ -385,6 +395,21 @@ export class GameLib {
         }
       }
 
+      // common neighbors (2 depth relation : from player to ranked)
+      const commonN: Entity[] = [];
+      if (player) {
+        for (const r of rankedEntities ?? []) {
+          const cn = CommonNeighbors(world, player, r, 2);
+          commonN.push(
+            ...cn.filter((c) => !commonN.find((r) => r?.id === c.id)),
+          );
+        }
+      }
+      related.push(
+        ...commonN.filter((c) => !related.find((r) => r?.id === c.id)),
+      );
+      // end
+
       for (const r of related as any[]) {
         delete r._id;
         delete r.embedding;
@@ -395,11 +420,13 @@ export class GameLib {
         delete r.state;
       }
 
+      // console.log("Chat histories :");
+      // console.log(chatHistories.slice(-5, -1));
       const { data, prompt } = await agentLib.generateNarrative(
         memberCodes.join(", "),
         chatHistories[chatHistories.length - 1].content,
         {
-          chatHistories: chatHistories.slice(-10, -1),
+          chatHistories: chatHistories.slice(-5, -1),
           // documents: "",
           // terms: terms
           //   .map((t) => `[${t.id}] ${t.term}: ${t.description}`)

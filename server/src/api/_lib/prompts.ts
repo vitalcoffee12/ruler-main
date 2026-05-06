@@ -376,6 +376,30 @@ Game World Entities:
 ${entities}
 
 `,
+  INTENT_EXTRACTOR: (
+    message: string,
+  ) => `Extract player's intent based on chat history. Player's intent is the most important thing that drives the game forward, so extract it carefully.
+
+Player's intent may contain:
+- Player's goal or desire
+- Player's emotional state or attitude
+- Player's preferred playstyle or approach
+
+Intent may contain:
+- A concise statement of the player's intent that can guide the game's narrative and design decisions.
+- Explanation of current game state.
+
+Guildlines:
+- Result must be a paragraph that helps others understand the player's intentions and current situation.
+
+Output format (JSON):
+{
+  "intent": "string" // A concise statement of the player's intent that can guide the game's narrative and design decisions.
+}
+
+Player's message:
+${message}
+`,
 };
 
 export const FORMAT = {
@@ -462,6 +486,12 @@ export const FORMAT = {
         name: { type: "string" },
         description: { type: "string" },
       },
+    },
+  },
+  INTENT_EXTRACTOR: {
+    type: "object",
+    properties: {
+      intent: { type: "string" },
     },
   },
 };

@@ -147,6 +147,30 @@ export class AgentLib {
     return { data: parsed, prompt };
   }
 
+  async extractIntentFromChat(options?: {
+    model?: string;
+    chatHistories?: { role: string; content: string }[];
+    message?: string;
+  }): Promise<{ intent: string; prompt: string }> {
+    const prompt = PROMPTS.INTENT_EXTRACTOR(
+      options?.message || "No message provided.",
+    );
+    const res = await this.chat(
+      MODELS.llama3,
+      [
+        ...(options?.chatHistories ?? []),
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      FORMAT.INTENT_EXTRACTOR,
+    );
+    const parsed = JSON.parse(res);
+
+    return { intent: parsed.intent, prompt };
+  }
+
   async generateNarrative(
     players: string,
     input: string,

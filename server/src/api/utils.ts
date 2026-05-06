@@ -1,3 +1,5 @@
+import { Entity } from "./game/gameModel";
+
 export function generateRandomCode(length: number = 8): string {
   const characters =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -128,4 +130,28 @@ export function removeMarkdownFormatting(origin: string): string {
   text = text.replace(/~~/g, ""); // strikethrough
   text = text.replace(/(\*\*|__)/g, ""); // bold
   return text;
+}
+
+export function CommonNeighbors(
+  world: Entity[],
+  current: Entity,
+  target: Entity,
+  depth: number = 2,
+): Entity[] {
+  if (depth <= 0) {
+    return [];
+  }
+  const commons = current.relations.filter((r) =>
+    target.relations?.some((tr) => tr.id === r.id),
+  );
+  const ce = world.filter((e) => commons.some((c) => c.id === e.id));
+
+  const children = [];
+  for (const c of ce) {
+    const neighbors = CommonNeighbors(world, c, target, depth - 1);
+    children.push(...neighbors);
+  }
+  ce.push(...children.filter((c) => !ce.some((e) => e.id === c.id)));
+
+  return ce;
 }
