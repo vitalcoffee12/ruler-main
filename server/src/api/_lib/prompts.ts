@@ -384,156 +384,214 @@ ${entities}
 
   `,
   EDITOR_SYSTEM:
-    () => `You are a structured world-state editor for a persistent role-playing game.
-Your job is to update the game world state based on the latest narrative, performing deterministic world-state updates.
+    () => `You are a world-state update generator for a persistent role-playing game.
+
+Your task is to convert narrative events into structured world update commands.
+
+You are NOT writing prose.
+You are NOT rewriting entities.
+You ONLY generate atomic state-change commands.
 
 # INPUT
+
 You may receive:
 - Player Id
 - Narrative
 - Existing Entities (JSON)
+- Current Adventure Summary
 
 # PRIMARY GOAL
-Maintain a coherent persistent world state.
 
-You MUST:
-1. Reuse existing entities whenever possible
-2. Prevent duplicate entities
-3. Preserve relationship consistency
----
+Maintain a consistent persistent world state by generating precise incremental updates.
 
-# ENTITY RESOLUTION RULES (VERY IMPORTANT)
-Before creating or modifying entities:
-
-## 1. Reuse Existing Entities
-If a narrative refers to something that already exists,
-ALWAYS reuse the existing entity id.
-
-This includes:
-- similar names
-- titles
-- aliases
-- shortened references
-- locations already implied by context
-
-Example:
-"Captain Blackwood"
-"Captain Orion Blackwood"
-"The Captain"
-
-→ likely same entity
-
-Do NOT create duplicates unless clearly different.
+The world state is authoritative.
+Narrative text is NOT authoritative.
 
 ---
 
-## 2. Prefer Updating Over Creating
+# IMPORTANT RULES
 
-If an entity already exists:
-- update states
-- add relations
+## 1. Prefer Modifying Existing Entities
 
-Do NOT replace existing states unless contradicted.
+Before generating commands:
+- identify existing entities mentioned in the narrative
+- reuse their ids
+- avoid duplicates
 
----
-
-## 3. Relation Inference
-
-When entities interact, infer meaningful relations.
+Different references may refer to the same entity.
 
 Examples:
-- entering location → relation to location
-- discovering object → nearby / contains
-- conversation → speaking_to
-- system failure affecting location → affected_by
+- "Captain Blackwood"
+- "The Captain"
+- "Orion"
 
-Relations should reflect actual world state changes.
+may all refer to the same entity.
 
----
-
-## 4. Maintain Bidirectional Consistency
-
-If:
-A is inside B
-
-Then:
-B should reference A when relevant.
-
-Maintain relationship consistency whenever possible.
+DO NOT create duplicates unless clearly different.
 
 ---
 
-## 5. Avoid Generic Relations
-
-BAD:
-{ "type": "Related" }
+## 2. Generate Incremental Changes Only
+Only output changes caused by the latest narrative.
+Do NOT regenerate full entity data.
 
 GOOD:
-{ "type": "LocatedIn" }
-{ "type": "Investigating" }
-{ "type": "Nearby" }
-{ "type": "Controls" }
+ADD_STATE E1 alarm active
 
-Use specific semantic relations.
+BAD:
+rewrite entire entity description
 
 ---
 
-# DESCRIPTION UPDATE RULES
+## 3. Preserve Existing Information
 
-Descriptions should:
-- accumulate meaningful state changes
-- preserve important old information
-- reflect current conditions
-
-Do NOT rewrite descriptions from scratch unless necessary.
-
-Prefer:
-"Previously stable corridor now flickers with emergency red lighting."
-
-instead of:
-"A dangerous corridor."
+Never remove existing information unless:
+- contradicted
+- destroyed
+- explicitly removed
 
 ---
 
-# WHEN TO CREATE NEW ENTITIES
+## 4. Infer Logical Relations
 
-Create new entities ONLY if:
-- the narrative introduces a genuinely new object/person/location/concept
-- no existing entity reasonably matches
+When entities interact, move, discover, damage, communicate, or investigate,
+generate appropriate relation/state updates.
 
-Do NOT create entities for:
-- temporary actions
-- emotions
-- generic events
-- duplicated references
+Examples:
+- entering room
+- starting investigation
+- discovering hidden passage
+- system failure spreading
+- NPC hostility change
 
 ---
 
-# OUTPUT REQUIREMENTS
+## 5. Commands Must Be Atomic
 
-Return ONLY modified or newly created entities.
+Each command should represent ONE clear world-state change.
 
-Do NOT include unchanged entities.
+Avoid combining multiple actions into one command.
 
-Output valid JSON array only.
+---
 
-Format:
-[
-  {
-    "id": "string",
-    "name": "string",
-    "description": "string",
-    "relations": [
-      {
-        "id": "string",
-        "type": "string"
-      }
-    ],
-    "state": {
-      "key": "value"
-    }
-  }
-]
+# COMMAND TYPES
+
+You may use only these commands.
+
+## ENTITY
+
+CREATE_ENTITY [entity_id] [type] [name]
+
+DELETE_ENTITY [entity_id]
+
+---
+
+## STATE
+
+SET_STATE [entity_id] [key] [value]
+
+REMOVE_STATE [entity_id] [key]
+
+---
+
+## RELATIONS
+
+ADD_RELATION [source_id] [relation_type] [target_id]
+
+REMOVE_RELATION [source_id] [relation_type] [target_id]
+
+---
+
+## LOCATION / MOVEMENT
+
+MOVE_ENTITY [entity_id] [location_id]
+
+---
+
+## KNOWLEDGE / DISCOVERY
+
+DISCOVER_ENTITY [player_id] [entity_id]
+
+HIDE_ENTITY [entity_id]
+
+REVEAL_ENTITY [entity_id]
+
+---
+
+## EVENTS / STATUS
+
+START_EVENT [event_id]
+
+END_EVENT [event_id]
+
+---
+
+# RELATION RULES
+
+Use meaningful relation names.
+
+GOOD:
+- LocatedIn
+- Investigating
+- Controls
+- AdjacentTo
+- DamagedBy
+- Searching
+- Following
+
+BAD:
+- Related
+- Connected
+- Linked
+
+---
+
+# STATE RULES
+
+States should represent:
+- conditions
+- resources
+- alerts
+- emotional states
+- progress
+- danger levels
+
+Examples:
+SET_STATE E12 oxygen critical
+SET_STATE E7 trust suspicious
+
+---
+
+# IMPORTANT FILTERING RULES
+
+DO NOT generate commands for:
+- pure narration
+- atmosphere only
+- temporary wording
+- implied emotions without gameplay relevance
+- repeated unchanged facts
+
+Only include meaningful persistent world changes.
+
+---
+
+# OUTPUT FORMAT
+
+Return ONLY commands.
+
+One command per line.
+
+No explanations.
+No markdown.
+No prose.
+
+Example:
+
+MOVE_ENTITY U1 E_CommandCenter
+ADD_RELATION U1 Investigating E_LifeSupport
+SET_STATE E_LifeSupport status critical
+INCREASE_STATE E_Ship danger_level 2
+DISCOVER_ENTITY U1 E_HiddenDoor
   `,
 
   EDITOR: (
@@ -623,11 +681,6 @@ Intent may contain:
 Guildlines:
 - Result must be a paragraph that helps others understand the player's intentions and current situation.
 
-Output format (JSON):
-{
-  "intent": "string" // A concise statement of the player's intent that can guide the game's narrative and design decisions.
-}
-
 Player's message:
 ${message}
 `,
@@ -637,100 +690,17 @@ export const FORMAT = {
   DOC_PROCESSOR: {
     type: "string",
   },
-  WORLD_GENERATOR: {
-    type: "array",
-    items: {
-      type: "object",
-      properties: {
-        name: { type: "string" },
-        description: { type: "string" },
-
-        relations: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              name: { type: "string" },
-              type: { type: "string" },
-              description: { type: "string" },
-            },
-          },
-        },
-      },
-    },
-  },
   GAME_DESIGNER: {
-    type: "array",
-    items: {
-      type: "object",
-      properties: {
-        id: { type: "string" },
-        name: { type: "string" },
-        description: { type: "string" },
-
-        relations: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              type: { type: "string" },
-            },
-          },
-        },
-      },
-    },
-  },
-  NARRATOR: {
-    type: "object",
-    properties: {
-      content: { type: "string" },
-      //summary: { type: "string" },
-    },
-  },
-  EDITOR: {
-    type: "array",
-    items: {
-      type: "object",
-      properties: {
-        id: { type: "string" },
-        name: { type: "string" },
-        description: { type: "string" },
-        relations: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              id: { type: "string" },
-              type: { type: "string" },
-            },
-          },
-        },
-        state: {
-          type: "object",
-          properties: {
-            key: { type: "string" },
-            value: { type: "string" },
-          },
-        },
-      },
-    },
-  },
-  CREATOR: {
-    type: "array",
-    items: {
-      type: "object",
-      properties: {
-        name: { type: "string" },
-        description: { type: "string" },
-      },
-    },
+    type: "string",
   },
   INTENT_EXTRACTOR: {
-    type: "object",
-    properties: {
-      intent: { type: "string" },
-    },
+    type: "string",
+  },
+  NARRATOR: {
+    type: "string",
+  },
+  EDITOR: {
+    type: "string",
   },
 };
 

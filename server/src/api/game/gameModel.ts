@@ -3,30 +3,27 @@ import { z } from "zod";
 
 extendZodWithOpenApi(z);
 
-export type Chat = z.infer<typeof ChatSchema>;
-export const ChatSchema = z.object({
-  id: z.number().optional(),
-  userId: z.number(),
-  message: z.string(),
-  createdAt: z.date(),
-});
-
 export type Entity = z.infer<typeof EntitySchema>;
 export const EntitySchema = z.object({
-  id: z.string(),
-  state: z.string().optional(),
+  // id: z.string(),
+  // state: z.string().optional(),
   name: z.string(),
-  description: z.string().optional(),
-  documents: z
-    .array(z.object({ id: z.number(), title: z.string().optional() }))
-    .optional(),
-  // terms: z
-  //   .array(z.object({ id: z.number(), term: z.string().optional() }))
+  // description: z.string().optional(),
+  // documents: z
+  //   .array(z.object({ id: z.number(), title: z.string().optional() }))
   //   .optional(),
+  // // terms: z
+  // //   .array(z.object({ id: z.number(), term: z.string().optional() }))
+  // //   .optional(),
   relations: z.array(
     z.object({ id: z.string(), type: z.string(), description: z.string() }),
   ),
-  score: z.number().optional(),
+  lastScore: z.number(),
+  lastSceneId: z.number(),
+  retreivedCount: z.number(),
+  preference: z.number(),
+  isPreferred: z.boolean(),
+  state: z.array(z.object({ key: z.string(), value: z.string() })),
   embedding: z.array(z.number()).optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
@@ -59,17 +56,6 @@ export const EntitySchema = z.object({
 //   createdAt: z.date(),
 //   updatedAt: z.date(),
 // });
-
-export type Quest = z.infer<typeof QuestSchema>;
-export const QuestSchema = z.object({
-  id: z.number().optional(),
-  objective: z.string(),
-  giverId: z.string(),
-  description: z.string(),
-  history: z.string(),
-  reward: z.array(z.string()),
-  state: z.enum(["yet_discovered", "on_progress", "complete"]),
-});
 
 // export type RuleFormat = z.infer<typeof RuleFormatSchema>;
 // export const RuleFormatSchema = z.object({
@@ -122,37 +108,37 @@ export const GameHistorySchema = z.object({
   createdAt: z.date(),
 });
 
-export type SceneHistory = z.infer<typeof SceneHistorySchema>;
-export const SceneHistorySchema = z.object({
-  id: z.number().optional(), // scene => set of game histories
-  message: z.string(), // ai agent's message for the scene
-  sceneDescription: z.string(), // description of the scene
-  gameHistories: z.array(GameHistorySchema), // game histories within the scene
-  tasks: z // tasks performed in the scene
-    .array(
-      z.object({
-        type: z.string(),
-        input: z.string().optional(),
-        output: z.string().optional(),
-      }),
-    )
-    .optional(),
-  // documents: z // citations used in the scene
-  //   .array(
-  //     z.object({
-  //       id: z.number(),
-  //       comment: z.string().optional(),
-  //     }),
-  //   )
-  //   .optional(),
-  // terms: z // ranked terms in the scene
-  //   .array(
-  //     z.object({
-  //       id: z.number(),
-  //       comment: z.string().optional(),
-  //     }),
-  //   )
-  //   .optional(),
-  entities: z.array(EntitySchema), // entities restored until the scene
-  createdAt: z.date(),
-});
+// export type SceneHistory = z.infer<typeof SceneHistorySchema>;
+// export const SceneHistorySchema = z.object({
+//   id: z.number().optional(), // scene => set of game histories
+//   message: z.string(), // ai agent's message for the scene
+//   sceneDescription: z.string(), // description of the scene
+//   gameHistories: z.array(GameHistorySchema), // game histories within the scene
+//   tasks: z // tasks performed in the scene
+//     .array(
+//       z.object({
+//         type: z.string(),
+//         input: z.string().optional(),
+//         output: z.string().optional(),
+//       }),
+//     )
+//     .optional(),
+//   // documents: z // citations used in the scene
+//   //   .array(
+//   //     z.object({
+//   //       id: z.number(),
+//   //       comment: z.string().optional(),
+//   //     }),
+//   //   )
+//   //   .optional(),
+//   // terms: z // ranked terms in the scene
+//   //   .array(
+//   //     z.object({
+//   //       id: z.number(),
+//   //       comment: z.string().optional(),
+//   //     }),
+//   //   )
+//   //   .optional(),
+//   entities: z.array(EntitySchema), // entities restored until the scene
+//   createdAt: z.date(),
+// });
