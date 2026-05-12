@@ -1,6 +1,6 @@
 export const MODELS = {
-  llama3: "llama3.3:latest",
-  //llama3: "llama3.1:8b",
+  //llama3: "llama3.3:latest",
+  llama3: "llama3.1:8b",
   qwen_embedding: "qwen3-embedding:latest",
 };
 

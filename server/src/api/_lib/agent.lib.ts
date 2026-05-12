@@ -12,7 +12,7 @@ export class AgentLib {
   async chat(
     model: string,
     messages: { role: string; content: string }[],
-    format: any,
+    format?: string | any,
   ): Promise<string> {
     try {
       const res = await ollama.chat({
@@ -174,6 +174,7 @@ export class AgentLib {
   async generateNarrative(
     players: string,
     input: string,
+    intent: string,
     options?: {
       model?: string;
       topic?: string;
@@ -183,46 +184,45 @@ export class AgentLib {
       // documents?: string;
       // terms?: string;
       entities?: string;
-      summary?: string;
+      //summary?: string;
     },
   ): Promise<{
     data: {
       content: string;
       // documents?: { id: number; comment: string }[];
       // terms?: { id: number; comment: string }[];
-      summary: string;
+      //summary: string;
     };
     prompt: string;
   }> {
     const prompt = PROMPTS.NARRATOR(
       players || "No players",
       input,
-      options?.summary || "No previous adventure",
+      intent,
+      // options?.summary || "No previous adventure",
       // options?.documents || "No documents",
       // options?.terms || "No terms",
       options?.entities || "No entities",
     );
 
-    const res = await this.chat(
-      MODELS.llama3,
-      [
-        {
-          role: "system",
-          content: PROMPTS.NARRATOR_SYSTEM(),
-        },
-        ...(options?.chatHistories ?? []),
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      FORMAT.NARRATOR,
-    );
+    const res = await this.chat(MODELS.llama3, [
+      {
+        role: "system",
+        content: PROMPTS.NARRATOR_SYSTEM(),
+      },
+      ...(options?.chatHistories ?? []),
+      {
+        role: "user",
+        content: prompt,
+      },
+    ]);
     console.log("response/:", res);
-    const parsed = res ? JSON.parse(res) : {};
+    //const parsed = res ? JSON.parse(res) : {};
 
     return {
-      data: parsed,
+      data: {
+        content: res ?? "",
+      },
       prompt,
     };
   }
@@ -272,7 +272,7 @@ export class AgentLib {
     model?: string;
     players?: string;
     narrative?: string;
-    sceneDescription?: string;
+    //sceneDescription?: string;
     quests?: string;
     entities?: string;
   }): Promise<{
@@ -282,8 +282,8 @@ export class AgentLib {
     const prompt = PROMPTS.CREATOR(
       options?.players || "No players",
       options?.narrative || "No narrative",
-      options?.sceneDescription || "No scene description",
-      options?.quests || "No quets provided",
+      //options?.sceneDescription || "No scene description",
+      //options?.quests || "No quets provided",
       options?.entities || "No entities",
     );
 

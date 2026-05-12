@@ -361,7 +361,19 @@ export class GameLib {
       const player = world.find((w) =>
         guildMembers.some((s) => s.userCode === w.id),
       );
-      // related entities pick
+      const userMessage = chatHistories[chatHistories.length - 1].content;
+      // const embedUserMessage = await agentLib.embedText(userMessage);
+
+      const { intent, prompt: extractedPrompt } =
+        await agentLib.extractIntentFromChat({
+          chatHistories: chatHistories.slice(-10, -1),
+          message: userMessage,
+        });
+
+      console.log("Extracted intent:", intent);
+      const embedIntent = await agentLib.embedText(intent);
+
+      // start related entities pick
       const related: Entity[] = [];
       const related2Player = [];
       // player related (1 depth relation)
@@ -376,17 +388,14 @@ export class GameLib {
         );
         related.push(...related2Player);
       }
-
-      const embedUserMessage = await agentLib.embedText(
-        chatHistories[chatHistories.length - 1].content,
-      );
+      console.log("related entity count: ", related.length);
       let rankedEntities;
       // contextually related entities
-      if (embedUserMessage) {
+      if (embedIntent) {
         rankedEntities = (await mongoLib.searchByEmbedding(
           `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
-          embedUserMessage,
-          5,
+          embedIntent,
+          3,
         )) as Entity[];
         for (const e of rankedEntities) {
           if (!related.find((r) => r?.id === e.id)) {
@@ -394,6 +403,9 @@ export class GameLib {
           }
         }
       }
+
+      console.log("related entity count: ", related.length);
+      console.log(rankedEntities);
 
       // common neighbors (2 depth relation : from player to ranked)
       const commonN: Entity[] = [];
@@ -408,6 +420,7 @@ export class GameLib {
       related.push(
         ...commonN.filter((c) => !related.find((r) => r?.id === c.id)),
       );
+      console.log("related entity count: ", related.length);
       // end
 
       for (const r of related as any[]) {
@@ -424,14 +437,14 @@ export class GameLib {
       // console.log(chatHistories.slice(-5, -1));
       const { data, prompt } = await agentLib.generateNarrative(
         memberCodes.join(", "),
-        chatHistories[chatHistories.length - 1].content,
+        userMessage,
+        intent,
         {
           chatHistories: chatHistories.slice(-5, -1),
           // documents: "",
           // terms: terms
           //   .map((t) => `[${t.id}] ${t.term}: ${t.description}`)
           //   .join("\n"),
-          summary: latestSummary,
           entities: JSON.stringify(related),
         },
       );
@@ -449,11 +462,11 @@ export class GameLib {
             input: prompt,
             output: data.content,
           },
-          {
-            type: "generate_summary",
-            input: latestSummary,
-            output: data.summary,
-          },
+          // {
+          //   type: "generate_summary",
+          //   input: latestSummary,
+          //   output: data.summary,
+          // },
         ],
         // documents: data.documents?.map((d) => ({
         //   id: d.id,
@@ -493,7 +506,7 @@ export class GameLib {
       return {
         memberCodes: memberCodes.join(", "),
         narrative: data.content,
-        sceneDescription: data.summary,
+        sceneDescription: "",
 
         entities: related,
       };
@@ -525,7 +538,7 @@ export class GameLib {
       const { data: cdata, prompt: cprompt } = await agentLib.generateCreates({
         players: previousData.memberCodes || "No players",
         narrative: previousData.narrative || "No previous narrative",
-        sceneDescription: previousData.sceneDescription || "No previous scene",
+        // sceneDescription: previousData.sceneDescription || "No previous scene",
         // documents: previousData.documents || "No previous documents",
         // terms: previousData.terms || "No previous terms",
         entities:
@@ -535,7 +548,7 @@ export class GameLib {
       const connection = mongoose.connection.collection(
         `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
       );
-      console.log("Generated creates:", cdata);
+      //console.log("Generated creates:", cdata);
 
       const afterProcess = cdata
         .reduce((prev: any[], curr: any) => {
@@ -547,7 +560,7 @@ export class GameLib {
         }, [] as any[])
         .map((v) => ({ ...v, id: GenerateEntityCode() }));
 
-      console.log("Generated after process:", afterProcess);
+      //console.log("Generated after process:", afterProcess);
 
       const generated = afterProcess.map((e) => {
         e.relations =
@@ -570,7 +583,7 @@ export class GameLib {
         return e;
       });
 
-      console.log("Generated:", generated);
+      //console.log("Generated:", generated);
 
       const { data, prompt } = await agentLib.generateEdits({
         players: previousData.memberCodes || "No players",
@@ -583,7 +596,7 @@ export class GameLib {
           "No previous entities",
       });
 
-      console.log("Generated edits:", data);
+      //console.log("Generated edits:", data);
 
       await this.insertGameHistory(guildCode, {
         chat: {
