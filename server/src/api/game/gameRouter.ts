@@ -2,7 +2,6 @@ import { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import express, { type Router } from "express";
 import { z } from "zod";
 import { createApiResponse } from "@/api-docs/openAPIResponseBuilders";
-import { validateRequest } from "@/common/utils/httpHandlers";
 import { gameController } from "./gameController";
 
 export const gameRegistry = new OpenAPIRegistry();
@@ -29,7 +28,6 @@ gameRegistry.registerPath({
     "Element Successfully added to game",
   ),
 });
-
 gameRouter.post("/add-element", gameController.addElement);
 
 // create new game element - no authentication
@@ -51,7 +49,6 @@ gameRegistry.registerPath({
   },
   responses: createApiResponse(z.boolean(), "Request Successfully sent"),
 });
-
 gameRouter.post("/request-element", gameController.requestElement);
 
 //
@@ -65,7 +62,7 @@ gameRegistry.registerPath({
         "application/json": {
           schema: z.object({
             guildCode: z.string(),
-            elementId: z.string(),
+            elementName: z.string(),
             element: z.any(),
           }),
         },
@@ -74,23 +71,94 @@ gameRegistry.registerPath({
   },
   responses: createApiResponse(z.boolean(), "Element Successfully updated"),
 });
-
 gameRouter.post("/modify-element", gameController.updateElement);
 
 gameRegistry.registerPath({
   method: "get",
-  path: "/game/element-details/{guildCode}/{elementId}",
+  path: "/game/element-details/{guildCode}/{elementName}",
   tags: ["Game"],
   request: {
     params: z.object({
       guildCode: z.string(),
-      elementId: z.string(),
+      elementName: z.string(),
     }),
   },
   responses: createApiResponse(z.boolean(), "Element Successfully retrieved"),
 });
-
 gameRouter.get(
-  "/element-details/:guildCode/:elementId",
+  "/element-details/:guildCode/:elementName",
   gameController.getElementById,
 );
+
+gameRegistry.registerPath({
+  method: "post",
+  path: "/game/send-message",
+  tags: ["Game"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            userId: z.number(),
+            guildCode: z.string(),
+            message: z.string(),
+          }),
+        },
+      },
+    },
+  },
+  responses: createApiResponse(z.boolean(), "Message Successfully sent"),
+});
+gameRouter.post("/send-message", gameController.sendMessage);
+
+gameRegistry.registerPath({
+  method: "post",
+  path: "/game/world",
+  tags: ["Game"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            guildCode: z.string(),
+            page: z.number().optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: createApiResponse(
+    z.object({
+      entities: z.array(z.any()),
+      hasMore: z.boolean(),
+    }),
+    "World retrieved successfully",
+  ),
+});
+gameRouter.post("/world", gameController.getWorld);
+
+gameRegistry.registerPath({
+  method: "post",
+  path: "/game/chat",
+  tags: ["Game"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            guildCode: z.string(),
+            page: z.number().optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: createApiResponse(
+    z.object({
+      history: z.array(z.any()),
+      hasMore: z.boolean(),
+    }),
+    "Chat retrieved successfully",
+  ),
+});
+gameRouter.post("/chat", gameController.getChat);

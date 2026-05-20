@@ -5,12 +5,10 @@ export const MODELS = {
 };
 
 export const COLLECTION_SUFFIX = {
-  GAME_HISTORY: ".g",
-  SCENE_HISTORY: ".s",
-  RULE_SET: ".r",
-  TERM_SET: ".t",
   DOCUMENTS: ".d",
-  QUESTS: ".q",
+  GAME: ".g",
+  SCENARIO: ".s",
+  QUEST: ".q",
   WORLD: ".w",
 };
 
@@ -37,3 +35,8 @@ export const ENTITY_STATE = {
   ACTIVE: "active",
   REMOVED: "removed",
 };
+
+export interface IGameCommand {
+  command: string;
+  args: string[];
+}

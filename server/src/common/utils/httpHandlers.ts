@@ -48,6 +48,7 @@ export const validateRequest =
 
 export const validateToken =
   () => async (req: Request, res: Response, next: NextFunction) => {
+    console.log("Validating token for request:", req.method, req.path);
     try {
       let isValid = false;
       console.log("Validating token for request:", req.method, req.path);

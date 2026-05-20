@@ -30,13 +30,22 @@ export interface Auth {
   iconPath?: string;
 }
 
+export interface GuildChat {
+  userId: number;
+  userCode: string;
+  message: string;
+}
+export interface HistoryTask {
+  type: string;
+  input: string;
+  output: string;
+}
 export interface GameHistory {
   _id: string;
   sceneId: number;
-  chat: { userId: number; userCode: string; message: string };
-  tasks?: { type: string; input: string; output: string }[];
-  entities: any[];
-  citations: any[];
+  chat: GuildChat;
+  tasks?: HistoryTask[];
+  entities: Entity[];
   createdAt: Date;
 }
 
@@ -50,20 +59,34 @@ export interface GuildChatMessage {
   displayName: string;
   content: string;
   timestamp: Date;
-  citations: { content: string; ruleId: number; description?: string }[];
-  entities: any[];
-  tasks?: string;
+  entities: Entity[];
+  tasks?: HistoryTask[];
 }
 
 export interface Entity {
-  id: string;
   name: string;
-  description: string;
-  secrets?: string; // Optional field for GM's reference, not used in gameplay
-  score?: number;
-  relations: { id: string; type: string }[];
-  features: string[];
-  favorite?: boolean;
+  type: string;
+  location: string;
+  relations: { name: string; type: string }[];
+  state: { [key: string]: string };
+  lastScore: number;
+  lastSceneId: number;
+  retreivedCount: number;
+  preference: number;
+  isPreferred: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
+
+export const MESSAGE_TYPES = {
+  USER_ONLINE: "USER_ONLINE",
+  USER_JOIN_GUILD: "USER_JOIN_GUILD",
+  GUILD_LIST_UPDATE: "GUILD_LIST_UPDATE",
+
+  AGENT_PROCESSING: "AGENT_PROCESSING",
+  AGENT_COMPLETE: "AGENT_COMPLETE",
+
+  GUILD_MEMBER_LIST_UPDATE: "GUILD_MEMBER_LIST_UPDATE",
+  GUILD_WORLD_UPDATE: "GUILD_WORLD_UPDATE",
+  GUILD_CHAT_UPDATE: "GUILD_CHAT_UPDATE",
+};

@@ -32,6 +32,9 @@ export class GuildEntity extends BaseEntity implements Guild {
   @Column({ type: "varchar", length: 255, nullable: true })
   iconPath?: string;
 
+  @Column({ type: "varchar", length: 255, nullable: true })
+  filePath?: string;
+
   @Column({ default: "pending", type: "varchar", length: 20 })
   state: "active" | "disabled" | "pending";
 

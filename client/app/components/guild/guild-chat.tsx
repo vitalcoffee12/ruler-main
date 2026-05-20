@@ -1,9 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import useSocket from "~/hooks/use-socket.hook";
-import type { GameHistory, Guild, GuildChatMessage } from "../common.interface";
+import {
+  MESSAGE_TYPES,
+  type GameHistory,
+  type Guild,
+  type GuildChatMessage,
+} from "../common.interface";
 import { MessageList } from "./guild-chat-message";
 import useToast from "~/hooks/use-toast.hook";
 import { BASE_URL } from "~/axios-instance";
+import useRequest from "~/hooks/use-request.hook";
+import { AuthContext } from "~/contexts/authContext";
 
 export default function GuildChat(props: {
   guild: Guild;
@@ -19,6 +26,7 @@ export default function GuildChat(props: {
     }
   >;
 }) {
+  const { auth } = useContext(AuthContext);
   const chatRef = useRef<HTMLDivElement>(null);
   const { payloads, isConnected, sendMessage } = useSocket();
 
@@ -30,12 +38,51 @@ export default function GuildChat(props: {
   const [rows, setRows] = useState<number>(1);
   const [toast, addToast] = useToast();
 
-  const onSendMessage = (message: string) => {
+  const reqGetChat = useRequest("/game/chat", "post");
+  const reqSendChat = useRequest("/game/send-message", "post");
+
+  const fetchChat = async (page: number) => {
+    try {
+      const res = await reqGetChat.sendRequest({
+        authorized: true,
+        body: {
+          guildCode: props.guild.code,
+          page,
+        },
+      });
+      if (res?.data.responseObject) {
+        const { history, hasMore } = res.data.responseObject;
+        setHistories(history);
+        // Optionally handle hasMore for pagination
+      }
+    } catch (ex) {
+      console.error("Failed to fetch chat history:", ex);
+      addToast("error", "Failed to load chat history");
+    }
+  };
+
+  const sendChat = async (message: string) => {
+    try {
+      await reqSendChat.sendRequest({
+        authorized: true,
+        body: {
+          userId: auth.id,
+          guildCode: props.guild.code,
+          message,
+        },
+      });
+    } catch (ex) {
+      console.error("Failed to send message:", ex);
+      addToast("error", "Failed to send message");
+    }
+  };
+  const onSendMessage = async (message: string) => {
     if (isWaiting) {
       addToast("warning", "GM's thingking...Please wait...");
       return;
     }
-    sendMessage("GUILD_CHAT_MESSAGE", { message, entities: taggedNodes });
+    //sendMessage("GUILD_CHAT_MESSAGE", { message, entities: taggedNodes });
+    await sendChat(message);
     setMessage("");
     setIsWaiting(true);
     setRows(1);
@@ -45,10 +92,10 @@ export default function GuildChat(props: {
     if (!isConnected) return;
     for (const payload of payloads) {
       if (
-        payload.type === "GUILD_CHAT_UPDATE" &&
+        payload.type === MESSAGE_TYPES.GUILD_CHAT_UPDATE &&
         payload.guildCode === props.guild.code
       ) {
-        setHistories(payload.content);
+        fetchChat(1);
       }
       // if (
       //   payload.type === "GUILD_HISTORY_UPDATE" &&
@@ -57,13 +104,13 @@ export default function GuildChat(props: {
       //   setHistories(payload.content);
       // }
       if (
-        payload.type === "GUILD_FLAG_DOWN" &&
+        payload.type === MESSAGE_TYPES.AGENT_COMPLETE &&
         payload.guildCode === props.guild.code
       ) {
         setIsWaiting(false);
       }
       if (
-        payload.type === "GUILD_FLAG_WAITING" &&
+        payload.type === MESSAGE_TYPES.AGENT_PROCESSING &&
         payload.guildCode === props.guild.code
       ) {
         setIsWaiting(true);
@@ -193,7 +240,7 @@ function mapHistoriesToMessages(
   const historiesMap = histories.map((history) => {
     const memberInfo = memberDic ? memberDic[history.chat.userCode] : undefined;
     let type = "PLAYER";
-    switch (history.chat.userId) {
+    switch (Number(history.chat.userId)) {
       case 0:
         type = "GUILD";
         break;
@@ -219,10 +266,8 @@ function mapHistoriesToMessages(
         : "Unknown User",
       content: history.chat.message,
       timestamp: history.createdAt,
-      citations: history.citations,
       entities: history.entities,
-      tasks:
-        history.tasks?.find((v) => v.type == "generate_summary")?.output ?? "",
+      tasks: history.tasks,
     };
   });
 

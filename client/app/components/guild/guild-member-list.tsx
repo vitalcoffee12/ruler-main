@@ -73,7 +73,7 @@ export default function GuildMemberList(props: { guild: Guild }) {
           </div>
         </div>
         <div>
-          {members.map((member) => (
+          {members?.map((member) => (
             <div
               key={member.userId}
               className="flex items-center mb-2 cursor-pointer hover:bg-stone-100 rounded-lg p-2"

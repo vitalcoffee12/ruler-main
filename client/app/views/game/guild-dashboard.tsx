@@ -1,6 +1,10 @@
 import { useContext, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import type { Entity, Guild } from "~/components/common.interface";
+import {
+  MESSAGE_TYPES,
+  type Entity,
+  type Guild,
+} from "~/components/common.interface";
 import GuildChat from "~/components/guild/guild-chat";
 
 import GuildHeader from "~/components/guild/guild-header";
@@ -15,7 +19,6 @@ import useToast from "~/hooks/use-toast.hook";
 
 export default function Dashboard() {
   const location = useLocation().pathname.split("/")[4];
-  const nav = useNavigate();
   const { auth, login } = useContext(AuthContext);
   const [guild, setGuild] = useState<Guild | null>(null);
   const [memberDic, setMemberDic] = useState<
@@ -35,29 +38,32 @@ export default function Dashboard() {
   const [refType, setRefType] = useState<string | null>(null);
   const [refData, setRefData] = useState<any>(null);
   const [world, setWorld] = useState<Entity[]>([]);
+  const [worldPage, setWorldPage] = useState(1);
+  const [hasMoreWorld, setHasMoreWorld] = useState(true);
   const [isWaiting, setIsWaiting] = useState(false);
   const { isConnected, payloads, sendMessage } = useSocket();
 
   const [toast, addToast] = useToast();
   const reqFetchGuildData = useRequest(`/guild/code/${location}`, "get");
+  const reqFetchWorld = useRequest(`/game/world`, "post");
 
   useEffect(() => {
     if (!isConnected || !guild) return;
     for (const payload of payloads) {
       if (
-        payload.type === "GUILD_HISTORY_UPDATE" &&
+        payload.type === MESSAGE_TYPES.GUILD_WORLD_UPDATE &&
         payload.guildCode === guild.code
       ) {
-        setWorld(payload.content);
+        fetchWorld();
       }
       if (
-        payload.type === "GUILD_FLAG_WAITING" &&
+        payload.type === MESSAGE_TYPES.AGENT_PROCESSING &&
         payload.guildCode === guild.code
       ) {
         setIsWaiting(true);
       }
       if (
-        payload.type === "GUILD_FLAG_DOWN" &&
+        payload.type === MESSAGE_TYPES.AGENT_COMPLETE &&
         payload.guildCode === guild.code
       ) {
         setIsWaiting(false);
@@ -67,7 +73,6 @@ export default function Dashboard() {
 
   const setInitialData = (data: any) => {
     setGuild(data.guild);
-    console.log("Fetched guild data:", data);
     if (auth.guildCode) {
       const newMemberDic = data.members.reduce(
         (acc: any, member: any) => {
@@ -85,7 +90,6 @@ export default function Dashboard() {
         },
       );
       setMemberDic(newMemberDic);
-      console.log("Constructed member dictionary:", newMemberDic);
     }
   };
 
@@ -106,6 +110,23 @@ export default function Dashboard() {
     setLoading(false);
   };
 
+  const fetchWorld = async () => {
+    try {
+      if (auth.accessToken) {
+        const res = await reqFetchWorld.sendRequest({
+          authorized: true,
+          body: { guildCode: guild?.code, page: worldPage },
+        });
+        setWorld(res?.data.responseObject.entities);
+        setHasMoreWorld(res?.data.responseObject.hasMore);
+        console.log(res?.data.responseObject.entities);
+      }
+      //addToast("success", "World updated");
+    } catch (error) {
+      //addToast("error", "Failed to update world");
+    }
+  };
+
   const onClickEntity = (id: string) => {
     setRefType("entity");
     setRefData(id);
@@ -115,14 +136,19 @@ export default function Dashboard() {
   useEffect(() => {
     login({ ...auth, guildCode: guild?.code });
   }, [guild]);
+
   useEffect(() => {
     fetchGuildData();
   }, [auth.guildCode, auth?.accessToken, location]);
 
   useEffect(() => {
     if (!isConnected) return;
-    sendMessage("USER_JOIN_GUILD");
+    sendMessage(MESSAGE_TYPES.USER_JOIN_GUILD);
   }, [isConnected, guild]);
+
+  useEffect(() => {
+    fetchWorld();
+  }, [worldPage]);
 
   return (
     <>
@@ -148,7 +174,10 @@ export default function Dashboard() {
           <GuildWorld
             guild={guild ?? defaultGuild}
             world={world}
+            page={worldPage}
+            hasMore={hasMoreWorld}
             isWaiting={isWaiting}
+            onChangePage={(newPage) => setWorldPage(newPage)}
             onClickEntity={onClickEntity}
           />
         </div>

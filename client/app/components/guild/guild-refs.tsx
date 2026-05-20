@@ -16,22 +16,22 @@ export default function GuildRefs(props: {
         </div>
       )}
       {props.refType == "entity" && props.data && (
-        <EntityRef world={props.world} id={props.data} />
+        <EntityRef key={props.data} world={props.world} name={props.data} />
       )}
     </>
   );
 }
 
-function EntityRef(props: { id: string; world: Entity[] }) {
+function EntityRef(props: { name: string; world: Entity[] }) {
   const [inIsOpen, setInIsOpen] = useState<boolean>(true);
   const [outIsOpen, setOutIsOpen] = useState<boolean>(true);
-  const targetEntity = props.world.find((e) => e.id === props.id);
+  const targetEntity = props.world.find((e) => e.name === props.name);
   const relatedEntitiesIn = props.world.filter((e) =>
-    e.relations?.some((r) => r.id === targetEntity?.id),
+    e.relations?.some((r) => r.name === targetEntity?.name),
   );
 
   const relatedEntitiesOut = props.world.filter((e) =>
-    targetEntity?.relations?.some((r) => r.id === e.id),
+    targetEntity?.relations?.some((r) => r.name === e.name),
   );
 
   return (
@@ -42,15 +42,18 @@ function EntityRef(props: { id: string; world: Entity[] }) {
             className="flex gap-2 items-center border-b pb-1 border-stone-200"
             title="id"
           >
-            <span className="text-xs rounded bg-stone-100 p-1 text-stone-700">
-              {targetEntity?.id}
-            </span>
             <p title="name" className="text-lg">
               {targetEntity?.name}
             </p>
           </div>
           <div className="p-2">
-            <Markdown>{targetEntity?.description}</Markdown>
+            <Markdown>
+              {Object.keys(targetEntity?.state || {})
+                .map((key) => {
+                  return `**${key}**: ${targetEntity?.state[key]}\n`;
+                })
+                .join("\n")}
+            </Markdown>
           </div>
         </div>
         <div className=" ">
@@ -83,24 +86,29 @@ function EntityRef(props: { id: string; world: Entity[] }) {
               <>
                 <li
                   className="rounded-lg shadow-md p-2 mb-3 bg-white"
-                  id={r.id}
+                  id={r.name}
                 >
                   <div
                     className="flex gap-2 items-center border-b pb-1 border-stone-200"
-                    title="id"
+                    title="name"
                   >
-                    <p className="text-lg" title={r.id}>
+                    <p className="text-lg" title={r.name}>
                       {r?.name}
                     </p>
                     <div className="text-xs rounded bg-stone-100 p-1 text-stone-700">
                       {
-                        r?.relations.find((v) => v.id === targetEntity?.id)
+                        r?.relations.find((v) => v.name === targetEntity?.name)
                           ?.type
                       }
                     </div>
                   </div>
+                  <div>{r.location}</div>
                   <div className="p-2">
-                    <Markdown>{r?.description}</Markdown>
+                    <Markdown>
+                      {Object.keys(r?.state || {})
+                        .map((key) => `**${key}**: ${r?.state[key]}`)
+                        .join("\n")}
+                    </Markdown>
                   </div>
                 </li>
               </>
@@ -135,27 +143,32 @@ function EntityRef(props: { id: string; world: Entity[] }) {
               <>
                 <li
                   className="rounded-lg shadow-md p-2 mb-3 bg-white"
-                  id={r.id}
+                  id={r.name}
                 >
                   <div
                     className="flex gap-2 items-center border-b pb-1 border-stone-200"
-                    title="id"
+                    title="name"
                   >
                     <div className="text-xs rounded bg-stone-100 p-1 text-stone-700">
                       {
-                        targetEntity?.relations.find((v) => v.id === r?.id)
+                        targetEntity?.relations.find((v) => v.name === r?.name)
                           ?.type
                       }
                     </div>
                     {/* <span className="text-xs rounded bg-stone-100 p-1 text-stone-700">
                 {r?.id}
               </span> */}
-                    <p title={r.id} className="text-lg">
+                    <p title={r.name} className="text-lg">
                       {r?.name}
                     </p>
                   </div>
+                  <div>{r.location}</div>
                   <div className="p-2">
-                    <Markdown>{r?.description}</Markdown>
+                    <Markdown>
+                      {Object.keys(r?.state || {})
+                        .map((key) => `**${key}**: ${r?.state[key]}`)
+                        .join("\n")}
+                    </Markdown>
                   </div>
                 </li>
               </>

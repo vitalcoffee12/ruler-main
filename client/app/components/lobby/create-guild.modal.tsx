@@ -189,7 +189,7 @@ export default function CreateGuildModal(props: {
             </div>
           </div>
         )}
-        <input type="number" name="ownerId" hidden value={auth.id} />
+        <input type="number" name="ownerId" hidden value={auth.id} readOnly />
         <input
           type="file"
           name="iconPath"

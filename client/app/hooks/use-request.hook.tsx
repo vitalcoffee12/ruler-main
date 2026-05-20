@@ -42,9 +42,9 @@ export default function useRequest(url: string, method: "post" | "get") {
         data: options.body ?? null,
         headers: fullHeader,
       });
-      console.log(
-        `Request successfully managed (${fullUrl}):\n${res.status}\n${res.data}`,
-      );
+      // console.log(
+      //   `Request successfully managed (${fullUrl}):\n${res.status}\n${res.data}`,
+      // );
       setRes(res as ResponseDataType);
       return res as ResponseDataType;
     } catch (ex) {

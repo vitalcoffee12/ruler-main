@@ -1,8 +1,8 @@
 import { Request, RequestHandler, Response } from "express";
 import { GuildService } from "./guildService";
-import { socketHandler } from "../_lib/socketHandler";
 import { ServiceResponse } from "@/common/models/serviceResponse";
 import { StatusCodes } from "http-status-codes";
+import { MESSAGE_TYPES, socketHandler } from "../_lib/socketHandler";
 
 class GuildController {
   constructor(
@@ -32,18 +32,16 @@ class GuildController {
       iconPath: iconPath?.filename ?? null,
       attachment: attachment?.filename ?? null,
     });
+
+    res.status(serviceResponse.statusCode).send(serviceResponse);
+
     if (serviceResponse.responseObject) {
-      this.guildService.createGame(
+      await this.guildService.createGame(
         serviceResponse.responseObject?.code,
         req.body.description ?? "",
-      );
-      socketHandler.sendMessageToUserByUserId(
-        "GUILD_LIST_UPDATE",
-        Number(req.headers["userId"]),
-        {},
+        req.body.ownerId,
       );
     }
-    res.status(serviceResponse.statusCode).send(serviceResponse);
   };
 
   public getGuildsByUser: RequestHandler = async (
@@ -91,9 +89,6 @@ class GuildController {
       guildCode,
       userId,
     );
-    socketHandler.sendWorldUpdate(guildCode);
-
-    socketHandler.sendMemberList(guildCode);
 
     res.status(servicecResponse.statusCode).send(servicecResponse);
   };

@@ -41,7 +41,7 @@ export default function Signin() {
       if (data.email.trim() === "" || data.password.trim() === "") {
         return;
       }
-      await reqLogin.sendRequest({ body: data });
+      await reqLogin.sendRequest({ authorized: false, body: data });
     } catch (ex) {}
   };
 

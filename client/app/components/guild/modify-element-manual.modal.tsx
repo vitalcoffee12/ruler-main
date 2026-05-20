@@ -10,11 +10,15 @@ export default function ModifyElementManualModal(props: {
 }) {
   const [page, setPage] = useState(0);
   const [element, setElement] = useState<Entity>({
-    id: "",
     name: "",
-    description: "",
-    secrets: "",
-    favorite: false,
+    type: "",
+    location: "",
+    state: {},
+    isPreferred: false,
+    preference: 0,
+    lastSceneId: 0,
+    lastScore: 0,
+    retreivedCount: 0,
     relations: [],
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -79,20 +83,6 @@ export default function ModifyElementManualModal(props: {
                   />
                   <div className="text-xs text-stone-400 text-right mt-1 mb-2">
                     {element.name.length} / 50
-                  </div>
-                  <textarea
-                    placeholder="Element Description"
-                    className="w-full border border-stone-300 rounded-md p-2 h-32"
-                    value={element.description}
-                    onChange={(e) =>
-                      setElement({ ...element, description: e.target.value })
-                    }
-                  ></textarea>
-                  <div className="text-xs text-stone-400 text-right">
-                    {element.description.length} / 500
-                  </div>
-                  <div className="text-sm text-stone-600 mt-1">
-                    Advanced Options
                   </div>
                 </div>
               </div>

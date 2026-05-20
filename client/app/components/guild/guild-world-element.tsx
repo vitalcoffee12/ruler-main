@@ -11,8 +11,6 @@ function GuildWorldElement(
   },
   ref: React.Ref<{ [key: string]: HTMLDivElement | null }>,
 ) {
-  const [noteVisible, setNoteVisible] = useState(false);
-  const [imageVisible, setImageVisible] = useState(false);
   const [chartVisible, setChartVisible] = useState(false);
 
   const [isFavorite, setIsFavorite] = useState(false);
@@ -73,22 +71,6 @@ function GuildWorldElement(
     onClick: () => void;
   }[] = [
     {
-      icon: "description",
-      label: "Toggle GM Note",
-      class: noteVisible ? "'FILL' 1" : "'FILL' 0",
-      onClick: () => {
-        setNoteVisible((prev) => !prev);
-      }, // Implement the toggle logic for GM Note visibility
-    },
-    {
-      icon: "image",
-      label: "Toggle Image",
-      class: imageVisible ? "'FILL' 1" : "'FILL' 0",
-      onClick: () => {
-        setImageVisible((prev) => !prev);
-      }, // Implement the toggle logic for Image visibility
-    },
-    {
       icon: "favorite",
       label: isFavorite ? "Unfavorite" : "Favorite",
       class: isFavorite ? "'FILL' 1" : "'FILL' 0",
@@ -121,16 +103,19 @@ function GuildWorldElement(
         className="top-0 left-0 border border-stone-300 rounded-lg mb-3 bg-white hover:shadow-md cursor-pointer transition-shadow duration-200 relative"
         ref={(el) => {
           if (ref && typeof ref !== "function") {
-            ref.current![props.node.id] = el;
+            ref.current![props.node.name] = el;
           }
         }}
         onClick={(e) => {
-          props.onClick(props.node.id);
+          props.onClick(props.node.name);
         }}
       >
         <div className="flex items-center justify-between mt-1 px-1">
           <div className="text-sm text-stone-700 font-bold px-3">
-            {props.node.name}
+            {props.node.name}{" "}
+            <span className="text-xs font-normal ml-2 px-2 py-1 bg-stone-100">
+              {props.node.type}
+            </span>
           </div>
           <div
             className="material-symbols-outlined text-stone-400 px-3 py-2 no-select"
@@ -153,10 +138,22 @@ function GuildWorldElement(
             more_horiz
           </div>
         </div>
-        <div className="text-sm text-stone-600 px-4">
-          {props.node.description}
+        <div className="text-sm px-2 ml-2 text-stone-500">
+          Location : {props.node.location}
         </div>
 
+        <div className="ml-1 mt-1">
+          {props.node.state &&
+            Object.keys(props.node.state).map((key) => (
+              <div
+                key={key}
+                className="flex items-center text-sm text-stone-600 px-3 py-1 no-select"
+              >
+                <span className="font-medium text-stone-700">{key}:</span>
+                <span className="ml-1">{props.node.state[key]}</span>
+              </div>
+            ))}
+        </div>
         <div className="mb-1 px-1">
           <ul className="flex items-center justify-between no-select">
             {botMenues.map((menu) => (
@@ -184,25 +181,6 @@ function GuildWorldElement(
             ))}
           </ul>
         </div>
-        {props.node.features && (
-          <div
-            className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 text-sm m-3 rounded-r overflow-hidden transition-height duration-300 p-2"
-            style={{
-              display: noteVisible ? "block" : "none",
-              height: noteVisible ? "fit-content" : "0",
-            }}
-          >
-            <div className="text-sm text-stone-600">
-              <ul className="flex gap-1">
-                {props.node.features?.map((f) => (
-                  <li key={f} className="text-xs border rounded">
-                    {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
 
         <div
           className="absolute top-9 right-3 z-99 transition-all duration-200 bg-white border border-stone-300 rounded-md shadow-lg hidden height-0"
@@ -240,7 +218,7 @@ function GuildWorldElement(
         {modalType === "edit" && (
           <ModifyElementManualModal
             guildCode={props.guildCode}
-            elementId={props.node.id}
+            elementId={props.node.name}
             closeModal={closeModal}
           />
         )}
@@ -267,7 +245,7 @@ export const GuildWorldElements = memo(function GuildWorldElements(props: {
     <div className="row-start-2 row-end-3 overflow-y-auto no-scrollbar p-4 max-h-[calc(100vh-var(--spacing)*42)] mt-2">
       {props.world.map((w) => (
         <ForwardedGuildWorldElement
-          key={w.id}
+          key={w.name}
           guildCode={props.guildCode}
           node={w}
           ref={props.refs}

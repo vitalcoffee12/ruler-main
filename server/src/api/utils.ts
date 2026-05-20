@@ -1,4 +1,4 @@
-import { Entity } from "./game/gameModel";
+import { Entity, ExtendEntity } from "./game/gameModel";
 
 export function generateRandomCode(length: number = 8): string {
   const characters =
@@ -142,16 +142,26 @@ export function CommonNeighbors(
     return [];
   }
   const commons = current.relations.filter((r) =>
-    target.relations?.some((tr) => tr.id === r.id),
+    target.relations?.some((tr) => tr.name === r.name),
   );
-  const ce = world.filter((e) => commons.some((c) => c.id === e.id));
+  const ce = world.filter((e) => commons.some((c) => c.name === e.name));
 
   const children = [];
   for (const c of ce) {
     const neighbors = CommonNeighbors(world, c, target, depth - 1);
     children.push(...neighbors);
   }
-  ce.push(...children.filter((c) => !ce.some((e) => e.id === c.id)));
+  ce.push(...children.filter((c) => !ce.some((e) => e.name === c.name)));
 
   return ce;
+}
+
+export function ExtendToEntity(extend: ExtendEntity[]): Entity[] {
+  return extend.map((e) => ({
+    name: e.name,
+    type: e.type,
+    location: e.location,
+    relations: e.relations,
+    state: e.state,
+  }));
 }

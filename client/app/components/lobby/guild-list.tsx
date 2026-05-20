@@ -4,11 +4,9 @@ import { BASE_URL } from "~/axios-instance";
 import { AuthContext } from "~/contexts/authContext";
 import useRequest from "~/hooks/use-request.hook";
 import useSocket from "~/hooks/use-socket.hook";
+import { MESSAGE_TYPES } from "../common.interface";
 
-export default function GuildList(props: {
-  refreshGuildList?: boolean;
-  onClickCreateGuild?: () => void;
-}) {
+export default function GuildList(props: { onClickCreateGuild?: () => void }) {
   const { auth } = useContext(AuthContext);
   const badgeRef = useRef<HTMLDivElement>(null);
   const refs = useRef<
@@ -16,6 +14,16 @@ export default function GuildList(props: {
   >([]);
   const [hoveredGuildCode, setHoveredGuildCode] = useState<string | null>(null);
   const [guilds, setGuilds] = useState<GuildListItemProps[]>([]);
+  const [refresh, setRefresh] = useState(false);
+  const { payloads, isConnected, sendMessage } = useSocket();
+
+  useEffect(() => {
+    for (const payload of payloads) {
+      if (payload.type === MESSAGE_TYPES.GUILD_LIST_UPDATE) {
+        setRefresh(!refresh);
+      }
+    }
+  }, [payloads, isConnected, auth.code]);
 
   const reqFetchGuilds = useRequest("/guild/user", "get");
   const fetchGuilds = async () => {
@@ -34,7 +42,7 @@ export default function GuildList(props: {
 
   useEffect(() => {
     fetchGuilds();
-  }, [auth?.accessToken, props.refreshGuildList]);
+  }, [auth?.accessToken, refresh]);
 
   useEffect(() => {
     if (hoveredGuildCode) {

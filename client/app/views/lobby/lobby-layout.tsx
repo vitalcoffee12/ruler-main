@@ -30,12 +30,6 @@ export default function Layout() {
       console.log("USER_OFFLINE");
       addToast("error", "Loggic is now offline! Try again...");
     }
-
-    for (const payload of payloads) {
-      if (payload.type === "GUILD_LIST_UPDATE") {
-        setRefreshGuildList(!refreshGuildList);
-      }
-    }
   }, [payloads, isConnected, auth.code]);
 
   useEffect(() => {
@@ -76,10 +70,7 @@ export default function Layout() {
               GG
             </div>
           </div>
-          <GuildList
-            onClickCreateGuild={openModal}
-            refreshGuildList={refreshGuildList}
-          />
+          <GuildList onClickCreateGuild={openModal} />
           <div>
             <div className="flex justify-center items-center h-full border-t border-stone-200">
               <span

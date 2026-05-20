@@ -2,15 +2,15 @@ import { ServiceResponse } from "@/common/models/serviceResponse";
 import type { Guild, GuildMember, GuildMemberWithUser } from "./guildModel";
 import { StatusCodes } from "http-status-codes";
 import {
+  ExtendToEntity,
   GenerateDocumentCode,
-  GenerateEntityCode,
   GenerateGuildCode,
   GenerateRandomColorCode,
 } from "../utils";
 import { GuildMemberEntity } from "@/entities/guilldMemberEntity";
 import { GuildEntity } from "@/entities/guildEntity";
 import { UserEntity } from "@/entities/userEntity";
-import { Entity, GameHistory, SceneHistory } from "../game/gameModel";
+import { Entity, ExtendEntity, GameHistory } from "../game/gameModel";
 import { gameLib } from "../_lib/game.lib";
 import { COLLECTION_SUFFIX, PREDEFINED_USER } from "../constants";
 import mongoose from "mongoose";
@@ -21,6 +21,7 @@ import { mongoLib } from "../_lib/mongo.lib";
 import { In } from "typeorm";
 import { agentLib } from "../_lib/agent.lib";
 import { Document } from "../resources/resourceModel";
+import { MESSAGE_TYPES, socketHandler } from "../_lib/socketHandler";
 
 export class GuildService {
   constructor(
@@ -97,7 +98,7 @@ export class GuildService {
     sceneId: number = 0,
   ): Promise<ServiceResponse<GameHistory[] | null>> {
     try {
-      const historyData = await gameLib.getHistory(guildCode, sceneId);
+      const historyData = await gameLib.getHistory(guildCode, 1);
       if (!historyData) {
         return ServiceResponse.failure(
           "No history found for guild",
@@ -126,19 +127,19 @@ export class GuildService {
       const historyData = await gameLib.getWorld(guildCode);
       if (!historyData) {
         return ServiceResponse.failure(
-          "No history found for guild",
+          "No world found for guild",
           null,
           StatusCodes.NOT_FOUND,
         );
       }
       return ServiceResponse.success<Entity[]>(
-        "History retrieved successfully",
+        "World retrieved successfully",
         historyData,
       );
     } catch (ex) {
       const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
       return ServiceResponse.failure(
-        `Error retrieving history for guild: ${errorMessage}`,
+        `Error retrieving world for guild: ${errorMessage}`,
         null,
         StatusCodes.INTERNAL_SERVER_ERROR,
       );
@@ -181,7 +182,7 @@ export class GuildService {
     );
 
     await mongoose.connection.createCollection(
-      `${newGuild.code}${COLLECTION_SUFFIX.GAME_HISTORY}`,
+      `${newGuild.code}${COLLECTION_SUFFIX.GAME}`,
     );
     await mongoose.connection.createCollection(
       `${newGuild.code}${COLLECTION_SUFFIX.WORLD}`,
@@ -189,50 +190,64 @@ export class GuildService {
     await mongoLib.createEmbeddingIndex(
       `${newGuild.code}${COLLECTION_SUFFIX.WORLD}`,
     );
-    // await mongoose.connection.createCollection(
-    //   `${newGuild.code}${COLLECTION_SUFFIX.SCENE_HISTORY}`,
-    // );
 
     await mongoose.connection.createCollection(
       `${newGuild.code}${COLLECTION_SUFFIX.DOCUMENTS}`,
     );
 
-    const newCharacter: Entity = {
-      id: `${user.code}`,
+    await mongoose.connection.createCollection(
+      `${newGuild.code}${COLLECTION_SUFFIX.SCENARIO}`,
+    );
+    await mongoLib.createEmbeddingIndex(
+      `${newGuild.code}${COLLECTION_SUFFIX.SCENARIO}`,
+    );
+
+    await mongoose.connection.createCollection(
+      `${newGuild.code}${COLLECTION_SUFFIX.QUEST}`,
+    );
+
+    const newCharacter: ExtendEntity = {
       name: user.displayName,
-      description: `A player named ${user.displayName}`,
-      state: "active",
-      score: 100,
+      type: "player",
+      isPreferred: true,
+      preference: 0,
+      lastSceneId: 0,
+      lastScore: 0,
+      retreivedCount: 0,
+      location: "",
+      state: {},
       relations: [],
-      embedding: [],
       updatedAt: new Date(),
       createdAt: new Date(),
     };
 
     const predUser = PREDEFINED_USER.SYSTEM;
-    await gameLib.insertGameHistory(newGuild.code, {
-      chat: {
-        userId: predUser.id,
+    await gameLib.insertGameHistory(
+      newGuild.code,
+      {
+        userId: predUser.id.toString(),
         userCode: predUser.code,
         message: `Player ${user.displayName} has created the guild.`,
       },
-      entities: [],
-    });
+      [newCharacter],
+    );
 
     await mongoose.connection
       .collection(`${newGuild.code}${COLLECTION_SUFFIX.WORLD}`)
       .insertOne(newCharacter);
 
     const predGuild = PREDEFINED_USER.GUILD(newGuild.code, newGuild.name);
-    await gameLib.insertGameHistory(newGuild.code, {
-      chat: {
-        userId: predGuild.id,
+    await gameLib.insertGameHistory(
+      newGuild.code,
+      {
+        userId: predGuild.id.toString(),
         userCode: predGuild.code,
         message: `## Congratulations, \`${newGuild.name}\` has been created!
 This is the beginning of your guild chat. Guild members can communicate here, adventure the world, and \`Loggic\` will take a job in guiding your journey!`,
       },
-      entities: [],
-    });
+      [],
+      [],
+    );
 
     return newGuild;
   }
@@ -272,6 +287,12 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
           .insertMany(docs);
       }
 
+      await socketHandler.sendMessageToUserByUserId(
+        MESSAGE_TYPES.GUILD_LIST_UPDATE,
+        createGuildData.ownerId,
+        {},
+      );
+
       return ServiceResponse.success<Guild>(
         "Guild created successfully",
         guild,
@@ -287,13 +308,22 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
     }
   }
 
-  async createGame(guildCode: string, description: string) {
+  async createGame(guildCode: string, description: string, userId: number) {
+    const guild = await this.guildRepository.findOne({
+      where: { code: guildCode },
+    });
     const docs = await mongoose.connection
       .collection(`${guildCode}${COLLECTION_SUFFIX.DOCUMENTS}`)
       .find({})
       .toArray();
 
-    const entities: any[] = [];
+    const player = await mongoose.connection
+      .collection(`${guildCode}${COLLECTION_SUFFIX.WORLD}`)
+      .findOne<any>({
+        type: "player",
+      });
+
+    let entities: Entity[] = [player as Entity];
     const chatLog = [];
     const atleast = 3;
     let chunks = [];
@@ -319,90 +349,121 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
       chunks.push(chunk);
     }
 
+    const t: { input?: string; output?: string; type: string }[] = [];
     let input = "";
     for (let i = 0; i < Math.max(chunks.length, atleast); i++) {
       if (chunks.length > i) {
         input = chunks[i];
       } else {
-        input = "";
+        input =
+          "The Fantasy world, which wating for a adventurer who can save the world.";
       }
-      const e = await agentLib.generateWorld({
-        description: description,
-        previousChat: chatLog,
-        doc:
-          !chunks.length && !description.length
-            ? "The Fantasy world, which wating for a adventurer who can save the world."
-            : input,
-      });
-
-      entities.push(...e);
+      const { data, prompt } = await agentLib.designGameWorld(
+        description,
+        JSON.stringify(entities),
+        !chunks.length && !description.length
+          ? "The Fantasy world, which wating for a adventurer who can save the world."
+          : input,
+        chatLog,
+      );
+      entities = gameLib.parseCommand(entities as ExtendEntity[], data);
       chatLog.push(
         { role: "user", content: input },
-        { role: "assistant", content: JSON.stringify(e) },
+        { role: "assistant", content: JSON.stringify(entities) },
       );
-    }
-
-    const afterProcess = entities
-      .reduce((prev: any[], curr: any) => {
-        const exist = prev.find((p) => p.name === curr.name);
-        if (!exist) {
-          prev.push(curr);
-        }
-        return prev;
-      }, [] as any[])
-      .map((v) => ({ ...v, id: GenerateEntityCode() }));
-
-    const flatRelation = afterProcess.map((e) => {
-      e.relations = e.relations.filter((v: any) =>
-        afterProcess.some((s) => s.name === v.name),
-      );
-      e.relations = e.relations.map((v: any) => ({
-        ...v,
-        id: afterProcess.find((s) => s.name === v.name).id,
-      }));
-      return e;
-    });
-
-    for (const item of flatRelation) {
-      item.embedding = await agentLib.embedText(
-        [item.name, item.description, item.secrets].join("\n"),
-      );
-    }
-
-    const t: { input?: string; output?: string; type: string }[] = [];
-    for (let i = 0; i < chatLog.length; i = i + 2) {
       t.push({
-        type: `chunk_${Math.floor(i / 2)}`,
-        input: chatLog[i].content,
-        output: chatLog[i + 1].content,
+        type: `initial_chunk_${i}`,
+        input: prompt,
+        output: JSON.stringify(data),
       });
     }
 
-    await gameLib.insertGameHistory(guildCode, {
-      chat: {
-        userId: PREDEFINED_USER.SYSTEM.id,
+    await gameLib.insertGameHistory(
+      guildCode,
+      {
+        userId: PREDEFINED_USER.SYSTEM.id.toString(),
         userCode: PREDEFINED_USER.SYSTEM.code,
         message: `Element created: ${entities.length}`,
       },
-      tasks: [
+      [],
+      [
         ...t,
         {
-          type: "after_process",
-
-          output: JSON.stringify(afterProcess),
-        },
-        {
-          type: "flat_relation",
-          output: JSON.stringify(flatRelation),
+          type: "final",
+          output: JSON.stringify(entities),
         },
       ],
-      entities: [],
-    });
-    await mongoose.connection
-      .collection(`${guildCode}${COLLECTION_SUFFIX.WORLD}`)
-      .insertMany(flatRelation);
+    );
+
+    if (entities.length > 0) {
+      await mongoLib.insertDocumentsToEmptyCollection(
+        `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
+        entities,
+      );
+    }
 
     await this.guildRepository.update({ code: guildCode }, { state: "active" });
+
+    const { data, prompt } = await agentLib.introduceGame(
+      JSON.stringify(ExtendToEntity(entities as ExtendEntity[])),
+      description,
+    );
+
+    const { data: editData, prompt: editPrompt } = await agentLib.editGameWorld(
+      data,
+      JSON.stringify(ExtendToEntity(entities as ExtendEntity[])),
+    );
+
+    const parsedEntities = gameLib.parseCommand(
+      entities as ExtendEntity[],
+      editData,
+    );
+
+    const guildUser = PREDEFINED_USER.GUILD(
+      guild?.code ?? guildCode,
+      guild?.name ?? "Unknown Guild",
+    );
+
+    await gameLib.insertGameHistory(
+      guildCode,
+      {
+        userId: guildUser.id.toString(),
+        userCode: guildUser.code,
+        message: data,
+      },
+      [],
+      [{ type: "introduction", input: prompt, output: data }],
+    );
+
+    await gameLib.insertGameHistory(
+      guildCode,
+      {
+        userId: PREDEFINED_USER.SYSTEM.id.toString(),
+        userCode: PREDEFINED_USER.SYSTEM.code,
+        message: "The game world has been edited based on the introduction.",
+      },
+      [],
+      [
+        {
+          type: "edit_after_introduction",
+          input: editPrompt,
+          output: JSON.stringify(editData),
+        },
+      ],
+    );
+
+    if (entities.length > 0) {
+      await mongoLib.insertDocumentsToEmptyCollection(
+        `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
+        parsedEntities,
+      );
+    }
+
+    await socketHandler.sendMessageToUserByUserId(
+      MESSAGE_TYPES.GUILD_LIST_UPDATE,
+      userId,
+      {},
+    );
   }
 
   async findGuildsByUser(
@@ -706,23 +767,9 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
         await this.guildMemberRepository.save(newMember);
 
         await gameLib.insertGameHistory(guild.code, {
-          chat: {
-            userId: PREDEFINED_USER.SYSTEM.id,
-            userCode: PREDEFINED_USER.SYSTEM.code,
-            message: `Player ${user.displayName} has joined the guild.`,
-          },
-          entities: [
-            {
-              id: `${user.code}`,
-              name: user.displayName,
-              description: ``,
-              score: 10,
-              relations: [],
-              embedding: [],
-              updatedAt: new Date(),
-              createdAt: new Date(),
-            },
-          ],
+          userId: PREDEFINED_USER.SYSTEM.id.toString(),
+          userCode: PREDEFINED_USER.SYSTEM.code,
+          message: `Player ${user.displayName} has joined the guild.`,
         });
 
         return ServiceResponse.success<boolean>(

@@ -18,24 +18,24 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
   const typeRef = useRef<Record<string, HTMLLIElement>>({});
 
   const fetchGuildKnowledgeBase = async () => {
-    try {
-      const res = await getRequest(
-        `/resource/guild`,
-        {
-          type: type,
-          code: props.guild.code,
-          page: page[type],
-          search: search,
-        },
-        {
-          Authorization: `Bearer ${auth.accessToken}`,
-        },
-      );
-      if (res.data.responseObject) {
-        setData(res.data.responseObject.data || []);
-        setMaxPage(res.data.responseObject.maxPage || 1);
-      }
-    } catch (ex) {}
+    //try {
+    //   const res = await getRequest(
+    //     `/resource/guild`,
+    //     {
+    //       type: type,
+    //       code: props.guild.code,
+    //       page: page[type],
+    //       search: search,
+    //     },
+    //     {
+    //       Authorization: `Bearer ${auth.accessToken}`,
+    //     },
+    //   );
+    //   if (res.data.responseObject) {
+    //     setData(res.data.responseObject.data || []);
+    //     setMaxPage(res.data.responseObject.maxPage || 1);
+    //   }
+    // } catch (ex) {}
   };
 
   useEffect(() => {

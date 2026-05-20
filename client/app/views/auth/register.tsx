@@ -45,6 +45,7 @@ export default function Register() {
         return;
       }
       await reqCreateUser.sendRequest({
+        authorized: false,
         body: {
           name: data.username,
           email: data.email,
@@ -64,6 +65,7 @@ export default function Register() {
         return false;
       }
       const res = await reqCheckEmail.sendRequest({
+        authorized: false,
         body: { email: data.email },
       });
       return !res?.data.responseObject;

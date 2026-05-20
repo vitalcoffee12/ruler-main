@@ -28,6 +28,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [socketInstance, setSocketInstance] = useState<SocketInstance | null>(
     null,
   );
+  const [waiting, setWaiting] = useState(false);
   const { auth } = useContext(AuthContext);
 
   useEffect(() => {
@@ -61,11 +62,20 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     };
 
     socket.onclose = () => {
+      if (waiting) {
+        return;
+      }
+
       console.log("WebSocket disconnected");
       setSocketInstance((prev) => ({
         ...prev!,
         isConnected: false,
       }));
+
+      setWaiting(true);
+      setTimeout(() => {
+        setWaiting(false);
+      }, 3000);
     };
 
     return () => {

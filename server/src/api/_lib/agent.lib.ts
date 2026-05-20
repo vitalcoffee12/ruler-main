@@ -1,6 +1,6 @@
 import { ollama } from "../llms/llama/ollama";
 import { Entity } from "../game/gameModel";
-import { MODELS } from "../constants";
+import { IGameCommand, MODELS } from "../constants";
 import { FORMAT, PROMPTS } from "./prompts";
 import { Document } from "../resources/resourceModel";
 
@@ -40,94 +40,58 @@ export class AgentLib {
   }
 
   // MD 파일로부터 문서 처리
-  async processDoc(docs: Document[]): Promise<Document[] | null> {
-    // format md file to rule
-    try {
-      const split = 5;
-      const overlap = 2;
-      let idx = 0;
-      for (const item of docs) {
-        idx += 1;
-        console.log(`${idx}/${docs.length} : ${item.title}`);
-        if (!item.content || item.content.length === 0) {
-          console.log("  - No content, skip");
-          continue;
-        }
+  // async processDoc(docs: Document[]): Promise<Document[] | null> {
+  //   // format md file to rule
+  //   try {
+  //     const split = 5;
+  //     const overlap = 2;
+  //     let idx = 0;
+  //     for (const item of docs) {
+  //       idx += 1;
+  //       console.log(`${idx}/${docs.length} : ${item.title}`);
+  //       if (!item.content || item.content.length === 0) {
+  //         console.log("  - No content, skip");
+  //         continue;
+  //       }
 
-        for (let i = 0; i < item.content.length; i += split - overlap) {
-          console.log(
-            `  - Chunk ${i + 1}/${Math.ceil(item.content.length / (split - overlap))} (${item.content.length})`,
-          );
-          const chunk = item.content.slice(i, i + split).join("\n");
-          const res = await this.chat(
-            MODELS.llama3,
-            [
-              {
-                role: "system",
-                content: PROMPTS.DOC_PROCESSOR_SYSTEM(),
-              },
-              {
-                role: "user",
-                content: PROMPTS.DOC_PROCESSOR(chunk),
-              },
-            ],
-            FORMAT.DOC_PROCESSOR,
-          );
-          const parsed = JSON.parse(res);
-          item.summary = parsed.summary;
-          item.updatedAt = new Date();
-        }
-      }
-      return docs;
-    } catch (error) {
-      console.error("Error formatting rule set:", error);
-      return null;
-    }
-  }
+  //       for (let i = 0; i < item.content.length; i += split - overlap) {
+  //         console.log(
+  //           `  - Chunk ${i + 1}/${Math.ceil(item.content.length / (split - overlap))} (${item.content.length})`,
+  //         );
+  //         const chunk = item.content.slice(i, i + split).join("\n");
+  //         const res = await this.chat(
+  //           MODELS.llama3,
+  //           [
+  //             {
+  //               role: "system",
+  //               content: PROMPTS.DOC_PROCESSOR_SYSTEM(),
+  //             },
+  //             {
+  //               role: "user",
+  //               content: PROMPTS.DOC_PROCESSOR(chunk),
+  //             },
+  //           ],
+  //           FORMAT.DOC_PROCESSOR,
+  //         );
+  //         const parsed = JSON.parse(res);
+  //         item.summary = parsed.summary;
+  //         item.updatedAt = new Date();
+  //       }
+  //     }
+  //     return docs;
+  //   } catch (error) {
+  //     console.error("Error formatting rule set:", error);
+  //     return null;
+  //   }
+  // }
 
-  async generateWorld(options?: {
-    model?: string;
-    description?: string;
-    previousChat?: { role: string; content: string }[];
-    doc?: string;
-  }): Promise<any> {
-    const res = await this.chat(
-      MODELS.llama3,
-      [
-        {
-          role: "system",
-          content: PROMPTS.WORLD_GENERATOR_SYSTEM(
-            options?.description ??
-              "player did not give any description, focus on given document.",
-          ),
-        },
-        ...(options?.previousChat ?? []),
-        {
-          role: "user",
-          content: PROMPTS.WORLD_GENERATOR(
-            options?.doc ?? "No document provided. Freely generate.",
-          ),
-        },
-      ],
-      FORMAT.WORLD_GENERATOR,
-    );
-
-    return JSON.parse(res);
-  }
-
-  async generateEntities(options?: {
-    model?: string;
-    theme?: string;
-    request?: string;
-    entities?: string;
-    ids?: string;
-  }): Promise<{ data: Entity[]; prompt: string }> {
-    const prompt = PROMPTS.GAME_DESIGNER(
-      options?.theme || "",
-      options?.request || "",
-      options?.entities || "",
-      options?.ids || "",
-    );
+  async designGameWorld(
+    description: string,
+    entities: string,
+    loreChunk: string,
+    previousChat?: { role: string; content: string }[],
+  ): Promise<{ data: IGameCommand[]; prompt: string }> {
+    const prompt = PROMPTS.GAME_DESIGNER(description, entities, loreChunk);
     const res = await this.chat(
       MODELS.llama3,
       [
@@ -135,6 +99,7 @@ export class AgentLib {
           role: "system",
           content: PROMPTS.GAME_DESIGNER_SYSTEM(),
         },
+        ...(previousChat ?? []),
         {
           role: "user",
           content: prompt,
@@ -142,23 +107,68 @@ export class AgentLib {
       ],
       FORMAT.GAME_DESIGNER,
     );
-    const parsed = JSON.parse(res);
 
-    return { data: parsed, prompt };
+    return { data: JSON.parse(res ?? "[]") as IGameCommand[], prompt };
   }
 
-  async extractIntentFromChat(options?: {
-    model?: string;
-    chatHistories?: { role: string; content: string }[];
-    message?: string;
-  }): Promise<{ intent: string; prompt: string }> {
-    const prompt = PROMPTS.INTENT_EXTRACTOR(
-      options?.message || "No message provided.",
-    );
+  async introduceGame(
+    entities: string,
+    description?: string,
+  ): Promise<{ data: string; prompt: string }> {
+    const prompt = PROMPTS.INTRO(entities, description);
     const res = await this.chat(
       MODELS.llama3,
       [
-        ...(options?.chatHistories ?? []),
+        {
+          role: "system",
+          content: PROMPTS.INTRO_SYSTEM(),
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      FORMAT.NARRATOR,
+    );
+    return { data: res ?? "", prompt };
+  }
+
+  // async createEntity(
+  // }): Promise<{ data: Entity[]; prompt: string }> {
+  //   const prompt = PROMPTS.GAME_DESIGNER(
+  //     options?.theme || "",
+  //     options?.request || "",
+  //     options?.entities || "",
+  //     options?.ids || "",
+  //   );
+  //   const res = await this.chat(
+  //     MODELS.llama3,
+  //     [
+  //       {
+  //         role: "system",
+  //         content: PROMPTS.GAME_DESIGNER_SYSTEM(),
+  //       },
+  //       {
+  //         role: "user",
+  //         content: prompt,
+  //       },
+  //     ],
+  //     FORMAT.GAME_DESIGNER,
+  //   );
+  //   const parsed = JSON.parse(res);
+
+  //   return { data: parsed, prompt };
+  // }
+
+  async extractIntent(
+    message: string,
+    previousChat?: { role: string; content: string }[],
+  ): Promise<{ data: string; prompt: string }> {
+    const prompt = PROMPTS.INTENT_EXTRACTOR(message || "No message provided.");
+    const res = await this.chat(
+      MODELS.llama3,
+      [
+        ...(previousChat ?? []),
         {
           role: "user",
           content: prompt,
@@ -166,84 +176,54 @@ export class AgentLib {
       ],
       FORMAT.INTENT_EXTRACTOR,
     );
-    const parsed = JSON.parse(res);
 
-    return { intent: parsed.intent, prompt };
+    return { data: res ?? "", prompt };
   }
 
   async generateNarrative(
-    players: string,
     input: string,
     intent: string,
-    options?: {
-      model?: string;
-      topic?: string;
-      prevScene?: string;
-      chatHistories?: { role: string; content: string }[];
-      quests?: string;
-      // documents?: string;
-      // terms?: string;
-      entities?: string;
-      //summary?: string;
-    },
+    entities: string,
+    previousChat?: { role: string; content: string }[],
   ): Promise<{
-    data: {
-      content: string;
-      // documents?: { id: number; comment: string }[];
-      // terms?: { id: number; comment: string }[];
-      //summary: string;
-    };
+    data: string;
     prompt: string;
   }> {
     const prompt = PROMPTS.NARRATOR(
-      players || "No players",
-      input,
-      intent,
-      // options?.summary || "No previous adventure",
-      // options?.documents || "No documents",
-      // options?.terms || "No terms",
-      options?.entities || "No entities",
+      input || "No input provided.",
+      intent || "No intent provided.",
+      entities || "No entities provided.",
     );
-
     const res = await this.chat(MODELS.llama3, [
       {
         role: "system",
         content: PROMPTS.NARRATOR_SYSTEM(),
       },
-      ...(options?.chatHistories ?? []),
+      ...(previousChat ?? []),
       {
         role: "user",
         content: prompt,
       },
     ]);
+
     console.log("response/:", res);
-    //const parsed = res ? JSON.parse(res) : {};
 
     return {
-      data: {
-        content: res ?? "",
-      },
+      data: res ?? "",
       prompt,
     };
   }
 
-  async generateEdits(options?: {
-    model?: string;
-    players?: string;
-    narrative?: string;
-    sceneDescription?: string;
-    quests?: string;
-    entities?: string;
-  }): Promise<{
-    data: Entity[];
+  async editGameWorld(
+    narrative: string,
+    entities: string,
+  ): Promise<{
+    data: IGameCommand[];
     prompt: string;
   }> {
     const prompt = PROMPTS.EDITOR(
-      options?.players || "No players",
-      options?.narrative || "No narrative",
-      options?.sceneDescription || "No scene description",
-      options?.quests || "No quets provided",
-      options?.entities || "No entities",
+      narrative || "No narrative provided.",
+      entities || "No entities provided.",
     );
 
     const res = await this.chat(
@@ -261,53 +241,52 @@ export class AgentLib {
       FORMAT.EDITOR,
     );
 
-    const parsed = res ? JSON.parse(res) : [];
     return {
-      data: parsed,
+      data: JSON.parse(res ?? "[]") as IGameCommand[],
       prompt,
     };
   }
 
-  async generateCreates(options?: {
-    model?: string;
-    players?: string;
-    narrative?: string;
-    //sceneDescription?: string;
-    quests?: string;
-    entities?: string;
-  }): Promise<{
-    data: Partial<Entity>[];
-    prompt: string;
-  }> {
-    const prompt = PROMPTS.CREATOR(
-      options?.players || "No players",
-      options?.narrative || "No narrative",
-      //options?.sceneDescription || "No scene description",
-      //options?.quests || "No quets provided",
-      options?.entities || "No entities",
-    );
+  // async generateCreates(options?: {
+  //   model?: string;
+  //   players?: string;
+  //   narrative?: string;
+  //   //sceneDescription?: string;
+  //   quests?: string;
+  //   entities?: string;
+  // }): Promise<{
+  //   data: Partial<Entity>[];
+  //   prompt: string;
+  // }> {
+  //   const prompt = PROMPTS.CREATOR(
+  //     options?.players || "No players",
+  //     options?.narrative || "No narrative",
+  //     //options?.sceneDescription || "No scene description",
+  //     //options?.quests || "No quets provided",
+  //     options?.entities || "No entities",
+  //   );
 
-    const res = await this.chat(
-      MODELS.llama3,
-      [
-        {
-          role: "system",
-          content: PROMPTS.CREATOR_SYSTEM(),
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      FORMAT.CREATOR,
-    );
+  //   const res = await this.chat(
+  //     MODELS.llama3,
+  //     [
+  //       {
+  //         role: "system",
+  //         content: PROMPTS.CREATOR_SYSTEM(),
+  //       },
+  //       {
+  //         role: "user",
+  //         content: prompt,
+  //       },
+  //     ],
+  //     FORMAT.CREATOR,
+  //   );
 
-    const parsed = res ? JSON.parse(res) : [];
-    return {
-      data: parsed,
-      prompt,
-    };
-  }
+  //   const parsed = res ? JSON.parse(res) : [];
+  //   return {
+  //     data: parsed,
+  //     prompt,
+  //   };
+  // }
 }
 
 export const agentLib = new AgentLib();

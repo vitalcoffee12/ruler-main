@@ -9,7 +9,6 @@ import rateLimiter from "@/common/middleware/rateLimiter";
 import requestLogger from "@/common/middleware/requestLogger";
 import { userRouter } from "@/api/user/userRouter";
 import { guildRouter } from "./api/guild/guildRouter";
-import { resourceRouter } from "./api/resources/resourceRouter";
 import { gameRouter } from "./api/game/gameRouter";
 
 const logger = pino({ name: "server start" });
@@ -37,13 +36,13 @@ app.use(requestLogger);
 // Routes
 app.use("/health-check", healthCheckRouter);
 app.use("/api/user", userRouter);
-app.use("/api/guild", guildRouter);
-app.use("/api/resource", resourceRouter);
 app.use("/api/game", gameRouter);
+app.use("/api/guild", guildRouter);
+//app.use("/api/resource", resourceRouter);
 
-app.all("{*splat}", (req, res) => {
-  res.sendFile(__dirname + "/../client/index.html");
-});
+// app.all("{*splat}", (req, res) => {
+//   res.sendFile(__dirname + "/../client/index.html");
+// });
 // Swagger UI
 app.use(openAPIRouter);
 

@@ -73,25 +73,6 @@ function MessageTypeGuild(props: { message: GuildChatMessage }) {
               menu
             </div>
             <Markdown>{props.message.content}</Markdown>
-            <div className="text-xs text-stone-500 mt-6">
-              <Markdown>{props.message.tasks}</Markdown>
-            </div>
-          </div>
-
-          <div>
-            {props.message.citations &&
-              props.message.citations.map((citation) => (
-                <div
-                  key={citation.ruleId}
-                  className="relative border-l-4 border-stone-300 px-3 text-stone-600 italic mt-3 pr-30 py-2"
-                  title={`show original rule #${citation.ruleId}`}
-                >
-                  <div className="absolute top-4 right-0 py-1 px-2 bg-lime-200 text-lime-800 text-xs rounded-md top-0 -translate-y-1/2 hover:bg-lime-300 cursor-pointer">
-                    {citation.ruleId}
-                  </div>
-                  <Markdown>{citation.content}</Markdown>
-                </div>
-              ))}
           </div>
           <div className="text-stone-500 text-sm flex justify-end">
             {new Date(props.message.timestamp).toLocaleString()}
@@ -145,21 +126,6 @@ function MessageTypePlayer(props: { message: GuildChatMessage }) {
             <Markdown>{props.message.content}</Markdown>
           </div>
 
-          <div>
-            {props.message.citations &&
-              props.message.citations.map((citation) => (
-                <div
-                  key={citation.ruleId}
-                  className="relative border-l-4 border-stone-300 px-3 text-stone-600 italic mt-3 pr-30 py-2"
-                  title={`show original rule #${citation.ruleId}`}
-                >
-                  <div className="absolute top-4 right-0 py-1 px-2 bg-lime-200 text-lime-800 text-xs rounded-md top-0 -translate-y-1/2 hover:bg-lime-300 cursor-pointer">
-                    {citation.ruleId}
-                  </div>
-                  <Markdown>{citation.content}</Markdown>
-                </div>
-              ))}
-          </div>
           <div className="text-stone-500 text-sm flex justify-end">
             {new Date(props.message.timestamp).toLocaleString()}
           </div>
