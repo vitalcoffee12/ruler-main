@@ -84,7 +84,6 @@ export const QuestSchema = z.object({
 export type Scenario = z.infer<typeof ScenarioSchema>;
 export const ScenarioSchema = z.object({
   id: z.number().optional(),
-  state: z.record(z.string(), z.string()),
   history: z.array(QuestSchema).optional(),
   entities: z.array(EntitySchema),
   currentQuest: QuestSchema.optional(),
