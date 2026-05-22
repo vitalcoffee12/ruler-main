@@ -65,18 +65,6 @@ export const GameHistorySchema = z.object({
   createdAt: z.date(),
 });
 
-export type Scenario = z.infer<typeof ScenarioSchema>;
-export const ScenarioSchema = z.object({
-  id: z.number().optional(),
-  state: z.record(z.string(), z.string()),
-  history: z.array(z.string()).optional(),
-  entities: z.array(EntitySchema),
-  quests: z.array(z.string()).optional(),
-  embedding: z.array(z.number()).optional(),
-  createdAt: z.date().optional(),
-  updatedAt: z.date().optional(),
-});
-
 export type Quest = z.infer<typeof QuestSchema>;
 export const QuestSchema = z.object({
   id: z.number().optional(),
@@ -84,8 +72,23 @@ export const QuestSchema = z.object({
   description: z.string(),
   isCompleted: z.boolean(),
   objective: z.string(),
+  failureCondition: z.string().optional(),
   giver: z.string(),
   reward: z.number(),
+  score: z.number(),
+  ending: z.string().optional(),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+export type Scenario = z.infer<typeof ScenarioSchema>;
+export const ScenarioSchema = z.object({
+  id: z.number().optional(),
+  state: z.record(z.string(), z.string()),
+  history: z.array(QuestSchema).optional(),
+  entities: z.array(EntitySchema),
+  currentQuest: QuestSchema.optional(),
+  embedding: z.array(z.number()).optional(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
 });

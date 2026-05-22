@@ -389,6 +389,9 @@ export class GameLib {
         case "ADD_RELATION":
           {
             const [sourceName, relation, targetName] = args;
+            if (sourceName == targetName) {
+              break; // don't allow self-relation for now, can be updated later if needed
+            }
             const source = world.find((e) => e.name === sourceName);
             const target = world.find((e) => e.name === targetName);
             if (source && target) {
@@ -418,8 +421,12 @@ export class GameLib {
             const [name, key, value] = args;
             const entity = world.find((e) => e.name === name);
             if (entity) {
-              entity.state = entity.state || {};
-              entity.state[key] = value;
+              if (key == "location" || key == "Location") {
+                entity.location = value;
+              } else {
+                entity.state = entity.state || {};
+                entity.state[key] = value;
+              }
               entity.lastSceneId = lastSceneId;
             }
           }
@@ -479,12 +486,12 @@ export class GameLib {
     const ranked = [] as ExtendEntity[];
     const player = world.find((e) => e.type === "player");
     const entities = world.filter((e) => e.type !== "player");
-    const embedIntent = await agentLib.embedText(userIntent);
-    const rankedByContext = await mongoLib.searchByEmbedding(
-      `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
-      embedIntent ?? [],
-      10,
-    );
+    // const embedIntent = await agentLib.embedText(userIntent);
+    // const rankedByContext = await mongoLib.searchByEmbedding(
+    //   `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
+    //   embedIntent ?? [],
+    //   10,
+    // );
 
     const maxPreference = Math.max(
       ...entities.map((e) => e.preference ?? 0),
@@ -507,12 +514,12 @@ export class GameLib {
       score += (entity.retreivedCount ?? 0) / (maxRetreived || 1);
       score += (entity.lastScore ?? 0) / (maxScore || 1);
       score += (entity.relations?.length ?? 0) / (maxRelations || 1);
-      const contextIndex = rankedByContext.findIndex(
-        (e) => e.name === entity.name,
-      );
-      if (contextIndex !== -1) {
-        score += (10 - contextIndex) * 0.1;
-      }
+      // const contextIndex = rankedByContext.findIndex(
+      //   (e) => e.name === entity.name,
+      // );
+      // if (contextIndex !== -1) {
+      //   score += (10 - contextIndex) * 0.1;
+      // }
       if (entity.relations?.find((r) => r.name === player?.name)) {
         score += 0.5;
       }

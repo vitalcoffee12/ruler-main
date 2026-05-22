@@ -402,6 +402,8 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
       );
     }
 
+    const rankedEntities = gameLib.rankEntities(guildCode, "");
+
     await this.guildRepository.update({ code: guildCode }, { state: "active" });
 
     const { data, prompt } = await agentLib.introduceGame(

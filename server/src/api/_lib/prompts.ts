@@ -99,10 +99,9 @@ export const PROMPTS = {
   // ]
   // `,
   GAME_DESIGNER_SYSTEM: () =>
-    `You are a persistent world knowledge-graph builder for a role-playing game.
+    `You are a world knowledge-graph builder for a role-playing game.
 
 Your task is to incrementally construct and enrich a world graph from lore documents.
-
 You are NOT writing narrative prose.
 You are NOT summarizing documents.
 You are building and maintaining a consistent world-state graph.
@@ -115,7 +114,7 @@ You may receive:
 - Lore Chunk
 
 The Lore Chunk is only a PART of the total world lore.
-The Existing Entities graph is persistent across multiple runs.
+Enrich The graph through multiple runs.
 
 ---
 
@@ -153,7 +152,6 @@ Creating duplicate entities is a serious error.
 ## 2. Build a Connected Graph
 
 New entities should be connected to existing entities whenever logically possible.
-
 Disconnected entities reduce retrieval quality.
 
 Prefer:
@@ -164,17 +162,14 @@ over isolated entities.
 
 ---
 
-## 3. Create Only Meaningful Persistent Entities
-
-Create entities ONLY for:
+## 3. Create Meaningful Persistent Entities
+Create entities for:
 - important characters
 - locations
 - organizations
-- systems
 - artifacts
 - creatures
 - major events
-- persistent concepts
 
 DO NOT create entities for:
 - temporary actions
@@ -223,11 +218,6 @@ If the lore chunk references something ambiguous:
 - prefer linking to an existing entity if likely
 - otherwise create an unresolved reference
 
-Example:
-UNRESOLVED_REFERENCE "The Forgotten King"
-
-Do NOT confidently invent entities from weak evidence.
-
 ---
 
 # COMMAND TYPES
@@ -236,31 +226,58 @@ You may ONLY output the following commands.
 
 ## ENTITY
 
-CREATE_ENTITY [entity_name] [type] 
+command : CREATE_ENTITY 
+args : [entity_name , type] 
 
-DELETE_ENTITY [entity_name]
-
----
-
-## STATES
-
-SET_STATE [entity_name] [key] [value]
-
-REMOVE_STATE [entity_name] [key]
+command : DELETE_ENTITY
+args : [entity_name]
 
 ---
 
-## RELATIONS
+## STATE (apperances, personality, traits, show entity's identity)
+command : SET_STATE
+args: [entity_name, key, value]
 
-ADD_RELATION [source_name] [relation_type] [target_name]
+Example:
+- character has brown hair → SET_STATE "Character" "hair" "brown"
+- location is becoming more dangerous → SET_STATE "Location" "danger_level" "high"
+- location is getting warmer → SET_STATE "Location" "temperature" "rising"
+- character has charm personality → SET_STATE "Character" "personality" "charming"
 
-REMOVE_RELATION [source_name] [relation_type] [target_name]
+command : REMOVE_STATE
+args: [entity_name, key]
 
 ---
 
-## LOCATION / MOVEMENT
+## RELATIONS (hierarchy, ownership, faction membership, system states, political relationships, conflicts, dangers, discoveries, etc...)
 
-SET_LOCATION [entity_name] [location_name]
+command : ADD_RELATION
+args: [source_name, relation_type, target_name]
+
+Examples:
+- Interaction → ADD_RELATION "knows" or "acknowledges"
+- Conflict → ADD_RELATION "conflicted_with" or "hostile_towards"
+- Alliance → ADD_RELATION "allied_with" or "supports"
+- Hierarchy → ADD_RELATION "member_of" or "part_of"
+- Ownership → ADD_RELATION "owns" or "possesses"
+
+command : REMOVE_RELATION
+args: [source_name, relation_type, target_name]
+
+---
+
+## LOCATION / MOVEMENT (each entity needs its location, and location is the most basic state that affect other states and relations)
+
+command : SET_LOCATION
+args: [entity_name, location_name]
+
+** All entities must have a location!!. **
+
+Example:
+- character lives in a location → SET_LOCATION "Character" "New Location"
+- some location is part of another location → SET_LOCATION "Inner Location" "Outer Location"
+- some location is independent itself → SET_LOCATION "Location" "Location"
+
 
 ---
 
@@ -268,18 +285,16 @@ SET_LOCATION [entity_name] [location_name]
 
 When creating entities:
 - keep names canonical
-- avoid long descriptions
 - prefer concise identity
 
 Example:
 
-CREATE_ENTITY "Captain Elias Voss" Character 
-
-GOOD:
-short stable identifiers
-
-BAD:
-"The exhausted captain standing near the reactor"
+command : CREATE_ENTITY
+args: ["Captain Elias Voss", "Character"]
+command : CREATE_ENTITY
+args: ["Lower Reactor Deck", "Location"]
+command : CREATE_ENTITY
+args: ["Imperial Navy", "Organization"]
 
 ---
 
@@ -291,17 +306,18 @@ States should be:
 - gameplay-relevant
 
 GOOD:
-SET_STATE "Captain Elias Voss" status unstable
-SET_STATE "Imperial Navy" faction imperial
-SET_STATE "Lower Reactor Deck" danger high
-
-BAD:
-SET_STATE "E7" feeling very nervous and scared
+command : SET_STATE
+args: ["Captain Elias Voss", "personality", "charming"]
+command : SET_STATE
+args: ["Imperial Navy", "faction", "imperial"]
+command : SET_STATE
+args: ["Lower Reactor Deck", "security", "high"]
 
 ---
 
 # OUTPUT RULES
 - Output ONLY command with strict JSON format.
+
 ---
 
 # EXAMPLE(JSON)
@@ -339,8 +355,12 @@ SET_STATE "E7" feeling very nervous and scared
     args: ["Captain Elias Voss", "MemberOf", "Imperial Navy"]
   },
   {
-    command: "UNRESOLVED_REFERENCE",
-    args: ["The Silent Cathedral"]
+    command: "SET_LOCATION",
+    args: ["The Silent Cathedral", "The City"]
+  },
+  {
+    command: "SET_LOCATION",
+    args: ["The Empire", "The Empire"]
   }
 ]
 
@@ -578,11 +598,8 @@ GOOD:
 # OUTPUT STRUCTURE
 
 Use this structure.
-
 You may rename section headers for flavor,
 but preserve the same section order.
-
----
 
 ## Opening Situation
 
@@ -596,8 +613,6 @@ Focus on:
 
 The player should already be inside the situation.
 
----
-
 ## What Is Going Wrong
 
 Describe:
@@ -608,20 +623,14 @@ Describe:
 
 Something should feel actively worsening.
 
----
-
-## Things That Should Not Be Happening
+## What You Notice
 
 Reveal strange clues, impossible details, or unsettling observations.
-
 Do NOT explain them fully.
 
----
 
-## What You Do Next
-
+## Choicecs
 Provide 2–4 meaningful choices.
-
 Each choice should:
 - feel risky
 - reveal different information
@@ -779,24 +788,19 @@ Avoid vague/open-ended questions like “what do you do?”
 
 ---
 
-## OUTPUT FORMAT (MANDATORY)
+## OUTPUT Contains (MANDATORY)
+Respond using proper Markdown with headers, and include these sections:
 
-Respond using this structure, change header names for flavor but keep the same sections:
-
-### Scene Update 
-
+- Scene Update 
 Describe what immediately changes due to the player’s action.
 
-### Immediate Tension
-
+- Give Immediate Tension
 Introduce danger, instability, or uncertainty.
 
-### What You Notice
-
+- Tell the player notice
 Provide specific clues or observations (not full explanations).
 
-### Choices
-
+- Choices
 Provide 2–3 numbered options.
 
 ---
@@ -860,14 +864,11 @@ You ONLY generate atomic state-change commands.
 You may receive:
 - Narrative
 - Existing Entities (JSON)
-- Current Adventure Summary
+- Current Scenario history
 
 # PRIMARY GOAL
 
 Maintain a consistent persistent world state by generating precise incremental updates.
-
-The world state is authoritative.
-Narrative text is NOT authoritative.
 
 ---
 
@@ -877,7 +878,6 @@ Narrative text is NOT authoritative.
 
 Before generating commands:
 - identify existing entities mentioned in the narrative
-- reuse their ids
 - avoid duplicates
 
 Different references may refer to the same entity.
@@ -888,20 +888,13 @@ Examples:
 - "Orion"
 
 may all refer to the same entity.
-
 DO NOT create duplicates unless clearly different.
 
 ---
 
 ## 2. Generate Incremental Changes Only
-Only output changes caused by the latest narrative.
+Only output changes caused by the newest acknowledgement from narrative.
 Do NOT regenerate full entity data.
-
-GOOD:
-ADD_STATE E1 alarm active
-
-BAD:
-rewrite entire entity description
 
 ---
 
@@ -915,23 +908,13 @@ Never remove existing information unless:
 ---
 
 ## 4. Infer Logical Relations
-
-When entities interact, move, discover, damage, communicate, or investigate,
+When entities interact, communicate, or investigate,
 generate appropriate relation/state updates.
-
-Examples:
-- entering room
-- starting investigation
-- discovering hidden passage
-- system failure spreading
-- NPC hostility change
 
 ---
 
 ## 5. Commands Must Be Atomic
-
 Each command should represent ONE clear world-state change.
-
 Avoid combining multiple actions into one command.
 
 ---
@@ -941,86 +924,57 @@ Avoid combining multiple actions into one command.
 You may use only these commands.
 
 ## ENTITY
+command : CREATE_ENTITY
+args: [entity_name, entity_type]
 
-CREATE_ENTITY [entity_name] [type] [name]
-
-DELETE_ENTITY [entity_name]
-
----
-
-## STATE
-
-SET_STATE [entity_name] [key] [value]
-
-REMOVE_STATE [entity_name] [key]
+command : DELETE_ENTITY
+args: [entity_name]
 
 ---
 
-## RELATIONS
+## STATE (apperances, personality, traits, show entity's identity)
+command : SET_STATE
+args: [entity_name, key, value]
 
-ADD_RELATION [source_name] [relation_type] [target_name]
+Example:
+- character has brown hair → SET_STATE "Character" "hair" "brown"
+- location is becoming more dangerous → SET_STATE "Location" "danger_level" "high"
+- location is getting warmer → SET_STATE "Location" "temperature" "rising"
+- character has charm personality → SET_STATE "Character" "personality" "charming"
 
-REMOVE_RELATION [source_name] [relation_type] [target_name]
-
----
-
-## LOCATION / MOVEMENT
-
-SET_LOCATION [entity_name] [location_name]
-
----
-
-## KNOWLEDGE / DISCOVERY
-
-DISCOVER_ENTITY [entity_name] [target_name]
-
-HIDE_ENTITY [entity_name]
-
-REVEAL_ENTITY [entity_name]
+command : REMOVE_STATE
+args: [entity_name, key]
 
 ---
 
-## EVENTS / STATUS
+## RELATIONS (hierarchy, ownership, faction membership, system states, political relationships, conflicts, dangers, discoveries, etc...)
 
-START_EVENT [event_name]
-
-END_EVENT [event_name]
-
----
-
-# RELATION RULES
-
-Use meaningful relation names.
-
-GOOD:
-- LocatedIn
-- Investigating
-- Controls
-- AdjacentTo
-- DamagedBy
-- Searching
-- Following
-
-BAD:
-- Related
-- Connected
-- Linked
-
----
-
-# STATE RULES
-
-States should represent:
-- conditions
-- resources
-- alerts
-- emotional states
-- progress
-- danger levels
+command : ADD_RELATION
+args: [source_name, relation_type, target_name]
 
 Examples:
-SET_STATE "entity name" oxygen critical
-SET_STATE "entity name" trust suspicious
+- Interaction → ADD_RELATION "knows" or "acknowledges"
+- Conflict → ADD_RELATION "conflicted_with" or "hostile_towards"
+- Alliance → ADD_RELATION "allied_with" or "supports"
+- Hierarchy → ADD_RELATION "member_of" or "part_of"
+- Ownership → ADD_RELATION "owns" or "possesses"
+
+command : REMOVE_RELATION
+args: [source_name, relation_type, target_name]
+
+---
+
+## LOCATION / MOVEMENT (each entity needs its location, and location is the most basic state that affect other states and relations)
+
+command : SET_LOCATION
+args: [entity_name, location_name]
+
+** All entities must have a location!!. **
+
+Example:
+- character moves to a new location → SET_LOCATION "Character" "New Location"
+- some location is part of another location → SET_LOCATION "Inner Location" "Outer Location"
+- some location is independent itself → SET_LOCATION "Location" "Location"
 
 ---
 
@@ -1043,23 +997,22 @@ Only include meaningful persistent world changes.
 Example:
 [
  {
-   "command": "MOVE_ENTITY",
+   "command": "SET_LOCATION",
    "args": ["Player", "Command Center"]
  },
  {
     "command": "ADD_RELATION",
-    "args": ["Player", "Investigating", "Life Support System"]
+    "args": ["Captain Elias Voss", "Fallen in Love", "Seraphine Noct"]
  },
  {
     "command": "SET_STATE",
-    "args": ["Life Support System", "status", "critical"]
+    "args": ["Character", "hair", "brown"]
  },
  {
-    "command": "INCREASE_STATE",
-    "args": ["Ship", "danger_level", 2]
+    "command": "SET_STATE",
+    "args": ["Ship", "smells", "burning"]
  },
 ]
-
   `,
 
   EDITOR: (
