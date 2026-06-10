@@ -14,7 +14,11 @@ import AppDataSource from "@/dataSource";
 import { agentLib } from "./agent.lib";
 import { GuildMemberEntity } from "@/entities/guilldMemberEntity";
 import path from "node:path";
-import { GenerateEntityCode, removeMarkdownFormatting } from "../utils";
+import {
+  ExtendToEntity,
+  GenerateEntityCode,
+  removeMarkdownFormatting,
+} from "../utils";
 import { Document } from "../resources/resourceModel";
 import { string } from "zod";
 import { mongoLib } from "./mongo.lib";
@@ -71,7 +75,6 @@ export class GameLib {
     return await mongoose.connection
       .collection(`${guildCode}${COLLECTION_SUFFIX.WORLD}`)
       .find<ExtendEntity>({ deletedAt: { $exists: false } })
-      .sort({ lastScore: -1 })
       .skip(skip)
       .limit(pageSize)
       .toArray();
@@ -86,7 +89,21 @@ export class GameLib {
     return await mongoose.connection
       .collection(`${guildCode}${COLLECTION_SUFFIX.GAME}`)
       .find<GameHistory>({})
+      .skip(3)
       .toArray();
+  }
+
+  async getRecentHistory(
+    guildCode: string,
+    page: number,
+    pageSize: number = 12,
+  ): Promise<GameHistory[]> {
+    return (
+      await mongoose.connection
+        .collection(`${guildCode}${COLLECTION_SUFFIX.GAME}`)
+        .find<GameHistory>({})
+        .toArray()
+    ).slice(-pageSize);
   }
 
   // restoreWorld(
@@ -355,7 +372,27 @@ export class GameLib {
     lastSceneId: number = 0,
   ): ExtendEntity[] {
     for (const commandObj of commands) {
-      const { command, args } = commandObj;
+      const { target, memory } = commandObj;
+      if (target.length === 0) {
+        continue;
+      }
+      const entity = world.find((e) => e.name === target);
+      if (entity) {
+        entity.lastSceneId = lastSceneId;
+        entity.memory.push(memory);
+        // update other fields based on memory if needed
+      }
+    }
+    return world;
+  }
+
+  depricatedparseCommand(
+    world: ExtendEntity[],
+    commands: IGameCommand[],
+    lastSceneId: number = 0,
+  ): ExtendEntity[] {
+    for (const commandObj of commands) {
+      const { target: command, memory: args } = commandObj;
       if (command.length === 0) {
         continue;
       }
@@ -370,7 +407,7 @@ export class GameLib {
               ...defaultExtendEntity,
               name,
               type,
-              state: {},
+
               lastSceneId,
             };
             world.push(newEntity);
@@ -395,8 +432,8 @@ export class GameLib {
             const source = world.find((e) => e.name === sourceName);
             const target = world.find((e) => e.name === targetName);
             if (source && target) {
-              source.relations = source.relations || [];
-              source.relations.push({ name: targetName, type: relation });
+              // source.relations = source.relations || [];
+              // source.relations.push({ name: targetName, type: relation });
               source.lastSceneId = lastSceneId;
             }
           }
@@ -407,10 +444,10 @@ export class GameLib {
             const source = world.find((e) => e.name === sourceName);
             const target = world.find((e) => e.name === targetName);
             if (source && target) {
-              source.relations = source.relations || [];
-              source.relations = source.relations.filter(
-                (r) => r.name !== targetName || r.type !== relation,
-              );
+              // source.relations = source.relations || [];
+              // source.relations = source.relations.filter(
+              //   (r) => r.name !== targetName || r.type !== relation,
+              // );
               source.lastSceneId = lastSceneId;
               target.lastSceneId = lastSceneId;
             }
@@ -424,8 +461,8 @@ export class GameLib {
               if (key == "location" || key == "Location") {
                 entity.location = value;
               } else {
-                entity.state = entity.state || {};
-                entity.state[key] = value;
+                // entity.state = entity.state || {};
+                // entity.state[key] = value;
               }
               entity.lastSceneId = lastSceneId;
             }
@@ -454,38 +491,59 @@ export class GameLib {
     return "";
   }
 
-  async extractIntent(guild: Guild): Promise<{ data: string; prompt: string }> {
+  async getFlatChat(
+    guild: Guild,
+  ): Promise<{ role: string; content: string }[]> {
     const systemUser = PREDEFINED_USER.SYSTEM;
     const responseUser = PREDEFINED_USER.GUILD(guild.code, guild.name);
-
     const history = await this.getHistory(guild.code, 1);
     const chatHistories = history
       .filter(
-        (gh) => gh.chat && gh.chat.message && gh.chat.userId !== systemUser.id,
+        (gh) =>
+          gh.chat && gh.chat.message && gh.chat.userCode !== systemUser.code,
       )
       .map((ch) => {
-        if (ch.chat?.userId === responseUser.id) {
+        if (ch.chat?.userId === responseUser.id.toString()) {
           return { role: "assistant", content: ch.chat?.message ?? "" };
         } else return { role: "user", content: ch.chat?.message ?? "" };
       });
 
-    const userMessage = chatHistories[chatHistories.length - 1].content;
-    const { data: intent, prompt: promptExtractIntent } =
-      await agentLib.extractIntent(userMessage, chatHistories.slice(-10, -1));
-
-    console.log("Extracted intent:", intent);
-    return { data: intent, prompt: promptExtractIntent };
+    console.log(chatHistories, "chatHistories in getFlatChat", guild.code);
+    return chatHistories;
   }
 
-  async rankEntities(
-    guildCode: string,
-    userIntent: string,
-  ): Promise<ExtendEntity[]> {
+  async extractIntent(
+    userMessage: string,
+    rankedEntities: ExtendEntity[],
+    chatHistories: { role: string; content: string }[],
+  ): Promise<{
+    rankedEntities: ExtendEntity[];
+    data: { type: string; target: string; intent: string }[];
+    prompt: string;
+  }> {
+    const { data: intents, prompt: promptExtractIntent } =
+      await agentLib.extractIntent(
+        userMessage,
+        JSON.stringify(ExtendToEntity(rankedEntities)),
+        chatHistories.slice(-5, -1),
+      );
+
+    console.log("Extracted intent:", intents);
+    return { data: intents, prompt: promptExtractIntent, rankedEntities };
+  }
+
+  async rankEntities(guildCode: string): Promise<{
+    player: ExtendEntity;
+    rankedLocation: ExtendEntity[];
+    rankedCharacter: ExtendEntity[];
+  }> {
     const world = await this.getWorld(guildCode);
 
-    const ranked = [] as ExtendEntity[];
+    const rankedLocation = [] as ExtendEntity[];
+    const rankedCharacter = [] as ExtendEntity[];
     const player = world.find((e) => e.type === "player");
-    const entities = world.filter((e) => e.type !== "player");
+    const locations = world.filter((e) => e.type == "Location");
+    const chracters = world.filter((e) => e.type === "Character");
     // const embedIntent = await agentLib.embedText(userIntent);
     // const rankedByContext = await mongoLib.searchByEmbedding(
     //   `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
@@ -493,55 +551,111 @@ export class GameLib {
     //   10,
     // );
 
-    const maxPreference = Math.max(
-      ...entities.map((e) => e.preference ?? 0),
+    // const maxPreference = Math.max(
+    //   ...entities.map((e) => e.preference ?? 0),
+    //   0,
+    // );
+    const locationMaxRetreived = Math.max(
+      ...locations.map((e) => e.retreivedCount ?? 0),
       0,
     );
-    const maxRetreived = Math.max(
-      ...entities.map((e) => e.retreivedCount ?? 0),
+    const characterMaxRetreived = Math.max(
+      ...chracters.map((e) => e.retreivedCount ?? 0),
       0,
     );
-    const maxScore = Math.max(...entities.map((e) => e.lastScore ?? 0), 0);
-    const maxRelations = Math.max(
-      ...entities.map((e) => e.relations?.length ?? 0),
+    const locationMaxScore = Math.max(
+      ...locations.map((e) => e.lastScore ?? 0),
       0,
     );
+    const characterMaxScore = Math.max(
+      ...chracters.map((e) => e.lastScore ?? 0),
+      0,
+    );
+    // const maxRelations = Math.max(
+    //   ...entities.map((e) => e.relations?.length ?? 0),
+    //   0,
+    // );
 
-    for (const entity of entities) {
+    for (const entity of locations) {
       let score = 0;
-      score += entity.isPreferred ? 1 : 0;
-      score += (entity.preference ?? 0) / (maxPreference || 1);
-      score += (entity.retreivedCount ?? 0) / (maxRetreived || 1);
-      score += (entity.lastScore ?? 0) / (maxScore || 1);
-      score += (entity.relations?.length ?? 0) / (maxRelations || 1);
+      // score += entity.isPreferred ? 1 : 0;
+      // score += (entity.preference ?? 0) / (maxPreference || 1);
+      //
+      score += (entity.retreivedCount ?? 0) / (locationMaxRetreived || 1);
+      score += (entity.lastScore ?? 0) / (locationMaxScore || 1);
+      // score += (entity.relations?.length ?? 0) / (maxRelations || 1);
       // const contextIndex = rankedByContext.findIndex(
       //   (e) => e.name === entity.name,
       // );
       // if (contextIndex !== -1) {
       //   score += (10 - contextIndex) * 0.1;
       // }
-      if (entity.relations?.find((r) => r.name === player?.name)) {
-        score += 0.5;
+      // if (entity.relations?.find((r) => r.name === player?.name)) {
+      //   score += 0.5;
+      // }
+      // if (player?.relations.find((r) => r.name === entity.name)) {
+      //   score += 0.5;
+      // }
+      if (player?.location === entity.name) {
+        score += 2;
       }
-      if (player?.relations.find((r) => r.name === entity.name)) {
-        score += 0.5;
+
+      rankedLocation.push({ ...entity, lastScore: score });
+    }
+    for (const entity of chracters) {
+      let score = 0;
+      // score += entity.isPreferred ? 1 : 0;
+      // score += (entity.preference ?? 0) / (maxPreference || 1);
+      score += (entity.retreivedCount ?? 0) / (characterMaxRetreived || 1);
+      score += (entity.lastScore ?? 0) / (characterMaxScore || 1);
+      // score += (entity.relations?.length ?? 0) / (maxRelations || 1);
+      // const contextIndex = rankedByContext.findIndex(
+      //   (e) => e.name === entity.name,
+      // );
+      // if (contextIndex !== -1) {
+      //   score += (10 - contextIndex) * 0.1;
+      // }
+      if (entity.related?.find((r) => r === player?.location)) {
+        score += 0.3;
       }
       if (player?.location === entity.location) {
-        score += 1;
+        score += 2;
       }
-
-      ranked.push({ ...entity, lastScore: score });
+      rankedCharacter.push({ ...entity, lastScore: score });
     }
 
-    return [
-      player as ExtendEntity,
-      ...ranked.sort((a, b) => (b.lastScore ?? 0) - (a.lastScore ?? 0)),
-    ];
+    rankedLocation.sort((a, b) => (b.lastScore ?? 0) - (a.lastScore ?? 0));
+    rankedLocation[0].retreivedCount =
+      (rankedLocation[0]?.retreivedCount ?? 0) + 1;
+    rankedLocation[1].retreivedCount =
+      (rankedLocation[1]?.retreivedCount ?? 0) + 1;
+
+    rankedCharacter.sort((a, b) => (b.lastScore ?? 0) - (a.lastScore ?? 0));
+    rankedCharacter[0].retreivedCount =
+      (rankedCharacter[0]?.retreivedCount ?? 0) + 1;
+    rankedCharacter[1].retreivedCount =
+      (rankedCharacter[1]?.retreivedCount ?? 0) + 1;
+
+    const entities = [...rankedLocation, ...rankedCharacter].sort(
+      (a, b) => (b.lastScore ?? 0) - (a.lastScore ?? 0),
+    );
+
+    await mongoLib.insertDocumentsToEmptyCollection(
+      `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
+      [player, ...(entities as ExtendEntity[])],
+    );
+
+    return {
+      player: player as ExtendEntity,
+      rankedLocation: rankedLocation,
+      rankedCharacter: rankedCharacter,
+    };
   }
 
   async requestNarrative(
     intent: string,
     userMessage: string,
+    actions: string,
     chatHistories: any[],
     rankedEntities: Entity[],
   ): Promise<{ data: string; prompt: string }> {
@@ -549,6 +663,7 @@ export class GameLib {
       const result = await agentLib.generateNarrative(
         userMessage,
         intent,
+        actions,
         JSON.stringify(rankedEntities),
         chatHistories.slice(-10, -1),
       );
@@ -562,8 +677,8 @@ export class GameLib {
 
   async requestEdit(
     guildCode: string,
-    rankedEntities: Entity[],
     narrative: string,
+    entityDescription: string,
   ): Promise<boolean | null> {
     try {
       const guild = await this.guildRepository.findOne({
@@ -577,9 +692,22 @@ export class GameLib {
       const world = await this.getWorld(guildCode, { includeId: true });
       const { data, prompt } = await agentLib.editGameWorld(
         narrative,
-        JSON.stringify(rankedEntities),
+        entityDescription,
+        [],
       );
-      const updatedWorld = this.parseCommand(world, data);
+      //const updatedWorld = this.parseCommand(world, data);
+      for (const comm of data) {
+        const [target, memory] = [comm.target, comm.memory];
+        const entity = world.find((e) => e.name === target);
+        if (entity && !entity.memory.includes(memory)) {
+          entity.lastSceneId = guild.sceneId;
+          entity.memory.push(memory);
+          if (entity.memory.length > 10) {
+            entity.memory = entity.memory.slice(-10);
+          }
+          // update other fields based on memory if needed
+        }
+      }
 
       await this.insertGameHistory(
         guildCode,
@@ -600,7 +728,7 @@ export class GameLib {
 
       await mongoLib.insertDocumentsToEmptyCollection(
         `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
-        updatedWorld,
+        world,
       );
 
       return true;

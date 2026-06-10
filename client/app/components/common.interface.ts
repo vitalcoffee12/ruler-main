@@ -67,8 +67,17 @@ export interface Entity {
   name: string;
   type: string;
   location: string;
-  relations: { name: string; type: string }[];
-  state: { [key: string]: string };
+  group?: string;
+  // relations: { name: string; type: string }[];
+  // state: { [key: string]: string };
+  description: string;
+  personality?: string;
+  backstory?: string;
+  appearance?: string;
+  route?: string[];
+  related?: string[]; // related entities' names
+  documents: string[];
+  memory: string[];
   lastScore: number;
   lastSceneId: number;
   retreivedCount: number;

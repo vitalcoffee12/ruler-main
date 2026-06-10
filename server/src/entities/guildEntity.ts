@@ -41,6 +41,9 @@ export class GuildEntity extends BaseEntity implements Guild {
   @Column({ type: "boolean", default: false, nullable: false })
   autoFlag: boolean;
 
+  @Column({ type: "varchar", length: 255, nullable: true })
+  playerState?: string;
+
   @Column({ type: "int", nullable: false, default: 1 })
   sceneId: number;
 

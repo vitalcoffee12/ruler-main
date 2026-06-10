@@ -138,21 +138,38 @@ function GuildWorldElement(
             more_horiz
           </div>
         </div>
-        <div className="text-sm px-2 ml-2 text-stone-500">
-          Location : {props.node.location}
+        <div className="text-xs font-normal px-2 py-1 mt-1 mb-3 border-b border-stone-300 text-stone-600">
+          {props.node.location && `${props.node.location} `}
+          {props.node.group && `${props.node.group}`}
         </div>
 
-        <div className="ml-1 mt-1">
-          {props.node.state &&
-            Object.keys(props.node.state).map((key) => (
-              <div
-                key={key}
-                className="flex items-center text-sm text-stone-600 px-3 py-1 no-select"
-              >
-                <span className="font-medium text-stone-700">{key}:</span>
-                <span className="ml-1">{props.node.state[key]}</span>
+        {props.node.type == "Character" && (
+          <div className="text-sm px-2 ml-2 mb-2">
+            <div className="text-stone-600">Personality</div>
+            {props.node.personality}
+          </div>
+        )}
+        {props.node.type == "Location" && (
+          <div className="text-sm px-2 ml-2 mb-2">
+            <div className="text-stone-600">Route</div>
+            {props.node.route?.map((r) => (
+              <div className="text-sm mb-1 bg-stone-100 rounded" key={r}>
+                {r}
               </div>
             ))}
+          </div>
+        )}
+        <div className="text-sm px-2 ml-2 mb-2">
+          <div className="text-stone-600">Appearance</div>
+          {props.node.appearance}
+        </div>
+        <div className="text-sm px-2 ml-2 mb-2">
+          <div className="text-stone-600">Description</div>
+          {props.node.description}
+        </div>
+        <div className="text-sm px-2 ml-2 mb-2">
+          <div className="text-stone-600">Backstory</div>
+          {props.node.backstory}
         </div>
         <div className="mb-1 px-1">
           <ul className="flex items-center justify-between no-select">
@@ -181,7 +198,6 @@ function GuildWorldElement(
             ))}
           </ul>
         </div>
-
         <div
           className="absolute top-9 right-3 z-99 transition-all duration-200 bg-white border border-stone-300 rounded-md shadow-lg hidden height-0"
           ref={menuRef}

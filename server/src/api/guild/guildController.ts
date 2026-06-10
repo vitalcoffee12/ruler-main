@@ -29,6 +29,8 @@ class GuildController {
       : null;
     const serviceResponse = await this.guildService.createGuild({
       ...req.body,
+      description: req.body.description ?? "",
+
       iconPath: iconPath?.filename ?? null,
       attachment: attachment?.filename ?? null,
     });
@@ -97,6 +99,14 @@ class GuildController {
     req: Request,
     res: Response,
   ) => {};
+
+  public aggregate: RequestHandler = async (req: Request, res: Response) => {
+    const guildCode = req.params.code;
+    const serviceResponse = await this.guildService.aggregate(
+      guildCode as string,
+    );
+    res.status(serviceResponse.statusCode).send(serviceResponse);
+  };
 }
 
 export const guildController = new GuildController();

@@ -8,8 +8,16 @@ export const EntitySchema = z.object({
   name: z.string(),
   type: z.string(),
   location: z.string(),
-  relations: z.array(z.object({ name: z.string(), type: z.string() })),
-  state: z.record(z.string(), z.string()),
+  group: z.string().optional(), // group or category the entity belongs to
+  // relations: z.array(z.object({ name: z.string(), type: z.string() })),
+  // state: z.record(z.string(), z.string()),
+  description: z.string(),
+  personality: z.string().optional(),
+  backstory: z.string().optional(),
+  appearance: z.string().optional(),
+  related: z.array(z.string()).optional(), // related entities' names
+  route: z.array(z.string()).optional(),
+  memory: z.array(z.string()),
 });
 
 export type ExtendEntity = z.infer<typeof ExtendEntity>;
@@ -18,6 +26,7 @@ export const ExtendEntity = EntitySchema.extend({
   lastSceneId: z.number(),
   retreivedCount: z.number(),
   preference: z.number(),
+  documents: z.array(z.string()),
   isPreferred: z.boolean(),
   createdAt: z.date().optional(),
   updatedAt: z.date().optional(),
@@ -27,9 +36,9 @@ export const ExtendEntity = EntitySchema.extend({
 export const defaultEntity: Entity = {
   name: "Unknown Entity",
   type: "object",
+  description: "No description available.",
   location: "unknown",
-  relations: [],
-  state: {},
+  memory: [],
 };
 
 export const defaultExtendEntity: ExtendEntity = {
@@ -39,6 +48,7 @@ export const defaultExtendEntity: ExtendEntity = {
   retreivedCount: 0,
   preference: 0,
   isPreferred: false,
+  documents: [],
 };
 
 export type GameHistory = z.infer<typeof GameHistorySchema>;
@@ -47,7 +57,7 @@ export const GameHistorySchema = z.object({
   sceneId: z.number(),
   chat: z
     .object({
-      userId: z.number(),
+      userId: z.string(),
       userCode: z.string(),
       message: z.string(),
     })

@@ -10,7 +10,12 @@ import {
 import { GuildMemberEntity } from "@/entities/guilldMemberEntity";
 import { GuildEntity } from "@/entities/guildEntity";
 import { UserEntity } from "@/entities/userEntity";
-import { Entity, ExtendEntity, GameHistory } from "../game/gameModel";
+import {
+  defaultEntity,
+  Entity,
+  ExtendEntity,
+  GameHistory,
+} from "../game/gameModel";
 import { gameLib } from "../_lib/game.lib";
 import { COLLECTION_SUFFIX, PREDEFINED_USER } from "../constants";
 import mongoose from "mongoose";
@@ -209,14 +214,15 @@ export class GuildService {
     const newCharacter: ExtendEntity = {
       name: user.displayName,
       type: "player",
+      description: "",
       isPreferred: true,
       preference: 0,
       lastSceneId: 0,
       lastScore: 0,
       retreivedCount: 0,
       location: "",
-      state: {},
-      relations: [],
+      documents: [],
+      memory: [],
       updatedAt: new Date(),
       createdAt: new Date(),
     };
@@ -255,7 +261,7 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
   async createGuild(createGuildData: {
     iconPath?: string;
     name: string;
-    description?: string;
+    description: string;
     ownerId: number;
     attachment?: string;
   }) {
@@ -281,6 +287,16 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
           1,
           createGuildData.name,
           `/guild/${createGuildData.attachment}`,
+        );
+        await mongoose.connection
+          .collection(`${guildCode}${COLLECTION_SUFFIX.DOCUMENTS}`)
+          .insertMany(docs);
+      } else {
+        docs = await gameLib.buildDocumentFromMarkdown(
+          GenerateDocumentCode(),
+          1,
+          createGuildData.name,
+          `/default/default.md`,
         );
         await mongoose.connection
           .collection(`${guildCode}${COLLECTION_SUFFIX.DOCUMENTS}`)
@@ -312,23 +328,22 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
     const guild = await this.guildRepository.findOne({
       where: { code: guildCode },
     });
+
     const docs = await mongoose.connection
       .collection(`${guildCode}${COLLECTION_SUFFIX.DOCUMENTS}`)
       .find({})
       .toArray();
 
-    const player = await mongoose.connection
-      .collection(`${guildCode}${COLLECTION_SUFFIX.WORLD}`)
-      .findOne<any>({
-        type: "player",
-      });
-
-    let entities: Entity[] = [player as Entity];
-    const chatLog = [];
-    const atleast = 3;
+    if (description.length === 0) {
+      description = docs[0]?.content?.[0] ?? "No description provided.";
+    }
+    let entities: Entity[] = [];
+    const chatLog: { role: string; content: string }[] = [];
     let chunks = [];
-
     let chunk = "";
+
+    const regions: { name: string; description: string; related: string[] }[] =
+      [];
 
     for (const doc of docs) {
       if (
@@ -340,43 +355,396 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
       } else {
         chunk += doc.content[0];
       }
-      if (chunk.length >= 3000) {
-        chunks.push(chunk);
+      if (chunk.length >= 1000) {
+        chunks.push(chunk.replaceAll(/[\n\t\r]+/g, " "));
         chunk = "";
       }
     }
     if (chunk.length > 0) {
-      chunks.push(chunk);
+      chunks.push(chunk.replaceAll(/[\n\t\r]+/g, " "));
     }
 
     const t: { input?: string; output?: string; type: string }[] = [];
-    let input = "";
-    for (let i = 0; i < Math.max(chunks.length, atleast); i++) {
-      if (chunks.length > i) {
-        input = chunks[i];
-      } else {
-        input =
-          "The Fantasy world, which wating for a adventurer who can save the world.";
-      }
-      const { data, prompt } = await agentLib.designGameWorld(
+    //let input = "";
+    for (let i = 0; i < chunks.length; i++) {
+      const { data: regionData, prompt } = await agentLib.extractRegions(
         description,
-        JSON.stringify(entities),
-        !chunks.length && !description.length
-          ? "The Fantasy world, which wating for a adventurer who can save the world."
-          : input,
+        JSON.stringify(regions),
+        chunks[i],
         chatLog,
       );
-      entities = gameLib.parseCommand(entities as ExtendEntity[], data);
-      chatLog.push(
-        { role: "user", content: input },
-        { role: "assistant", content: JSON.stringify(entities) },
-      );
+      for (const r of regionData) {
+        const existing = regions.find(
+          (existing) =>
+            existing.name === r.name ||
+            existing.name.includes(r.name) ||
+            r.name.includes(existing.name),
+        );
+
+        if (existing) {
+          existing.description = r.description;
+          existing.related = Array.from(
+            new Set([...(existing.related ?? []), ...(r.related ?? [])]),
+          );
+          existing.related = existing.related?.filter(
+            (rel) => rel !== existing.name,
+          );
+        } else {
+          regions.push(r);
+        }
+      }
+
       t.push({
-        type: `initial_chunk_${i}`,
+        type: `region_extraction_chunk_${i}`,
         input: prompt,
-        output: JSON.stringify(data),
+        output: JSON.stringify(regionData),
+      });
+      chatLog.push({ role: "user", content: JSON.stringify(regionData) });
+    }
+
+    const combinedRegions: {
+      name: string;
+      description: string;
+      related: string[];
+    }[] = await agentLib.extractRegionCollapse(JSON.stringify(regions));
+
+    t.push({
+      type: `region_collapse`,
+      input: JSON.stringify(regions),
+      output: JSON.stringify(combinedRegions),
+    });
+
+    console.log("Combined regions: ", combinedRegions);
+
+    for (let i = 0; i < combinedRegions.length; i++) {
+      const r = combinedRegions[i];
+      const locations: Entity[] = [];
+      const { data: locationData, prompt } = await agentLib.designLocation(
+        JSON.stringify(r),
+      );
+      for (const e of locationData) {
+        if (
+          entities.some(
+            (existing) =>
+              existing.name === e.name ||
+              existing.name.includes(e.name) ||
+              e.name.includes(existing.name),
+          )
+        ) {
+          continue;
+        }
+
+        locations.push({
+          name: e.name,
+          group: r.name,
+          description: e.description,
+          related: e.related,
+          type: "Location",
+          location: r.name,
+          memory: [e.accessibility.toString()],
+          route: [],
+        });
+      }
+      //console.log(`Extracted locations for region ${r.name}: `, locations);
+      t.push({
+        type: `location_design_region_${i}`,
+        input: prompt,
+        output: JSON.stringify(locationData),
+      });
+      entities.push(...locations);
+
+      const chracters: Entity[] = [];
+      const { data: characterData, prompt: characterPrompt } =
+        await agentLib.designCharacter(
+          JSON.stringify(r),
+          JSON.stringify(locations),
+        );
+
+      for (const e of characterData) {
+        if (!e?.location) {
+          e.location =
+            locations[Math.floor(Math.random() * locations.length)].name;
+        }
+
+        if (
+          entities.some(
+            (existing) =>
+              existing.name === e.name ||
+              existing.name.includes(e.name) ||
+              e.name.includes(existing.name),
+          )
+        ) {
+          continue;
+        }
+
+        chracters.push({
+          name: e.name,
+          location: e.location,
+          description: e.description,
+          personality: e.personality,
+          backstory: e.backstory,
+          appearance: e.appearance,
+          related: e.related,
+          type: "Character",
+          memory: [],
+        });
+      }
+      //console.log(`Extracted characters for region ${r.name}: `, chracters);
+      entities.push(...chracters);
+      t.push({
+        type: `character_design_region_${i}`,
+        input: characterPrompt,
+        output: JSON.stringify(characterData),
       });
     }
+
+    // TODO character design based on location and region
+    // for (let i = 0; i < Math.max(chunks.length, atleast); i++) {
+    //   if (chunks.length > i) {
+    //     input = chunks[i];
+    //   } else {
+    //     input = chunks[chunks.length - 1];
+    //   }
+
+    //   const existingLocation = entities
+    //     .filter((e) => e.type === "Location")
+    //     .map((e) => {
+    //       return `
+    //       Name : ${e.name}
+    //       Group : ${e.group ?? "N/A"}
+    //       Description : ${e.description ?? "N/A"}
+    //       Related : ${e.related?.join(", ") ?? "N/A"}
+    //       `;
+    //     })
+    //     .join(" ");
+
+    //   const existingCharacters = entities
+    //     .filter((e) => e.type === "Character")
+    //     .map((e) => {
+    //       return `
+    //       Name : ${e.name}
+    //       Group : ${e.group ?? "N/A"}
+    //       Description : ${e.description ?? "N/A"}
+    //       Related : ${e.related?.join(", ") ?? "N/A"}
+    //      `;
+    //     })
+    //     .join("\n");
+
+    //   const { data, prompt } = await agentLib.designGameWorld(
+    //     description,
+    //     groups.size > 0 ? Array.from(groups).join(", ") : "Not provided yet",
+    //     `## existingLocations \n${existingLocation}\n## existingCharacters: \n${existingCharacters}`,
+    //     input,
+    //     chatLog,
+    //   );
+
+    //   for (const e of data) {
+    //     if (e.type === "Location" && e.group) {
+    //       groups.add(e.group);
+    //     }
+    //     if (!entities.find((en) => en.name === e.name && en.type === e.type)) {
+    //       entities.push(e);
+    //     }
+    //   }
+
+    //   chatLog.push(
+    //     { role: "user", content: input },
+    //     { role: "assistant", content: JSON.stringify(entities) },
+    //   );
+    //   t.push({
+    //     type: `initial_chunk_${i}`,
+    //     input: prompt,
+    //     output: JSON.stringify(data),
+    //   });
+    // }
+
+    const locations = entities.filter((e) => e.type === "Location");
+
+    // const characters = entities
+    //   .filter((e) => e.type === "Character")
+    //   .map((e) => e.name);
+    // const items = entities.filter((e) => e.type === "Item").map((e) => e.name);
+    // const creatures = entities
+    //   .filter((e) => e.type === "Creature")
+    //   .map((e) => e.name);
+    for (const l of locations) {
+      const relatedLocation = locations.filter(
+        (e) => l.related?.includes(e.name) && e.name !== l.name,
+      );
+
+      for (const rl of relatedLocation) {
+        if (!l.route?.includes(rl.name)) {
+          l.route = l.route ? [...l.route, rl.name] : [rl.name];
+        }
+        if (!rl.route?.includes(l.name)) {
+          rl.route = rl.route ? [...rl.route, l.name] : [l.name];
+        }
+      }
+
+      if (!l.route || l.route.length === 0) {
+        const randomLocation = locations
+          .filter((e) => e.name !== l.name && e.group !== l.group)
+          .sort(() => Math.random() - 0.5)[0];
+        if (randomLocation) {
+          l.route = [randomLocation.name];
+          if (!randomLocation.route?.includes(l.name)) {
+            randomLocation.route = randomLocation.route
+              ? [...randomLocation.route, l.name]
+              : [l.name];
+          }
+        }
+      }
+    }
+
+    for (const r of combinedRegions) {
+      let hasOut = false;
+      const locationInRegion = locations.filter((e) => e.group === r.name);
+      let mostPublicScore = 100;
+      let mostPublic;
+      for (const l of locationInRegion) {
+        const accessibility = l.memory[0] ?? "5";
+        if (accessibility && parseInt(accessibility) < mostPublicScore) {
+          mostPublicScore = parseInt(accessibility);
+          mostPublic = l;
+        }
+        l.memory = [];
+      }
+
+      const relatedRegions = combinedRegions.filter(
+        (e) => r.related?.includes(e.name) && e.name !== r.name,
+      );
+
+      if (mostPublic) {
+        for (const rr of relatedRegions) {
+          const outerLocations = locations
+            .filter((e) => e.group === rr.name)
+            .sort(() => Math.random() - 0.5);
+
+          if (outerLocations) {
+            if (
+              mostPublic.route &&
+              !mostPublic.route.includes(outerLocations[0].name)
+            ) {
+              mostPublic.route = [...mostPublic.route, outerLocations[0].name];
+            }
+            if (
+              outerLocations[0].route &&
+              !outerLocations[0].route.includes(mostPublic.name)
+            ) {
+              outerLocations[0].route = [
+                ...outerLocations[0].route,
+                mostPublic.name,
+              ];
+            }
+          }
+        }
+        hasOut = true;
+      }
+      if (!hasOut && locationInRegion.length > 0) {
+        const randomLocation = locationInRegion.sort(
+          () => Math.random() - 0.5,
+        )[0];
+        const outerLocations = locations
+          .filter((e) => e.group !== r.name)
+          .sort(() => Math.random() - 0.5)[0];
+        if (randomLocation && outerLocations) {
+          if (
+            randomLocation.route &&
+            !randomLocation.route.includes(outerLocations.name)
+          ) {
+            randomLocation.route = [
+              ...randomLocation.route,
+              outerLocations.name,
+            ];
+          }
+          if (
+            outerLocations.route &&
+            !outerLocations.route.includes(randomLocation.name)
+          ) {
+            outerLocations.route = [
+              ...outerLocations.route,
+              randomLocation.name,
+            ];
+          }
+        }
+      }
+    }
+
+    // for (const e of entities) {
+    //   if (e.type === "Character" || e.type === "Creature") {
+    //     // const relatedLocations =
+    //     //   e.related?.filter((r) => locations.includes(r)) || [];
+    //     // if (relatedLocations.length > 0) {
+    //     //   e.location = relatedLocations.sort((a, b) => Math.random() - 0.5)[0];
+    //     // } else {
+    //     //   e.location = locations[Math.floor(Math.random() * locations.length)];
+    //     // }
+    //   }
+    //   if (e.type === "Location") {
+    //     const routes = new Set<string>();
+    //     if (e.route) {
+    //       for (const r of e.route) {
+    //         routes.add(r);
+    //       }
+    //     }
+    //     const samegroup = entities.filter(
+    //       (en) =>
+    //         en.group === e.name && en.type === "Location" && en.name !== e.name,
+    //     );
+
+    //     if (
+    //       samegroup.length > 0 &&
+    //       Array.from(routes).includes(samegroup[0].name)
+    //     ) {
+    //       routes.add(samegroup[0].name);
+    //       samegroup[0].route = samegroup[0].route
+    //         ? [...samegroup[0].route, e.name]
+    //         : [e.name];
+    //     }
+    //     const related = entities.filter(
+    //       (en) =>
+    //         e.related?.includes(en.name) &&
+    //         en.group != e.group &&
+    //         en.type === "Location" &&
+    //         en.name !== e.name,
+    //     );
+
+    //     if (related.length > 0) {
+    //       for (const r of related.slice(0, 2)) {
+    //         if (Array.from(routes).includes(r.name)) continue;
+    //         routes.add(r.name);
+    //         r.route = r.route ? [...r.route, e.name] : [e.name];
+    //       }
+    //     }
+
+    //     if (routes.size === 0) {
+    //       const randomLocations = entities.filter(
+    //         (en) => en.type === "Location" && en.name !== e.name,
+    //       );
+    //       if (randomLocations.length > 0) {
+    //         routes.add(
+    //           randomLocations[
+    //             Math.floor(Math.random() * randomLocations.length)
+    //           ].name,
+    //         );
+    //         randomLocations[0].route = randomLocations[0].route
+    //           ? [...randomLocations[0].route, e.name]
+    //           : [e.name];
+    //       }
+    //     }
+    //     e.route = Array.from(routes);
+    //   }
+    // }
+
+    let player = await mongoose.connection
+      .collection(`${guildCode}${COLLECTION_SUFFIX.WORLD}`)
+      .findOne<Entity>({ type: "player" });
+    if (!player) {
+      player = { ...defaultEntity, type: "player", name: "Player" };
+    }
+
+    player.location = locations.sort(() => Math.random() - 0.5)[0].name;
+    entities.push(player);
 
     await gameLib.insertGameHistory(
       guildCode,
@@ -402,64 +770,64 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
       );
     }
 
-    const rankedEntities = gameLib.rankEntities(guildCode, "");
+    //const rankedEntities = gameLib.rankEntities(guildCode, "");
 
     await this.guildRepository.update({ code: guildCode }, { state: "active" });
 
-    const { data, prompt } = await agentLib.introduceGame(
-      JSON.stringify(ExtendToEntity(entities as ExtendEntity[])),
-      description,
-    );
+    // const { data, prompt } = await agentLib.introduceGame(
+    //   JSON.stringify(ExtendToEntity(entities as ExtendEntity[])),
+    //   description,
+    // );
 
-    const { data: editData, prompt: editPrompt } = await agentLib.editGameWorld(
-      data,
-      JSON.stringify(ExtendToEntity(entities as ExtendEntity[])),
-    );
+    // const { data: editData, prompt: editPrompt } = await agentLib.editGameWorld(
+    //   data,
+    //   JSON.stringify(ExtendToEntity(entities as ExtendEntity[])),
+    // );
 
-    const parsedEntities = gameLib.parseCommand(
-      entities as ExtendEntity[],
-      editData,
-    );
+    // const parsedEntities = gameLib.parseCommand(
+    //   entities as ExtendEntity[],
+    //   editData,
+    // );
 
-    const guildUser = PREDEFINED_USER.GUILD(
-      guild?.code ?? guildCode,
-      guild?.name ?? "Unknown Guild",
-    );
+    // const guildUser = PREDEFINED_USER.GUILD(
+    //   guild?.code ?? guildCode,
+    //   guild?.name ?? "Unknown Guild",
+    // );
 
-    await gameLib.insertGameHistory(
-      guildCode,
-      {
-        userId: guildUser.id.toString(),
-        userCode: guildUser.code,
-        message: data,
-      },
-      [],
-      [{ type: "introduction", input: prompt, output: data }],
-    );
+    // await gameLib.insertGameHistory(
+    //   guildCode,
+    //   {
+    //     userId: guildUser.id.toString(),
+    //     userCode: guildUser.code,
+    //     message: data,
+    //   },
+    //   [],
+    //   [{ type: "introduction", input: prompt, output: data }],
+    // );
 
-    await gameLib.insertGameHistory(
-      guildCode,
-      {
-        userId: PREDEFINED_USER.SYSTEM.id.toString(),
-        userCode: PREDEFINED_USER.SYSTEM.code,
-        message: "The game world has been edited based on the introduction.",
-      },
-      [],
-      [
-        {
-          type: "edit_after_introduction",
-          input: editPrompt,
-          output: JSON.stringify(editData),
-        },
-      ],
-    );
+    // await gameLib.insertGameHistory(
+    //   guildCode,
+    //   {
+    //     userId: PREDEFINED_USER.SYSTEM.id.toString(),
+    //     userCode: PREDEFINED_USER.SYSTEM.code,
+    //     message: "The game world has been edited based on the introduction.",
+    //   },
+    //   [],
+    //   [
+    //     {
+    //       type: "edit_after_introduction",
+    //       input: editPrompt,
+    //       output: JSON.stringify(editData),
+    //     },
+    //   ],
+    // );
 
-    if (entities.length > 0) {
-      await mongoLib.insertDocumentsToEmptyCollection(
-        `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
-        parsedEntities,
-      );
-    }
+    // if (entities.length > 0) {
+    //   await mongoLib.insertDocumentsToEmptyCollection(
+    //     `${guildCode}${COLLECTION_SUFFIX.WORLD}`,
+    //     parsedEntities,
+    //   );
+    // }
 
     await socketHandler.sendMessageToUserByUserId(
       MESSAGE_TYPES.GUILD_LIST_UPDATE,
@@ -790,6 +1158,72 @@ This is the beginning of your guild chat. Guild members can communicate here, ad
       return ServiceResponse.failure(
         `Error inviting member to guild: ${errorMessage}`,
         false,
+        StatusCodes.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async aggregate(guildCode: string): Promise<ServiceResponse<any>> {
+    try {
+      const guild = await this.guildRepository.findOne({
+        where: { code: guildCode },
+      });
+      if (!guild) {
+        return ServiceResponse.failure(
+          "Guild not found",
+          null,
+          StatusCodes.NOT_FOUND,
+        );
+      }
+      const gameHistory = await gameLib.getHistory(guildCode, 0);
+
+      const reponseUser = PREDEFINED_USER.GUILD(guild.code, guild.name);
+      const systemUser = PREDEFINED_USER.SYSTEM;
+
+      const returns = [];
+      for (let i = 0; i < gameHistory.length; i++) {
+        const entry = gameHistory[i];
+        if (!entry.chat) continue;
+
+        if (entry.chat.userCode === reponseUser.code) {
+          const command = gameHistory[i - 1];
+          const system = gameHistory[i + 1];
+
+          const responseTime =
+            entry.createdAt.getTime() - command.createdAt.getTime();
+
+          let intents = [];
+          let memories = [];
+          for (const t of entry.tasks ?? []) {
+            if (t.type == "extract_intent") {
+              intents = JSON.parse(t.output ?? "{}").intents ?? "[]";
+            }
+          }
+
+          for (const t of system.tasks ?? []) {
+            if (t.type == "edits") {
+              memories = JSON.parse(t.output ?? "[]") ?? [];
+            }
+          }
+
+          returns.push({
+            responseTime,
+            message: command.chat?.message,
+            intents,
+            memories,
+          });
+        }
+      }
+      return ServiceResponse.success(
+        "Guild data aggregated successfully",
+        returns,
+        StatusCodes.OK,
+      );
+    } catch (ex) {
+      const errorMessage = ex instanceof Error ? ex.message : "Unknown error";
+      return ServiceResponse.failure(
+        `Error aggregating guild data: ${errorMessage}`,
+        null,
         StatusCodes.INTERNAL_SERVER_ERROR,
       );
     }

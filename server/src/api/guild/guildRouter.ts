@@ -123,3 +123,5 @@ guildRouter.get(
   validateToken(),
   guildController.getGuildMembers,
 );
+
+guildRouter.get("/aggregate/:code", guildController.aggregate);

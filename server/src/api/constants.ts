@@ -19,12 +19,12 @@ export const DEFAULT_PAGINATION = {
 
 export const PREDEFINED_USER = {
   GUILD: (code: string, name: string) => ({
-    id: 0,
+    id: "0",
     code: code,
     name: "assistant",
   }),
   SYSTEM: {
-    id: -1,
+    id: "-1",
     code: "SYSTEM",
     name: "system",
   },
@@ -37,6 +37,6 @@ export const ENTITY_STATE = {
 };
 
 export interface IGameCommand {
-  command: string;
-  args: string[];
+  target: string;
+  memory: string;
 }

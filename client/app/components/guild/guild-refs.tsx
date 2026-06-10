@@ -23,16 +23,16 @@ export default function GuildRefs(props: {
 }
 
 function EntityRef(props: { name: string; world: Entity[] }) {
-  const [inIsOpen, setInIsOpen] = useState<boolean>(true);
-  const [outIsOpen, setOutIsOpen] = useState<boolean>(true);
-  const targetEntity = props.world.find((e) => e.name === props.name);
-  const relatedEntitiesIn = props.world.filter((e) =>
-    e.relations?.some((r) => r.name === targetEntity?.name),
-  );
+  // const [inIsOpen, setInIsOpen] = useState<boolean>(true);
+  // const [outIsOpen, setOutIsOpen] = useState<boolean>(true);
+  const targetEntity = props.world?.find((e) => e.name === props.name);
+  // const relatedEntitiesIn = props.world.filter((e) =>
+  //   e.relations?.some((r) => r.name === targetEntity?.name),
+  // );
 
-  const relatedEntitiesOut = props.world.filter((e) =>
-    targetEntity?.relations?.some((r) => r.name === e.name),
-  );
+  // const relatedEntitiesOut = props.world.filter((e) =>
+  //   targetEntity?.relations?.some((r) => r.name === e.name),
+  // );
 
   return (
     <>
@@ -44,19 +44,91 @@ function EntityRef(props: { name: string; world: Entity[] }) {
           >
             <p title="name" className="text-lg">
               {targetEntity?.name}
+              <span>
+                {targetEntity?.type && (
+                  <span
+                    className="text-xs rounded bg-stone-100 p-1 text-stone-700 ml-2"
+                    title={targetEntity.type}
+                  >
+                    {targetEntity.type}
+                  </span>
+                )}
+              </span>
             </p>
           </div>
+          <div className="text-sm text-stone-500 mt-2">
+            location
+            <div className="text-md p-1 text-stone-900 ml-2">
+              {targetEntity?.location || "Unknown"}
+            </div>
+          </div>
+          <div className="text-sm text-stone-500 mt-2">
+            group
+            <div className="text-md p-1 text-stone-900 ml-2">
+              {targetEntity?.group || "Unknown"}
+            </div>
+          </div>
+          <div className="text-sm text-stone-500 mt-2">
+            route
+            <div className="text-md p-1 text-stone-900 ml-2">
+              {targetEntity?.route?.map((r, index) => (
+                <div key={index}> {r} </div>
+              )) || ""}
+            </div>
+          </div>
+          <div className="text-sm text-stone-500 mt-2">
+            appearance
+            <div className="text-md p-1 text-stone-900 ml-2">
+              {targetEntity?.appearance || "Unknown"}
+            </div>
+          </div>
+          <div className="text-sm text-stone-500 mt-2">
+            personality
+            <div className="text-md p-1 text-stone-900 ml-2">
+              {targetEntity?.personality || "Unknown"}
+            </div>
+          </div>
+          <div className="text-sm text-stone-500 mt-2">
+            backstory
+            <div className="text-md p-1 text-stone-900 ml-2">
+              {targetEntity?.backstory || "Unknown"}
+            </div>
+          </div>
+          <div className="text-sm text-stone-500 mt-2">
+            description
+            <div className="text-md p-1 text-stone-900 ml-2">
+              {targetEntity?.description || "Unknown"}
+            </div>
+          </div>
+          <div className="text-sm text-stone-500 mt-2">
+            related
+            <div className="text-md p-1 text-stone-900 ml-2">
+              {targetEntity?.related?.map((r, index) => (
+                <div key={index}> {r} </div>
+              )) || "Unknown"}
+            </div>
+          </div>
+
+          <div className="text-sm text-stone-500 mt-2">
+            memories
+            <div className="text-md p-1 text-stone-900 ml-2">
+              {targetEntity?.memory?.map((d, index) => (
+                <div key={index}> {d} </div>
+              )) || "Unknown"}
+            </div>
+          </div>
+
           <div className="p-2">
-            <Markdown>
+            {/* <Markdown>
               {Object.keys(targetEntity?.state || {})
                 .map((key) => {
                   return `**${key}**: ${targetEntity?.state[key]}\n`;
                 })
                 .join("\n")}
-            </Markdown>
+            </Markdown> */}
           </div>
         </div>
-        <div className=" ">
+        {/* <div className=" ">
           <div
             className="no-select flex justify-between cursor-pointer p-2 px-4 active:scale-99 transtion duration-200 bg-stone-100"
             onClick={() => {
@@ -157,7 +229,7 @@ function EntityRef(props: { name: string; world: Entity[] }) {
                     </div>
                     {/* <span className="text-xs rounded bg-stone-100 p-1 text-stone-700">
                 {r?.id}
-              </span> */}
+              </span>}
                     <p title={r.name} className="text-lg">
                       {r?.name}
                     </p>
@@ -174,7 +246,7 @@ function EntityRef(props: { name: string; world: Entity[] }) {
               </>
             ))}
           </ul>
-        </div>
+        </div> */}
       </div>
     </>
   );

@@ -36,7 +36,7 @@ server.listen(env.PORT, async () => {
   await mongoose
     .connect(DB_MONGO_URI, {
       //dbName: DB_MONGO_NAME,
-      dbName: "test_2",
+      dbName: "test_6",
       user: DB_MONGO_USER,
       pass: DB_MONGO_PASS,
       directConnection: true,

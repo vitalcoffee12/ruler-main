@@ -84,14 +84,158 @@ export class AgentLib {
   //     return null;
   //   }
   // }
+  async extractRegions(
+    description: string,
+    groups: string,
+    loreChunk: string,
+    previousChat?: { role: string; content: string }[],
+  ): Promise<{
+    data: { name: string; description: string; related: string[] }[];
+    prompt: string;
+  }> {
+    const prompt = PROMPTS.REGION_EXTRACTOR(description, groups, loreChunk);
+    const res = await this.chat(
+      MODELS.llama3,
+      [
+        {
+          role: "system",
+          content: PROMPTS.REGION_EXTRACTOR_SYSTEM(),
+        },
+        ...(previousChat ?? []),
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      FORMAT.REGION_EXTRACTOR,
+    );
+    return {
+      data: JSON.parse(res ?? "[]") as {
+        name: string;
+        description: string;
+        related: string[];
+      }[],
+      prompt,
+    };
+  }
+
+  async extractRegionCollapse(regions: string) {
+    const prompt = PROMPTS.REGION_COLLAPSER(regions);
+    const res = await this.chat(
+      MODELS.llama3,
+      [
+        {
+          role: "system",
+          content: PROMPTS.REGION_COLLAPSER_SYSTEM(),
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      FORMAT.REGION_EXTRACTOR,
+    );
+
+    return JSON.parse(res ?? "[]") as {
+      name: string;
+      description: string;
+      related: string[];
+    }[];
+  }
+
+  async designLocation(description: string): Promise<{
+    data: {
+      name: string;
+      description: string;
+      accessibility: number;
+      appearance?: string;
+      backstory?: string;
+      related: string[];
+    }[];
+    prompt: string;
+  }> {
+    const prompt = PROMPTS.LOCATION_DESIGNER(description);
+    const res = await this.chat(
+      MODELS.llama3,
+      [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      FORMAT.LOCATION_DESIGNER,
+    );
+    return {
+      data: JSON.parse(res ?? "[]") as {
+        name: string;
+        description: string;
+        accessibility: number;
+
+        appearance?: string;
+        backstory?: string;
+        related: string[];
+      }[],
+      prompt,
+    };
+  }
+
+  async designCharacter(
+    overview: string,
+    description: string,
+  ): Promise<{
+    data: {
+      name: string;
+      location: string;
+      description: string;
+      personality?: string;
+      backstory?: string;
+      appearance?: string;
+      related: string[];
+    }[];
+    prompt: string;
+  }> {
+    const prompt = PROMPTS.CHARACTER_DESIGNER(overview, description);
+    const res = await this.chat(
+      MODELS.llama3,
+      [
+        {
+          role: "system",
+          content: PROMPTS.CHARACTER_DESIGNER_SYSTEM(),
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      FORMAT.CHARACTER_DESIGNER,
+    );
+    return {
+      data: JSON.parse(res ?? "[]") as {
+        name: string;
+        location: string;
+        description: string;
+        personality?: string;
+        backstory?: string;
+        appearance?: string;
+        related: string[];
+      }[],
+      prompt,
+    };
+  }
 
   async designGameWorld(
     description: string,
+    groups: string,
     entities: string,
     loreChunk: string,
     previousChat?: { role: string; content: string }[],
-  ): Promise<{ data: IGameCommand[]; prompt: string }> {
-    const prompt = PROMPTS.GAME_DESIGNER(description, entities, loreChunk);
+  ): Promise<{ data: Entity[]; prompt: string }> {
+    const prompt = PROMPTS.GAME_DESIGNER(
+      description,
+      groups,
+      entities,
+      loreChunk,
+    );
     const res = await this.chat(
       MODELS.llama3,
       [
@@ -108,7 +252,7 @@ export class AgentLib {
       FORMAT.GAME_DESIGNER,
     );
 
-    return { data: JSON.parse(res ?? "[]") as IGameCommand[], prompt };
+    return { data: JSON.parse(res ?? "[]") as Entity[], prompt };
   }
 
   async introduceGame(
@@ -162,12 +306,24 @@ export class AgentLib {
 
   async extractIntent(
     message: string,
+    entities: string,
     previousChat?: { role: string; content: string }[],
-  ): Promise<{ data: string; prompt: string }> {
-    const prompt = PROMPTS.INTENT_EXTRACTOR(message || "No message provided.");
+  ): Promise<{
+    data: { type: string; target: string; intent: string }[];
+    prompt: string;
+  }> {
+    const prompt = PROMPTS.INTENT_EXTRACTOR(
+      message || "No message provided.",
+      entities,
+    );
     const res = await this.chat(
       MODELS.llama3,
+
       [
+        {
+          role: "system",
+          content: PROMPTS.INTENT_EXTRACTOR_SYSTEM(),
+        },
         ...(previousChat ?? []),
         {
           role: "user",
@@ -177,12 +333,49 @@ export class AgentLib {
       FORMAT.INTENT_EXTRACTOR,
     );
 
-    return { data: res ?? "", prompt };
+    return {
+      data: JSON.parse(res ?? "[]") as {
+        type: string;
+        target: string;
+        intent: string;
+      }[],
+      prompt,
+    };
+  }
+
+  async npcActor(
+    playerMessage: string,
+    entities: string,
+    npcDescription: string,
+    previousChat?: { role: string; content: string }[],
+  ): Promise<{ data: { dialogue: string; closed: boolean }; prompt: string }> {
+    const prompt = PROMPTS.NPC_ACTOR(playerMessage, entities, npcDescription);
+    const res = await this.chat(
+      MODELS.llama3,
+      [
+        {
+          role: "system",
+          content: PROMPTS.NPC_ACTOR_SYSTEM(),
+        },
+        ...(previousChat ?? []),
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      FORMAT.NPC_ACTOR,
+    );
+
+    return {
+      data: JSON.parse(res ?? "{}") as { dialogue: string; closed: boolean },
+      prompt,
+    };
   }
 
   async generateNarrative(
     input: string,
     intent: string,
+    actions: string,
     entities: string,
     previousChat?: { role: string; content: string }[],
   ): Promise<{
@@ -192,6 +385,7 @@ export class AgentLib {
     const prompt = PROMPTS.NARRATOR(
       input || "No input provided.",
       intent || "No intent provided.",
+      actions || "No actions provided.",
       entities || "No entities provided.",
     );
     const res = await this.chat(MODELS.llama3, [
@@ -217,6 +411,7 @@ export class AgentLib {
   async editGameWorld(
     narrative: string,
     entities: string,
+    previousChat?: { role: string; content: string }[],
   ): Promise<{
     data: IGameCommand[];
     prompt: string;
@@ -233,6 +428,7 @@ export class AgentLib {
           role: "system",
           content: PROMPTS.EDITOR_SYSTEM(),
         },
+        ...(previousChat ?? []),
         {
           role: "user",
           content: prompt,

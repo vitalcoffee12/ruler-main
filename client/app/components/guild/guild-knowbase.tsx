@@ -3,39 +3,25 @@ import { use, useContext, useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import "./_guild.css";
 import { AuthContext } from "~/contexts/authContext";
+import useRequest from "~/hooks/use-request.hook";
 
 export default function GuildKnowledgeBase(props: { guild: Guild }) {
-  const { auth } = useContext(AuthContext);
-  const [type, setType] = useState<"ruleSet" | "termSet">("ruleSet");
-  const [maxPage, setMaxPage] = useState(1);
-  const [page, setPage] = useState<Record<string, number>>({
-    ruleSet: 1,
-    termSet: 1,
-  });
   const [data, setData] = useState<any[]>([]);
-  const [search, setSearch] = useState<string>("");
-  const highlighterRef = useRef<HTMLDivElement>(null);
-  const typeRef = useRef<Record<string, HTMLLIElement>>({});
+  const reqKnowledgeBase = useRequest(
+    `/guild/aggregate/${props.guild.code}`,
+    "get",
+  );
 
   const fetchGuildKnowledgeBase = async () => {
-    //try {
-    //   const res = await getRequest(
-    //     `/resource/guild`,
-    //     {
-    //       type: type,
-    //       code: props.guild.code,
-    //       page: page[type],
-    //       search: search,
-    //     },
-    //     {
-    //       Authorization: `Bearer ${auth.accessToken}`,
-    //     },
-    //   );
-    //   if (res.data.responseObject) {
-    //     setData(res.data.responseObject.data || []);
-    //     setMaxPage(res.data.responseObject.maxPage || 1);
-    //   }
-    // } catch (ex) {}
+    if (!props.guild.code) return;
+    const res = await reqKnowledgeBase.sendRequest({
+      authorized: false,
+    });
+
+    if (res && res.status === 200) {
+      setData(res.data.responseObject || []);
+      console.log("Fetched guild knowledge base:", res.data.responseObject);
+    }
   };
 
   useEffect(() => {
@@ -43,25 +29,8 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
     fetchGuildKnowledgeBase();
   }, [props.guild.code]);
 
-  useEffect(() => {
-    if (!props.guild.code) return;
-    fetchGuildKnowledgeBase();
-  }, [page, type]);
-
-  useEffect(() => {
-    const selectedRef =
-      typeRef.current[type === "ruleSet" ? "Documents" : "Terms"];
-
-    if (selectedRef && highlighterRef.current) {
-      highlighterRef.current.style.width = `${selectedRef.offsetWidth}px`;
-      highlighterRef.current.style.height = `${selectedRef.offsetHeight}px`;
-      highlighterRef.current.style.transform = `translateX(${selectedRef.offsetLeft}px)`;
-      highlighterRef.current.style.transition = `transform 0.12s ease-in-out, width 0.12s ease-in-out`;
-    }
-  }, [type]);
-
   return (
-    <div className="p-4 grid grid-rows-[auto_auto_auto_1fr_50px] gap-2 h-full box-border">
+    <div className="p-4 grid grid-rows-[auto_auto_auto_1fr_50px] gap-2 h-full box-border overflow-auto">
       <h2 className="text-lg flex justify-between items-center mb-4">
         <span className="playwrite-font mr-2 font-semibold">
           {props.guild.name} Knowledge Base
@@ -74,90 +43,32 @@ export default function GuildKnowledgeBase(props: { guild: Guild }) {
         </span>
       </h2>
       <div>
-        <ul className="relative flex rounded-md bg-white p-1 text-sm shadow-sm no-select">
-          <div
-            className="absolute bg-lime-100 rounded-md transition duration-120 top-1 left-0 h-full z-0"
-            ref={highlighterRef}
-          ></div>
-          {subItems.map((item) => (
-            <li
-              key={item}
-              className={`p-2 cursor-pointer rounded-md transition duration-200 z-1 ${
-                (type === "ruleSet" && item === "Documents") ||
-                (type === "termSet" && item === "Terms")
-                  ? "text-lime-800"
-                  : "text-stone-800"
-              }`}
-              ref={(el) => {
-                if (el) typeRef.current[item] = el;
-              }}
-              onClick={() => {
-                setType(item === "Documents" ? "ruleSet" : "termSet");
-              }}
-            >
-              {item}
+        <ul>
+          {data.map((item, index) => (
+            <li key={index} className="mb-4 ">
+              <div className="text-md flex gap-2 items-center text-stone-800 font-medium mb-1">
+                <div className="text-sm p-1 bg-stone-200 rounded">
+                  {index + 1}
+                </div>
+                <div>{item.responseTime}</div>
+                <div>{item.message}</div>
+              </div>
+              <div className="text-sm text-stone-600 mt-1 border-b border-stone-200 pb-2">
+                {item.intents.map((intent: any, idx: number) => (
+                  <div key={idx} className="mb-1">
+                    {intent.type} : <span>{intent.target}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="text-sm text-stone-600 mt-1 border-b border-stone-200 pb-2">
+                {item.memories.map((memory: any, idx: number) => (
+                  <div key={idx} className="mb-1">
+                    {memory.target} : <span>{memory.memory}</span>
+                  </div>
+                ))}
+              </div>
             </li>
           ))}
-        </ul>
-      </div>
-      <div className="relative row-start-3 row-end-4 bg-white rounded-md border border-stone-300 text-sm flex items-center gap-1 outline-1 -outline-offset-1 focus-within:outline-2 focus-within:-outline-offset-2 sm:text-sm/6 outline-stone-300 focus-within:outline-stone-600 border border-stone-300 w-full">
-        <input
-          type="text"
-          placeholder={`Search in ${type === "ruleSet" ? "Documents" : "Terms"}...`}
-          className="w-full px-3 py-2 rounded-md focus:outline-none focus:outline-none "
-          onChange={(e) => {
-            setSearch(e.target.value);
-          }}
-          onKeyDown={(e) => {
-            if (e.key == "Enter") {
-              console.log("Searching for:", search);
-            }
-          }}
-          value={search}
-        />
-        <div
-          className="material-symbols-outlined p-1.5 no-select cursor-pointer text-stone-400 hover:text-stone-600 
-          hover:bg-stone-100 transition duration-200 rounded-full"
-          onClick={() => setSearch("")}
-          style={{
-            fontSize: "14px",
-            visibility: search.length > 0 ? "visible" : "hidden",
-          }}
-        >
-          close
-        </div>
-        <div className="material-symbols-outlined no-select cursor-pointer text-stone-400 p-2 hover:text-stone-600 hover:bg-stone-100 transition duration-200 ">
-          search
-        </div>
-      </div>
-      <div className="min-h-full overflow-y-auto no-scrollbar rounded-md bg-white row-start-4 row-end-5 shadow-sm">
-        {showItems({ type, data })}
-      </div>
-      <div className="min-h-full overflow-y-auto row-start-5 row-end-6 flex justify-center items-center">
-        <ul className="flex items-center gap-4 text-stone-600  no-select">
-          <li
-            className="material-symbols-outlined cursor-pointer active:scale-95"
-            onClick={() => {
-              setPage((prev) => ({
-                ...prev,
-                [type]: prev[type] > 1 ? prev[type] - 1 : prev[type],
-              }));
-            }}
-          >
-            arrow_back
-          </li>
-          {` Page ${page[type]} of ${maxPage} `}
-          <li
-            className="material-symbols-outlined cursor-pointer active:scale-95"
-            onClick={() => {
-              setPage((prev) => ({
-                ...prev,
-                [type]: prev[type] < maxPage ? prev[type] + 1 : prev[type],
-              }));
-            }}
-          >
-            arrow_forward
-          </li>
         </ul>
       </div>
     </div>

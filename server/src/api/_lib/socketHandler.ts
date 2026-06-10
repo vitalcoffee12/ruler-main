@@ -64,12 +64,12 @@ export class SocketHandler {
     switch (parsed.type) {
       case MESSAGE_TYPES.USER_ONLINE:
         // Handle chat message
-        socket.userId = parsed.userId;
+        socket.userId = Number(parsed.userId);
         socket.userCode = parsed.userCode;
 
         break;
       case MESSAGE_TYPES.USER_JOIN_GUILD:
-        socket.guildId = parsed.guildId;
+        socket.guildId = Number(parsed.guildId);
         socket.guildCode = parsed.guildCode;
 
         await this.sendMemberList(parsed.guildCode);

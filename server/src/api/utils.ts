@@ -141,19 +141,20 @@ export function CommonNeighbors(
   if (depth <= 0) {
     return [];
   }
-  const commons = current.relations.filter((r) =>
-    target.relations?.some((tr) => tr.name === r.name),
-  );
-  const ce = world.filter((e) => commons.some((c) => c.name === e.name));
+  return [];
+  // const commons = current.relations.filter((r) =>
+  //   target.relations?.some((tr) => tr.name === r.name),
+  // );
+  // const ce = world.filter((e) => commons.some((c) => c.name === e.name));
 
-  const children = [];
-  for (const c of ce) {
-    const neighbors = CommonNeighbors(world, c, target, depth - 1);
-    children.push(...neighbors);
-  }
-  ce.push(...children.filter((c) => !ce.some((e) => e.name === c.name)));
+  // const children = [];
+  // for (const c of ce) {
+  //   const neighbors = CommonNeighbors(world, c, target, depth - 1);
+  //   children.push(...neighbors);
+  // }
+  // ce.push(...children.filter((c) => !ce.some((e) => e.name === c.name)));
 
-  return ce;
+  // return ce;
 }
 
 export function ExtendToEntity(extend: ExtendEntity[]): Entity[] {
@@ -161,7 +162,13 @@ export function ExtendToEntity(extend: ExtendEntity[]): Entity[] {
     name: e.name,
     type: e.type,
     location: e.location,
-    relations: e.relations,
-    state: e.state,
+    group: e.group,
+    appearance: e.appearance,
+    personality: e.personality,
+    description: e.description,
+    backstory: e.backstory,
+    memory: e.memory,
+    related: e.related,
+    route: e.route,
   }));
 }
